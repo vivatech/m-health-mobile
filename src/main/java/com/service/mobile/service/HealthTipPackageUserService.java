@@ -103,4 +103,20 @@ public class HealthTipPackageUserService {
     public List<Integer> getIdByUserIdAndExpiery(Integer userId, YesNo yesNo) {
         return healthTipPackageUserRepository.getIdByUserIdAndExpiery(userId,yesNo);
     }
+
+    public HealthTipPackageUser getByIdAndExpiery(Integer userId, YesNo yesNo) {
+        return healthTipPackageUserRepository.getByIdAndExpiry(userId,yesNo).orElse(null);
+    }
+
+    public HealthTipPackageUser save(HealthTipPackageUser packageUser) {
+        return healthTipPackageUserRepository.save(packageUser);
+    }
+
+    public List<Integer> findPackageIdsByUserIdAndExpire(int userId, YesNo yesNo) {
+        return healthTipPackageUserRepository.findPackageIdsByUserIdAndExpire(userId,yesNo);
+    }
+
+    public Optional<HealthTipPackageUser> findByUserIdAndPackageId(Integer userId, Integer categoryId) {
+        return healthTipPackageUserRepository.findByUserIdAndPackageId(userId,categoryId);
+    }
 }

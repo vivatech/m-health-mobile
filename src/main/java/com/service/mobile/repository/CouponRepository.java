@@ -1,0 +1,16 @@
+package com.service.mobile.repository;
+
+import com.service.mobile.dto.enums.CouponCategory;
+import com.service.mobile.model.Coupon;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+
+public interface CouponRepository extends JpaRepository<Coupon, Integer> {
+    @Query("Select u from Coupon u where u.status = ?1")
+    List<Coupon> findByStatus(Integer i);
+
+    @Query("Select u from Coupon u where u.couponCode = ?1 and u.category = ?2 and u.status =?3")
+    List<Coupon> findByCouponCodeAndCategoryAndStatus(String couponCode, CouponCategory category, Integer i);
+}

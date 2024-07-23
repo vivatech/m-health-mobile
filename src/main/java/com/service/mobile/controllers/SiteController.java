@@ -1,11 +1,14 @@
 package com.service.mobile.controllers;
 
 import com.service.mobile.config.Constants;
+import com.service.mobile.dto.dto.DoctorRattingDTO;
 import com.service.mobile.dto.request.MobileReleaseRequest;
+import com.service.mobile.dto.request.NearByDoctorRequest;
+import com.service.mobile.dto.request.UpdatePictureRequest;
+import com.service.mobile.dto.response.NearByDoctorResponse;
 import com.service.mobile.dto.response.Response;
 import com.service.mobile.model.Country;
-import com.service.mobile.service.PublicService;
-import com.service.mobile.service.SiteService;
+import com.service.mobile.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -28,6 +31,18 @@ public class SiteController {
 
     @Autowired
     private MessageSource messageSource;
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private UsersService usersService;
+
+    @Autowired
+    private ConsultationService consultationService;
+
+    @Autowired
+    private DoctorService doctorService;
 
     @PostMapping("/mobile-release")
     public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
@@ -65,7 +80,7 @@ public class SiteController {
         return publicService.getStaticPageContent(locale,type);
     }
 
-    @GetMapping("/activities")
+    @PostMapping("/activities")
     public ResponseEntity<?> activities(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                         Locale locale,
                                         @RequestParam(name = "user_id",required = false) Integer user_id
@@ -75,10 +90,100 @@ public class SiteController {
 
     @GetMapping("/get-consult-type")
     public ResponseEntity<?> getConsultType(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
-                                            Locale locale,
-                                            @RequestParam(name = "user_id",required = false) Integer user_id
+                                            Locale locale
     ) {
-        return publicService.getConsultType(locale,user_id);
+        return publicService.getConsultType(locale);
     }
 
+    @GetMapping("/get-offers")
+    public ResponseEntity<?> getOffers(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                            Locale locale) {
+        return publicService.getOffers(locale);
+    }
+
+    @PostMapping("/recent-orders")
+    public ResponseEntity<?> recentOrders(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                          Locale locale,
+                                          @RequestHeader(name = "X-type", required = false)
+                                          String type,
+                                          @RequestParam(name = "user_id",required = false) Integer user_id
+    ) {
+        return orderService.recentOrders(locale,user_id,type);
+    }
+
+    @GetMapping("/get-state-list")
+    public ResponseEntity<?> getStateList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                          Locale locale) {
+        return publicService.getStateList(locale);
+    }
+
+    @GetMapping("/get-city-list")
+    public ResponseEntity<?> getCityList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                          Locale locale) {
+        return publicService.getCityList(locale);
+    }
+
+    //TODO Discuss with shamshad sir
+    @PostMapping("/update-profile-picture") //in post man post method is written
+    public ResponseEntity<?> updateProfilePicture(@ModelAttribute UpdatePictureRequest request,
+        @RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
+        return usersService.updateProfilePicture(request);
+    }
+
+    @GetMapping("/get-doctor-city-list")
+    public ResponseEntity<?> getDoctorCityList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale) {
+        return doctorService.getDoctorCityList(locale);
+    }
+
+    @GetMapping("/get-language")
+    public ResponseEntity<?> getLanguage(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale) {
+        return publicService.getLanguage(locale);
+    }
+
+    @GetMapping("/get-specialization")
+    public ResponseEntity<?> getSpecialization(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale) {
+        return publicService.getSpecialization(locale);
+    }
+
+    @GetMapping("/get-payment-method")
+    public ResponseEntity<?> getPaymentMethod(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale) {
+        return publicService.getPaymentMethod(locale);
+    }
+
+    @GetMapping("/get-doctor-by-rating")
+    public ResponseEntity<?> getDoctorByRatting(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale) {
+        List<DoctorRattingDTO> doctors = publicService.getDoctorByRatting(locale);
+        if(doctors.size()>0){
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.RATED_DOCTOR_LIST_RETRIEVED,null,locale),
+                    doctors
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.NO_RATED_DOCTOR_FOUND,null,locale)
+            ));
+        }
+    }
+
+    @GetMapping("/nearby-doctor")
+    public ResponseEntity<?> nearByDoctor(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale,
+                                          @RequestBody NearByDoctorRequest request) {
+        return publicService.nearByDoctor(locale,request);
+    }
+
+    @GetMapping("/get-all-category-list")
+    public ResponseEntity<?> getAllCategoriesList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale) {
+        return publicService.getAllCategoriesList(locale);
+    }
 }

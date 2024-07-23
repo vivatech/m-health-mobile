@@ -1,13 +1,12 @@
 package com.service.mobile.model;
 
-
-import com.service.mobile.config.Constants;
 import com.service.mobile.dto.enums.UserType;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -69,6 +68,9 @@ public class Users {
     @Column(name = "is_verified")
     private String isVerified = "No";
 
+    @Column(name = "language_fluency")
+    private String languageFluency;
+
     @Column(name = "is_hpcz_verified")
     private String isHpczVerified = "Yes"; //required
 
@@ -98,6 +100,15 @@ public class Users {
 
     @Column(name = "comment")
     private String comment;
+
+    @Column(name = "about_me")
+    private String aboutMe;
+
+    @Column(name = "experience")
+    private Float experience;
+
+    @Column(name = "total_money")
+    private Float totalMoney;
 
     @Column(name = "usr_reference_number")
     private String usrReferenceNumber;
@@ -134,4 +145,30 @@ public class Users {
 
     @Column(name = "country_code")
     private String countryCode;
+
+    @Column(name = "profile_picture")
+    private String profilePicture;
+
+    @Column(name = "hospital_address")
+    private String hospitalAddress;
+
+    @Column(name = "residence_address")
+    private String residenceAddress;
+
+    @Column(name = "clinic_name")
+    private String clinicName;
+
+    private LocalDate dob;
+
+    @ManyToOne
+    @JoinColumn(name = "country_id", nullable = false)
+    private Country country;
+
+    @ManyToOne
+    @JoinColumn(name = "state_id", nullable = false)
+    private State state;
+
+    @ManyToOne
+    @JoinColumn(name = "city_id", nullable = false)
+    private City city;
 }

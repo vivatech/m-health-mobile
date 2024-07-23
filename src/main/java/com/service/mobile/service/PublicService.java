@@ -1,18 +1,18 @@
 package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
-import com.service.mobile.dto.enums.YesNo;
-import com.service.mobile.dto.response.ActivitiesResponse;
-import com.service.mobile.dto.response.ConsultTypeResponse;
-import com.service.mobile.dto.response.Response;
-import com.service.mobile.model.Country;
-import com.service.mobile.model.GlobalConfiguration;
-import com.service.mobile.model.PackageUser;
-import com.service.mobile.model.StaticPage;
-import com.service.mobile.repository.CountryRepository;
-import com.service.mobile.repository.GlobalConfigurationRepository;
-import com.service.mobile.repository.PackageUserRepository;
+import com.service.mobile.config.PaymentOptionConfig;
+import com.service.mobile.dto.OfferInformationDTO;
+import com.service.mobile.dto.dto.*;
+import com.service.mobile.dto.enums.*;
+import com.service.mobile.dto.request.EditProfileRequest;
+import com.service.mobile.dto.request.NearByDoctorRequest;
+import com.service.mobile.dto.request.ThankYouRequest;
+import com.service.mobile.dto.response.*;
+import com.service.mobile.model.*;
+import com.service.mobile.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +22,10 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
 
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,8 +47,67 @@ public class PublicService {
 
     @Autowired
     private StaticPageService staticPageService;
+
     @Autowired
     private PackageUserRepository packageUserRepository;
+
+    @Autowired
+    private CouponRepository couponRepository;
+
+    @Autowired
+    private UsersRepository usersRepository;
+
+    @Value("${app.base.url}")
+    private String baseUrl;
+
+    @Value("${app.default.image}")
+    private String defaultImage;
+
+    @Value("${app.currency.symbol.fdj}")
+    private String currencySymbolFdj;
+
+    @Value("${app.currency.symbol}")
+    private String currencySymbol;
+
+    @Value("${app.payment.rate}")
+    private Float PaymentRate;
+
+    @Value("${app.location.radius}")
+    private Float locationRadius;
+
+    @Autowired
+    private UserLocationRepository userLocationRepository;
+
+    @Autowired
+    private StateRepository stateRepository;
+
+    @Autowired
+    private CityRepository cityRepository;
+
+    @Autowired
+    private LanguageRepository languageRepository;
+
+    @Autowired
+    private SpecializationRepository specializationRepository;
+
+    @Autowired
+    private PaymentOptionConfig paymentOptionConfig;
+    @Autowired
+    private ConsultationRepository consultationRepository;
+    @Autowired
+    private HomecareReservedSlotRepository homecareReservedSlotRepository;
+    @Autowired
+    private DoctorAvailabilityRepository doctorAvailabilityRepository;
+    @Autowired
+    private SlotMasterRepository slotMasterRepository;
+    @Autowired
+    private UsersUsedCouponCodeRepository usersUsedCouponCodeRepository;
+    @Autowired
+    private OrdersRepository ordersRepository;
+    @Autowired
+    private ConsultationRatingRepository consultationRatingRepository;
+    @Autowired
+    private HealthTipCategoryMasterRepository healthTipCategoryMasterRepository;
 
     public List<Country> findAllCountry(){
         return countryRepository.findAll();
@@ -55,7 +118,7 @@ public class PublicService {
                 List.of("TURN_PASSWORD", "STURN_SERVER", "TURN_SERVER", "TURN_USERNAME")).stream()
                 .collect(Collectors.toMap(GlobalConfiguration::getKey, GlobalConfiguration::getValue));
 
-        Long maxFees = chargesService.getMaxConsultationFees();
+        Integer maxFees = chargesService.getMaxConsultationFees();
         Long minFees = 0l;
 
         Map<String, String>[] slotTime = new HashMap[3];
@@ -122,7 +185,6 @@ public class PublicService {
     }
 
     public ResponseEntity<?> activities(Locale locale, Integer userId) {
-        Response response = new Response();
         if (userId!=null && userId!=0) {
             Pageable pageable = PageRequest.of(0,1);
             List<PackageUser> packageDetailOpt = packageUserRepository.getActivePackageDetail(userId, YesNo.No,pageable);
@@ -157,7 +219,7 @@ public class PublicService {
         }
     }
 
-    public ResponseEntity<?> getConsultType(Locale locale, Integer userId) {
+    public ResponseEntity<?> getConsultType(Locale locale) {
         List<ConsultTypeResponse> response = new ArrayList<>();
         ConsultTypeResponse data = new ConsultTypeResponse(
                 messageSource.getMessage(Constants.VIDEO_CONSULTATION,null,locale),
@@ -173,4 +235,685 @@ public class PublicService {
         ));
     }
 
+    public ResponseEntity<?> getOffers(Locale locale) {
+        Response response = new Response();
+        List<Coupon> coupons = couponRepository.findByStatus(1);
+        if (coupons.size()>0) {
+            OfferResponseDTO responseDTO = new OfferResponseDTO();
+            List<OfferInformationDTO> offer_information = new ArrayList<>();
+            for(Coupon coupon:coupons){
+                OfferInformationDTO infoDto = new OfferInformationDTO();
+                String discountSymbol = (coupon.getDiscountType()== DiscountType.PERCENTAGE)?"%":currencySymbol;
+                Float discountAmount = (coupon.getType()== OfferType.PAID)?coupon.getDiscountAmount():100f;
+                infoDto.setDiscount_amount(discountAmount + discountSymbol);
+                infoDto.setDiscount_type((coupon.getType()==OfferType.PAID) ?
+                        messageSource.getMessage(Constants.DISCOUNT_MSG,null,locale)
+                        : messageSource.getMessage(Constants.FREE_MSG,null,locale));
+
+
+                infoDto.setDiscount_type((coupon.getType()==OfferType.PAID) ?
+                        messageSource.getMessage(Constants.ON_HEALTHTIP,null,locale)
+                        : messageSource.getMessage(Constants.ON_VIDEO_CONSULTATION,null,locale));
+
+                infoDto.setOffer_text((coupon.getCategory()== CouponCategory.HEALTHTIP) ?
+                        messageSource.getMessage(Constants.OFFER_TEXT_ONE,null,locale)
+                        : messageSource.getMessage(Constants.OFFER_TEXT_TWO,null,locale));
+
+                offer_information.add(infoDto);
+            }
+            responseDTO.setOffer_information(offer_information);
+            responseDTO.setCoupon_code(coupons.get(0).getCouponCode());
+            responseDTO.setNote_message(messageSource.getMessage(Constants.NOTE_MESSAGE,null,locale));
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+                    responseDTO
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.NO_CONTENT_FOUNT,null,locale)
+            ));
+        }
+    }
+
+    public HomeConsultationInformation getHomeConsultationInformation(Integer userId) {
+        HomeConsultationInformation dto = new HomeConsultationInformation();
+        Users users = usersRepository.findById(userId).orElse(null);
+        dto.setName(users.getFirstName()+" "+users.getLastName());
+        dto.setContact_number(users.getCountryCode()+users.getContactNumber());
+        String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
+        dto.setProfile_picture(photoPath);
+        return dto;
+    }
+
+    public ClinicInformation getClinicInformation(Integer userId) {
+        ClinicInformation dto = new ClinicInformation();
+        Users users = usersRepository.findById(userId).orElse(null);
+        dto.setName(users.getFirstName()+" "+users.getLastName());
+        dto.setContact_number(users.getCountryCode()+users.getContactNumber());
+        dto.setAddress(users.getHospitalAddress());
+        UserLocation location = userLocationRepository.findByUserId(userId).orElse(null);
+        if(location!=null){
+            dto.setLatitude((location.getLatitude()!=null)?location.getLatitude():null);
+            dto.setLongitude((location.getLongitude()!=null)?location.getLongitude():null);
+        }
+        String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
+        dto.setProfile_picture(photoPath);
+        return dto;
+    }
+
+    public ResponseEntity<?> getProfile(Locale locale, Integer userId) {
+        if (userId!=null && userId!=0) {
+            Users users = usersRepository.findById(userId).orElse(null);
+            if(users!=null){
+                String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
+                String countryName = (users.getCountry()!=null)?users.getCountry().getName():"";
+                String stateName = (users.getState()!=null)?users.getState().getName():"";
+                String cityName = (users.getCity()!=null)?users.getCity().getName():"";
+
+                ProfileDto profile = new ProfileDto();
+                profile.setFirst_name(users.getFirstName());
+                profile.setLast_name(users.getLastName());
+                profile.setFullName(users.getFirstName()+" "+users.getLastName());
+                profile.setEmail((users.getEmail()!=null)?users.getEmail():"");
+                profile.setContact_number(users.getContactNumber());
+                profile.setPhoto(photoPath);
+                profile.setCountry(countryName);
+                profile.setCountry_code(users.getCountryCode());
+                profile.setState(stateName);
+                profile.setCity(cityName);
+                profile.setResidence_address(users.getResidenceAddress());
+                profile.setDob(users.getDob());
+                profile.setGender(users.getGender());
+
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+                        profile
+                ));
+
+            }else{
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                        Constants.UNAUTHORIZED_CODE,
+                        Constants.UNAUTHORIZED_CODE,
+                        messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
+                ));
+            }
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+            ));
+        }
+    }
+
+    public ResponseEntity<?> getStateList(Locale locale) {
+        List<State> states = stateRepository.findAllByNameAsc();
+        if (states.size()>0) {
+            List<StateResponse> data = new ArrayList<>();
+            for(State t:states){
+                data.add(new StateResponse(t.getId(),t.getName(),(t.getCountry()!=null)?t.getCountry().getId():null));
+            }
+
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.STATE_FOUND_SUCCESSFULLY,null,locale),
+                    data
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.NO_STATE_FOUND,null,locale)
+            ));
+        }
+    }
+
+    public ResponseEntity<?> getCityList(Locale locale) {
+        List<City> cities = cityRepository.findAllByNameAsc();
+        if (cities.size()>0) {
+            List<CityResponse> data = new ArrayList<>();
+            for(City t:cities){
+                data.add(new CityResponse(t.getId(),t.getName(),(t.getState()!=null)?t.getState().getId():null));
+            }
+
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.STATE_FOUND_SUCCESSFULLY,null,locale),
+                    data
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.NO_STATE_FOUND,null,locale)
+            ));
+        }
+    }
+
+    public ResponseEntity<?> editProfile(Locale locale, EditProfileRequest request) {
+        if (request.getUser_id() != null && request.getUser_id() > 0 &&
+                request.getFullName()!=null && !request.getFullName().isEmpty() &&
+                request.getEmail()!=null && !request.getEmail().isEmpty() &&
+                request.getGender()!=null && !request.getGender().isEmpty() &&
+                request.getResidence_address()!=null && !request.getResidence_address().isEmpty() &&
+                request.getDob() != null
+                && request.getCity_id() != null && request.getCity_id() > 0) {
+            Users user = usersRepository.findById(request.getUser_id()).orElse(null);
+            if(user!=null){
+                user.setUserId(request.getUser_id());
+
+                String[] name = request.getFullName().split(" ");
+                StringBuilder lastName = new StringBuilder();
+                String firstName = "";
+                if(name.length > 1) {
+                    firstName = name[0];
+                    for (int i = 1; i < name.length; i++) lastName.append(" ").append(name[i]);
+                }
+                else firstName = name[0];
+
+                user.setFirstName(firstName);
+                user.setLastName(lastName.toString());
+                user.setEmail(request.getEmail());
+                user.setGender(request.getGender());
+                user.setResidenceAddress(request.getResidence_address());
+                user.setDob(request.getDob());
+                user.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
+                City city = cityRepository.findById(request.getCity_id()).orElse(null);
+                if(city != null) {
+                    user.setCity(city);
+                    user.setState(city.getState());
+                    user.setCountry(city.getState().getCountry());
+//                    user.setCountryCode(String.valueOf(city.getState().getCountry().getPhoneCode()));
+                }
+                usersRepository.save(user);
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.PATIENT_UPDATED_SUCCESSFULLY,null,locale),
+                        null
+                ));
+            }else{
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                        Constants.UNAUTHORIZED_CODE,
+                        Constants.UNAUTHORIZED_CODE,
+                        messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
+                ));
+            }
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+            ));
+        }
+    }
+
+    public ResponseEntity<?> getLanguage(Locale locale) {
+        List<Language> languages = languageRepository.findAllByStatus("A");
+        if (languages.size()>0) {
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.LANGUAGE_LIST_FOUND,null,locale),
+                    languages
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.NO_LANGUAGE_LIST_FOUND,null,locale)
+            ));
+        }
+    }
+
+
+    public ResponseEntity<?> getSpecialization(Locale locale) {
+        List<Specialization> specializations = specializationRepository.findAllByStatus("A");
+        if (specializations.size()>0) {
+            List<SpecializationResponse> responses = new ArrayList<>();
+            String photo = baseUrl+defaultImage;
+            for(Specialization specialization:specializations){
+                SpecializationResponse data = new SpecializationResponse();
+                String photoPath = baseUrl+"/uploaded_file/specialisation/"+specialization.getId()+"/"+specialization.getPhoto();
+
+                data.setPhoto(photoPath);
+                if(locale.getLanguage().equals("en")){
+                    data.setName(specialization.getName());
+                }else {data.setName(specialization.getNameSl());}
+                data.setId(specialization.getId());
+
+                responses.add(data);
+            }
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.SPECIALIZATION_LIST_FOUND,null,locale),
+                    responses
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.NO_SPECIALIZATION_LIST_FOUND,null,locale)
+            ));
+        }
+    }
+
+    public ResponseEntity<?> getPaymentMethod(Locale locale) {
+
+        List<PaymentMethodResponse.Option> currencyOptions = new ArrayList<>();
+        for (Map.Entry<String, String> entry : paymentOptionConfig.getCurrency().entrySet()) {
+            PaymentMethodResponse.Option option = new PaymentMethodResponse.Option();
+            option.setValue(entry.getKey());
+            option.setTitle(messageSource.getMessage(entry.getValue().toLowerCase(), null, locale));
+            currencyOptions.add(option);
+        }
+
+        List<PaymentMethodResponse.Option> paymentMethods = new ArrayList<>();
+        for (Map.Entry<String, String> entry : paymentOptionConfig.getPaymentMethod().entrySet()) {
+            PaymentMethodResponse.Option option = new PaymentMethodResponse.Option();
+            option.setValue(entry.getKey());
+            option.setTitle(messageSource.getMessage(entry.getValue(), null, locale));
+            paymentMethods.add(option);
+        }
+
+        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+                paymentMethods
+        ));
+    }
+
+    public Consultation checkRealTimeBooking(Integer slotId, LocalDate date, Integer doctorId) {
+        List<RequestType> requestTypes = List.of(RequestType.Inprocess,RequestType.Pending,RequestType.Book);
+        List<Consultation> consultations = consultationRepository.findBySlotDateAndDoctorAndRequestType(slotId,date,doctorId,requestTypes);
+        if(consultations.size()>0){
+            return consultations.get(0);
+        }
+        return null;
+    }
+
+    public Consultation checkClientBooking(Integer slotId, LocalDate date, Integer userId) {
+        List<RequestType> requestTypes = List.of(RequestType.Inprocess,RequestType.Pending,RequestType.Book);
+        List<Consultation> consultations = consultationRepository.findBySlotDateAndPatientAndRequestType(slotId,date,userId,requestTypes);
+        if(consultations.size()>0){
+            return consultations.get(0);
+        }
+        return null;
+    }
+
+    public List<DoctorAvailability> nursesAssign(Integer slotId) {
+        return doctorAvailabilityRepository.findBySlotIdAndUserType(slotId,UserType.Nurse);
+    }
+
+    public ReserveSlotDto getReservedSlot(int slotId, int doctorId, SlotMaster slotInfo, int numberSlotsToAllocate, int timeValue) {
+        LocalTime time = slotInfo.getSlotStartTime();
+        List<LocalTime> slot_start_time = new ArrayList<>();
+        slot_start_time.add(slotInfo.getSlotStartTime());
+
+        for (int i = 1; i < numberSlotsToAllocate; i++) {
+            time = time.plusMinutes(timeValue);
+            slot_start_time.add(time);
+        }
+
+        List<Integer> allocated_slots = slotMasterRepository.findBySlotTypeIdAndSlotDayAndSlotStartTimeIn(
+                slotInfo.getSlotType().getId(),
+                slotInfo.getSlotDay(),
+                slot_start_time
+        ).stream().map(SlotMaster::getSlotId).collect(Collectors.toList());
+
+        ReserveSlotDto response = new ReserveSlotDto();
+        response.setAllocated_slots(allocated_slots);
+        response.setSlot_start_time(slot_start_time);
+        return response;
+    }
+
+    public CouponCodeResponseDTO checkPromoCode(Integer userId, CouponCategory category, Float price, String couponCode,Locale locale) {
+        CouponCodeResponseDTO response = new CouponCodeResponseDTO();
+        DiscountDetailsDTO discountDetails = new DiscountDetailsDTO();
+
+        // Simulate fetching Coupon from the database
+        List<Coupon> checkCouponList = couponRepository.findByCouponCodeAndCategoryAndStatus(couponCode, category,1);
+        Coupon checkCoupon = (checkCouponList.size()>0)?checkCouponList.get(0):null;
+        if (checkCoupon==null) {
+            response.setStatus("error");
+            response.setMessage(messageSource.getMessage(Constants.COUPIN_CODE_INVALID,null,locale));
+        } else if (checkCoupon.getNumberOfUsed() > checkCoupon.getOfferForNumberOfUsers()) {
+            response.setStatus("error");
+            response.setMessage(messageSource.getMessage(Constants.COUPIN_CODE_REACHED_LIMIT,null,locale));
+        } else if (checkCoupon.getEndDate().isBefore(LocalDateTime.now())) {
+            response.setStatus("error");
+            response.setMessage(messageSource.getMessage(Constants.COUPIN_CODE_REACHED_LIMIT,null,locale));
+        } else {
+            List<UsersUsedCouponCode> usersUsedCouponCode = usersUsedCouponCodeRepository.findByUserIdAndCouponId(userId,checkCoupon.getId());
+            boolean hasUserUsedCoupon = usersUsedCouponCode.size()>0;
+
+            if (hasUserUsedCoupon) {
+                response.setStatus("info");
+                response.setMessage(messageSource.getMessage(Constants.AVAILABLE_OFFER_MESSAGE,null,locale));
+            } else {
+                double currentAmount = price;
+                double discountAmount = 0;
+
+                calculateDiscountAmount(checkCoupon, currentAmount);
+                String discountAmountWithCurrency = formatDiscountAmount(discountAmount, currencySymbol);
+                String discountAmountWithSlshCurrency = formatDiscountAmount(discountAmount * PaymentRate, currencySymbol);
+
+                discountDetails.setDiscount_amount_with_currency(discountAmountWithCurrency);
+                discountDetails.setDiscount_amount_with_usd_currency(discountAmountWithCurrency);
+                discountDetails.setDiscount_amount_with_slsh_currency(discountAmountWithSlshCurrency);
+                discountDetails.setAlert_msg_usd("process_payment_of " + discountAmountWithCurrency);
+                discountDetails.setAlert_msg_slsh("process_payment_of " + discountAmountWithSlshCurrency);
+                discountDetails.setDiscount_amount_slsh(discountAmount * PaymentRate);
+                discountDetails.setDiscount_amount(discountAmount);
+                discountDetails.setType(checkCoupon.getType());
+                discountDetails.setCoupon_id(checkCoupon.getId());
+
+                response.setStatus("success");
+                response.setMessage(messageSource.getMessage(Constants.COUPON_CODE_SUCCESS_MESSAGE,null,locale));
+                response.setData(discountDetails);
+            }
+        }
+        return response;
+
+    }
+
+    private double calculateDiscountAmount(Coupon checkCoupon, double currentAmount) {
+        double discountAmount = 0;
+        if (OfferType.FREE == checkCoupon.getType()){
+            return discountAmount;
+        }
+        if (DiscountType.PERCENTAGE == checkCoupon.getDiscountType()) {
+            discountAmount = (currentAmount * checkCoupon.getDiscountAmount()) / 100;
+        } else {
+            discountAmount = Math.max(0, currentAmount - checkCoupon.getDiscountAmount());
+        }
+        return discountAmount;
+    }
+
+    private String formatDiscountAmount(double amount, String currencySymbol) {
+        return currencySymbol + String.format("%.2f", amount);
+    }
+
+    public ResponseEntity<?> thankYou(Locale locale, ThankYouRequest request) {
+        DoctorDetailResponseDTO response = new DoctorDetailResponseDTO();
+        DoctorDataDTO data = new DoctorDataDTO();
+
+        Orders getType = ordersRepository.findById(request.getOrder_id()).orElse(null);
+
+        if (getType != null && getType.getCaseId() != null) {
+            Orders model = ordersRepository.findDetailedOrder(request.getOrder_id());
+
+            if (model != null) {
+                String photo = getProfilePhoto(model);
+                data.setFirst_name(model.getDoctorId().getFirstName() + " " + model.getDoctorId().getLastName());
+                data.setConsultation_date(model.getCaseId().getConsultationDate());
+                //todo manage this error
+//                data.setTransaction_id(model.getTransactionList().get(0).getTransactionId());
+//                data.setSlot_time(model.getCaseId().getSlotDetail().getSlotTime());
+                data.setAmount(formatAmount(getType));
+                data.setConsultation_type(model.getCaseId().getConsultationType());
+                data.setProfile_photo(photo);
+                data.setNurse(getNurseInfo(getType, model));
+                data.setClinic(getClinicInformation(model.getId()));
+                data.setConsult_type(formatConsultType(model.getCaseId().getConsultType()));
+
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.DOCTOR_DETAILS_MSG,null,locale),
+                        data
+                ));
+            } else {
+
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+                ));
+            }
+        } else {
+            Orders model = ordersRepository.findBasicOrder(request.getOrder_id());
+            if (model != null) {
+                data.setPackage_name(model.getPackageId().getPackageName());
+                //todo manage this error
+//                data.setTransaction_id(model.getTransactionList().get(0).getTransactionId());
+                data.setAmount(formatAmount(getType));
+
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.DOCTOR_DETAILS_MSG,null,locale),
+                        data
+                ));
+            } else {
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+                ));
+            }
+        }
+    }
+
+    private String getProfilePhoto(Orders model) {
+        String photoPath = baseUrl+"uploaded_file/UserProfile/"+model.getId()+"/"+model.getDoctorId().getProfilePicture(); // Construct photo path based on conditions
+        return photoPath;
+    }
+
+    private String formatAmount(Orders getType) {
+        String currency = getType.getCurrency() != null ? getType.getCurrency() : currencySymbolFdj;
+        String amount = getType.getCurrencyAmount() != null ? currency + " " + getType.getCurrencyAmount() : currency + " " + getType.getAmount();
+        return amount;
+    }
+
+    private NurseDto getNurseInfo(Orders orders, Orders model) {
+        Users nurse = usersRepository.findById(model.getCaseId().getAssignedTo()).orElse(null);
+        NurseDto dto = null;
+        if(nurse!=null){
+            dto = new NurseDto();
+            String photoPath="";
+            if(nurse.getProfilePicture()!=null && !nurse.getProfilePicture().isEmpty()){
+                photoPath = baseUrl+"uploaded_file/UserProfile/"+model.getId()+"/"+model.getDoctorId().getProfilePicture();
+            }else{
+                photoPath = baseUrl+defaultImage;
+            }
+            dto.setProfile_picture(photoPath);
+            dto.setName(nurse.getFirstName()+" "+nurse.getLastName());
+            dto.setContact_number(nurse.getCountryCode()+""+nurse.getContactNumber());
+        }
+        return dto;
+    }
+
+    private String formatConsultType(String consultType) {
+        if ("call".equalsIgnoreCase(consultType)) {
+            return "video";
+        }
+        return consultType;
+    }
+
+    public List<DoctorRattingDTO> getDoctorByRatting(Locale locale) {
+        List<DoctorRattingDTO> doctors = new ArrayList<>();
+        String photo = baseUrl + defaultImage;
+
+        List<Users> doctorsList = usersRepository.findActiveDoctorsWithVideoAndHospital();
+        if (doctorsList != null && !doctorsList.isEmpty()) {
+            for (Users doc : doctorsList) {
+                Double rating = consultationRatingRepository.sumRatingsByDoctorId(doc.getUserId());
+                Long ratingCount = consultationRatingRepository.countApprovedRatingsByDoctorId(doc.getUserId());
+
+                Double finalCount = (ratingCount != null && ratingCount > 0) ? rating / ratingCount : 0;
+                if (finalCount > 0) {
+                    if (doc.getProfilePicture() != null && !doc.getProfilePicture().isEmpty()) {
+                        photo = baseUrl + doc.getProfilePicture();
+                    }
+
+                    List<Charges> charges = chargesService.findByUserId(doc.getUserId());
+                    Map<FeeType, String> consultationFees = new HashMap<>();
+                    for (Charges charge : charges) {
+                        consultationFees.put(charge.getFeeType(), currencySymbolFdj+" "+String.format("%.2f", charge.getFinalConsultationFees()));
+                    }
+
+                    DoctorRattingDTO doctorDTO = new DoctorRattingDTO();
+                    doctorDTO.setId(doc.getUserId());
+                    doctorDTO.setFirst_name(doc.getFirstName());
+                    doctorDTO.setLast_name(doc.getLastName());
+                    doctorDTO.setHospital_id(doc.getHospitalId());
+                    doctorDTO.setHospital_name(doc.getClinicName());
+                    doctorDTO.setPhoto(photo);
+                    doctorDTO.setRating(finalCount);
+                    doctorDTO.setConsultation_fees(consultationFees);
+
+                    doctors.add(doctorDTO);
+                }
+            }
+
+            if (doctors.isEmpty()) {
+                doctors = getTopDoctors();
+            }
+        }
+        return doctors;
+    }
+
+    private List<DoctorRattingDTO> getTopDoctors() {
+        List<DoctorRattingDTO> doctors = new ArrayList<>();
+        List<Integer> topDoctorIds = usersRepository.findTopDoctors();
+        if (!topDoctorIds.isEmpty()) {
+            List<Users> doctorsList = usersRepository.findDoctorsByIds(topDoctorIds);
+            for (Users doc : doctorsList) {
+                String photo = baseUrl + defaultImage;
+                if (doc.getProfilePicture() != null && !doc.getProfilePicture().isEmpty()) {
+                    photo = baseUrl + doc.getProfilePicture();
+                }
+
+                List<Charges> charges = chargesService.findByUserId(doc.getUserId());
+                Map<FeeType, String> consultationFees = new HashMap<>();
+                for (Charges charge : charges) {
+                    consultationFees.put(charge.getFeeType(), currencySymbolFdj+" "+String.format("%.2f", charge.getFinalConsultationFees()));
+                }
+
+                DoctorRattingDTO doctorDTO = new DoctorRattingDTO();
+                doctorDTO.setId(doc.getUserId());
+                doctorDTO.setFirst_name(doc.getFirstName());
+                doctorDTO.setLast_name(doc.getLastName());
+                doctorDTO.setHospital_id(doc.getHospitalId());
+                doctorDTO.setHospital_name(doc.getClinicName());
+                doctorDTO.setPhoto(photo);
+                doctorDTO.setRating(0.0);
+                doctorDTO.setConsultation_fees(consultationFees);
+
+                doctors.add(doctorDTO);
+            }
+        }
+        return doctors;
+    }
+
+    public ResponseEntity<?> nearByDoctor(Locale locale, NearByDoctorRequest request) {
+        List<NearByDoctorResponse> doctors = new ArrayList<>();
+        String photo = baseUrl + defaultImage;
+
+        if (request.getLatitude() != null && request.getLongitude() != null) {
+            double radius = 6371; // Radius of Earth in km
+            double maxLat = request.getLatitude() + Math.toDegrees(locationRadius / radius);
+            double minLat = request.getLatitude() - Math.toDegrees(locationRadius / radius);
+            double maxLng = request.getLongitude() + Math.toDegrees(locationRadius / radius / Math.cos(Math.toRadians(request.getLatitude())));
+            double minLng = request.getLongitude() - Math.toDegrees(locationRadius / radius / Math.cos(Math.toRadians(request.getLatitude())));
+
+            List<UserLocation> hospitalList = userLocationRepository.findWithinRadius(minLat,
+                    maxLat, minLng, maxLng, request.getLatitude(), request.getLongitude(), locationRadius);
+            if (hospitalList != null && !hospitalList.isEmpty()) {
+                List<Integer> hospitalIds = new ArrayList<>();
+                for (UserLocation address : hospitalList) {
+                    hospitalIds.add(address.getUser().getUserId());
+                }
+
+                List<Users> doctorsList = usersRepository.findNearbyDoctors(hospitalIds);
+                if (doctorsList != null && !doctorsList.isEmpty()) {
+                    for (Users doc : doctorsList) {
+                        if (doc.getProfilePicture() != null && !doc.getProfilePicture().isEmpty()) {
+                            photo = baseUrl + doc.getProfilePicture();
+                        }
+
+                        List<Charges> charges = chargesService.findByUserId(doc.getUserId());
+                        Map<FeeType, String> consultationFees = new HashMap<>();
+                        for (Charges charge : charges) {
+                            consultationFees.put(charge.getFeeType(), currencySymbolFdj+" "+String.format("%.2f", charge.getFinalConsultationFees()));
+                        }
+
+                        NearByDoctorResponse doctorDTO = new NearByDoctorResponse();
+                        doctorDTO.setId(doc.getUserId());
+                        doctorDTO.setFirst_name(doc.getFirstName());
+                        doctorDTO.setLast_name(doc.getLastName());
+                        doctorDTO.setHospital_id(doc.getHospitalId());
+                        doctorDTO.setHospital_name(doc.getClinicName());
+                        doctorDTO.setPhoto(photo);
+                        doctorDTO.setConsultation_fees(consultationFees);
+
+                        doctors.add(doctorDTO);
+                    }
+                    return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                            Constants.SUCCESS_CODE,
+                            Constants.SUCCESS_CODE,
+                            messageSource.getMessage(Constants.NEARBY_DOCTOR_RETRIEVED,null,locale),
+                            doctors
+                    ));
+                } else {
+                    return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                            Constants.SUCCESS_CODE,
+                            Constants.SUCCESS_CODE,
+                            messageSource.getMessage(Constants.NEARBY_DOCTOR_LIST_FOUND,null,locale),
+                            new ArrayList<>()
+                    ));
+                }
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.HOSPITAL_DATA_NOT_FOUND,null,locale),
+                        new ArrayList<>()
+                ));
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.NO_RECORD_FOUND_CODE,
+                    messageSource.getMessage(Constants.LAT_LONG_NOT_FOUND,null,locale),
+                    new ArrayList<>()
+            ));
+        }
+    }
+
+    public ResponseEntity<?> getAllCategoriesList(Locale locale) {
+        List<CategoriesDto> list = new ArrayList<>();
+        List<HealthTipCategoryMaster> categoryMasters = healthTipCategoryMasterRepository.findAll();
+        for(HealthTipCategoryMaster master:categoryMasters){
+            String name = locale.getLanguage().equalsIgnoreCase("en")? master.getName() : master.getNameSl();
+            list.add(new CategoriesDto(master.getCategoryId(),name));
+        }
+        if(list.size()>0){
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.CATEGORIES_LIST_RETRIEVED,null,locale),
+                    list
+            ));
+        }else {
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.NO_CATEGORIES_LIST_FOUND,null,locale),
+                    new ArrayList<>()
+            ));
+        }
+    }
 }

@@ -12,5 +12,6 @@ public enum UserType {
     Nurse,
     Pharmacy,
     Agentuser,
-    Marketing
+    Marketing,
+    Hospital
 }

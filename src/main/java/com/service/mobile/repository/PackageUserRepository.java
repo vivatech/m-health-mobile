@@ -13,4 +13,7 @@ public interface PackageUserRepository extends JpaRepository<PackageUser, Intege
 
     @Query("Select u from PackageUser u where u.user.userId = ?1 and u.isExpire = ?2 order by u.id desc")
     List<PackageUser> getActivePackageDetail(Integer userId, YesNo expired, Pageable pageable);
+
+    @Query("Select u from PackageUser u where u.user.userId = ?1 and u.packageInfo.packageId = ?2")
+    List<PackageUser> findByUserIdAndPackageId(Integer userId, Integer packageId);
 }
