@@ -575,32 +575,33 @@ public class PatientService {
         Users user = usersRepository.findById(userId).orElse(null);
         float totalMoney = (user != null) ? user.getTotalMoney() : 0;
 
-        List<HealthTipCategoryMaster> categories = healthTipCategoryMasterRepository.findHealthtipPackages(name, userId);
+        //TODO check this also and make the dto usable
+//        List<HealthTipCategoryMaster> categories = healthTipCategoryMasterRepository.findHealthtipPackages(name, userId);
 
-        List<HealthtipPackageDTO> packageData = new ArrayList<>();
-        if (categories != null && !categories.isEmpty()) {
-            double maxFee = healthTipPackageRepository.findMaxPackagePrice().orElse(100.0);
-            GlobalConfiguration waafiPaymentRate = globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE");
-            Double paymentRate = (waafiPaymentRate!=null && waafiPaymentRate.getValue()!=null)?
-                    Float.valueOf(waafiPaymentRate.getValue()):0.0;
-
-            for (HealthTipCategoryMaster category : categories) {
-                HealthTipPackageUser userPackage = healthTipPackageUserRepository.findActivePackageForUser(userId, category.getCategoryId());
-                boolean isPurchased = (userPackage != null);
-
-                String image = (category.getPhoto() != null && !category.getPhoto().isEmpty()) ?
-                        category.getPhoto() : "/uploaded_file/view-healthtip.png";
-                //TODO make this dto properly
-                HealthtipPackageDTO packageDTO = new HealthtipPackageDTO(category, totalMoney, maxFee, paymentRate, image, isPurchased, userPackage);
-                packageData.add(packageDTO);
-            }
-        }
-        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                Constants.SUCCESS_CODE,
-                Constants.SUCCESS_CODE,
-                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
-                packageData
-        ));
+//        List<HealthtipPackageDTO> packageData = new ArrayList<>();
+//        if (categories != null && !categories.isEmpty()) {
+//            double maxFee = healthTipPackageRepository.findMaxPackagePrice().orElse(100.0);
+//            GlobalConfiguration waafiPaymentRate = globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE");
+//            Double paymentRate = (waafiPaymentRate!=null && waafiPaymentRate.getValue()!=null)?
+//                    Float.valueOf(waafiPaymentRate.getValue()):0.0;
+//
+//            for (HealthTipCategoryMaster category : categories) {
+//                HealthTipPackageUser userPackage = healthTipPackageUserRepository.findActivePackageForUser(userId, category.getCategoryId());
+//                boolean isPurchased = (userPackage != null);
+//
+//                String image = (category.getPhoto() != null && !category.getPhoto().isEmpty()) ?
+//                        category.getPhoto() : "/uploaded_file/view-healthtip.png";
+//                HealthtipPackageDTO packageDTO = new HealthtipPackageDTO(category, totalMoney, maxFee, paymentRate, image, isPurchased, userPackage);
+//                packageData.add(packageDTO);
+//            }
+//        }
+//        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+//                Constants.SUCCESS_CODE,
+//                Constants.SUCCESS_CODE,
+//                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+//                packageData
+//        ));
+        return null;
     }
 
     public ResponseEntity<?> getBalance(Locale locale, Integer userId) {

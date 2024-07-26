@@ -2,6 +2,7 @@ package com.service.mobile.controllers;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.dto.DoctorRattingDTO;
+import com.service.mobile.dto.request.ListSupportTicketsRequest;
 import com.service.mobile.dto.request.MobileReleaseRequest;
 import com.service.mobile.dto.request.NearByDoctorRequest;
 import com.service.mobile.dto.request.UpdatePictureRequest;
@@ -43,6 +44,9 @@ public class SiteController {
 
     @Autowired
     private DoctorService doctorService;
+
+    @Autowired
+    private TicketService ticketService;
 
     @PostMapping("/mobile-release")
     public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
@@ -185,5 +189,12 @@ public class SiteController {
     public ResponseEntity<?> getAllCategoriesList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale) {
         return publicService.getAllCategoriesList(locale);
+    }
+
+    @GetMapping("/list-support-tickets")
+    public ResponseEntity<?> listSupportTickets(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale,
+                                                @RequestBody ListSupportTicketsRequest request) {
+        return ticketService.listSupportTickets(request,locale);
     }
 }

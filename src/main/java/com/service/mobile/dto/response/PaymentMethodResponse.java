@@ -24,8 +24,6 @@ public class PaymentMethodResponse {
     public static class Option {
         private String value;
         private String title;
-
-        // Constructors, Getters and Setters
     }
 
 }

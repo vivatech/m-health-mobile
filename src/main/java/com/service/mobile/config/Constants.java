@@ -122,4 +122,17 @@ public class Constants {
     public static final String FILE_DELETED_SUCCESSFULLY = "app.file.deleted.successfully";
     public static final String FILE_COULD_NOT_BE_DELETED = "app.file.could.not.be.deleted";
     public static final String FILE_NOT_FOUND = "app.file.not.found";
+    public static final String LAB_CATEGORY_RETRIEVED = "app.lab.category.retrieved";
+    public static final String NO_LAB_CATEGORY_NOT_FOUND = "app.no.lab.category.not.found";
+    public static final String LAB_SUB_CATEGORY_RETRIEVED = "app.lab.sub.category.retrieved";
+    public static final String NO_LAB_SUB_CATEGORY_NOT_FOUND = "app.no.lab.sub.category.not.found";
+    public static final String RECORD_ALREADY_EXISTS = "app.record.already.exists";
+    public static final String LAB_CONSULTATION_ID_IS_REQUIRED = "app.lab.consultation.id.required";
+    public static final String RECORD_DELETED = "app.record.deleted";
+    public static final String LAB_FOUND_SUCCESSFULLY = "app.lab.found.successfully";
+    public static final String LAB_ID_REQUIRED = "app.lab.id.required";
+    public static final String REPORT_ID_REQUIRED = "app.report.id.required";
+    public static final String NO_LAB_ORDER_FOUND = "app.no.lab.order.found";
+    public static final String LAB_ORDER_FOUND_SUCCESSFULLY = "app.lab.order.found.successfully";
+    public static final String SUPPORT_TICKET_FOUND_SUCCESSFULLY = "app.support.ticket.found.successfully";
 }

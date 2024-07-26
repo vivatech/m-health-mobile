@@ -12,7 +12,7 @@ public interface UserLocationRepository extends JpaRepository<UserLocation, Inte
     @Query("Select u from UserLocation u where u.user.userId = ?1")
     Optional<UserLocation> findByUserId(Integer userId);
 
-    @Query("SELECT ua FROM UsersAddress ua WHERE ua.latitude BETWEEN :minLat AND :maxLat AND ua.longitude BETWEEN :minLng AND :maxLng AND ROUND((6371 * acos(cos(radians(:lat)) * cos(radians(ua.latitude)) * cos(radians(ua.longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(ua.latitude)))), 2) <= :range")
+    @Query("SELECT ua FROM UserLocation ua WHERE ua.latitude BETWEEN :minLat AND :maxLat AND ua.longitude BETWEEN :minLng AND :maxLng AND ROUND((6371 * acos(cos(radians(:lat)) * cos(radians(ua.latitude)) * cos(radians(ua.longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(ua.latitude)))), 2) <= :range")
     List<UserLocation> findWithinRadius(@Param("minLat") double minLat,@Param("maxLat") double maxLat,
                                         @Param("minLng") double minLng,@Param("maxLng") double maxLng,
                                         @Param("lat") double lat,@Param("lng") double lng,@Param("range") double range);

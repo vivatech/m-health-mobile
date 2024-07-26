@@ -6,6 +6,7 @@ import com.service.mobile.dto.OfferInformationDTO;
 import com.service.mobile.dto.dto.*;
 import com.service.mobile.dto.enums.*;
 import com.service.mobile.dto.request.EditProfileRequest;
+import com.service.mobile.dto.request.ListSupportTicketsRequest;
 import com.service.mobile.dto.request.NearByDoctorRequest;
 import com.service.mobile.dto.request.ThankYouRequest;
 import com.service.mobile.dto.response.*;
@@ -66,6 +67,9 @@ public class PublicService {
     @Value("${app.currency.symbol.fdj}")
     private String currencySymbolFdj;
 
+    @Value("${app.currency.symbol.slsh}")
+    private String currencySymbolSLSH;
+
     @Value("${app.currency.symbol}")
     private String currencySymbol;
 
@@ -108,6 +112,12 @@ public class PublicService {
     private ConsultationRatingRepository consultationRatingRepository;
     @Autowired
     private HealthTipCategoryMasterRepository healthTipCategoryMasterRepository;
+    @Autowired
+    private LabCategoryMasterRepository labCategoryMasterRepository;
+    @Autowired
+    private LabPriceRepository labPriceRepository;
+    @Autowired
+    private LabSubCategoryMasterRepository labSubCategoryMasterRepository;
 
     public List<Country> findAllCountry(){
         return countryRepository.findAll();
@@ -529,8 +539,20 @@ public class PublicService {
                 Constants.SUCCESS_CODE,
                 Constants.SUCCESS_CODE,
                 messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
-                paymentMethods
+                currencyOptions
         ));
+    }
+
+    public List<PaymentMethodResponse.Option> getPaymentMethod() {
+        List<PaymentMethodResponse.Option> currencyOptions = new ArrayList<>();
+        for (Map.Entry<String, String> entry : paymentOptionConfig.getCurrency().entrySet()) {
+            PaymentMethodResponse.Option option = new PaymentMethodResponse.Option();
+            option.setValue(entry.getKey());
+            option.setTitle(entry.getValue().toLowerCase());
+            currencyOptions.add(option);
+        }
+
+        return currencyOptions;
     }
 
     public Consultation checkRealTimeBooking(Integer slotId, LocalDate date, Integer doctorId) {
@@ -651,7 +673,7 @@ public class PublicService {
         Orders getType = ordersRepository.findById(request.getOrder_id()).orElse(null);
 
         if (getType != null && getType.getCaseId() != null) {
-            Orders model = ordersRepository.findDetailedOrder(request.getOrder_id());
+            Orders model = ordersRepository.findById(request.getOrder_id()).orElse(null);
 
             if (model != null) {
                 String photo = getProfilePhoto(model);
@@ -682,7 +704,7 @@ public class PublicService {
                 ));
             }
         } else {
-            Orders model = ordersRepository.findBasicOrder(request.getOrder_id());
+            Orders model = ordersRepository.findById(request.getOrder_id()).orElse(null);
             if (model != null) {
                 data.setPackage_name(model.getPackageId().getPackageName());
                 //todo manage this error
@@ -916,4 +938,104 @@ public class PublicService {
             ));
         }
     }
+
+    public List<LabCategoryMaster> getAssignedLabsCategory() {
+        return labCategoryMasterRepository.findActiveLabCategoryByLabPrice(CategoryStatus.Active);
+    }
+
+    public List<GetLabDto> getLabInfo(List<Integer> labcatIds) {
+        List<GetLabDto> response = new ArrayList<>();
+        List<LabPrice> labPrices = labPriceRepository.findBySubCatIdAndUserTypeAndStatus(labcatIds,UserType.Lab,Status.A);
+        for(LabPrice price:labPrices){
+            GetLabDto temp = new GetLabDto();
+            temp.setUser_id(price.getLabUser().getUserId());
+            temp.setClinic_name(price.getLabUser().getClinicName());
+            response.add(temp);
+        }
+        return response;
+    }
+
+    public BillInfoDto getBillInfo(Integer labId, List<Integer> reportId, String collectionMode, String currencyOption) {
+        Integer paymentRate = 1;
+        String currencySym = currencySymbolFdj; // Adjust this to your actual symbol
+        if (currencyOption.equalsIgnoreCase("slsh")) {
+            GlobalConfiguration configuration = globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE");
+            paymentRate = Integer.parseInt(configuration.getValue());
+            currencySym = currencySymbolSLSH; // Adjust this to your actual symbol
+        }
+
+        Users lab = usersRepository.findById(labId).orElse(new Users());
+        LabDetailDto labDetail = new LabDetailDto(labId, lab.getClinicName(), lab.getHospitalAddress());
+
+        String labVisitOnly = "";
+        Float diagnosisCost = 0.0f;
+        Boolean isHomeVisit = true;
+        String onlyLabVisitMsg = null;
+        String onlyLabVisitMsgApi = null;
+        Map<Integer, String> reportName = new HashMap<>();
+        if (!reportId.isEmpty()) {
+            for (Integer subCatId : reportId) {
+                List<LabPrice> labPrices = labPriceRepository.findByLabIdAndSubCatId(labId, subCatId);
+                for (LabPrice p : labPrices) {
+                    diagnosisCost += (p.getLabPrice()) * paymentRate;
+                }
+            }
+
+            List<LabSubCategoryMaster> subCategory = labSubCategoryMasterRepository.findByIdinList(reportId);
+            reportName = subCategory.stream()
+                    .collect(Collectors.toMap(LabSubCategoryMaster::getSubCatId, LabSubCategoryMaster::getSubCatName));
+
+            List<ReportSubCatDto> dtos = checkHomeVisit(reportId);
+            labVisitOnly = dtos.stream()
+                    .map(ReportSubCatDto::getSub_cat_name)
+                    .collect(Collectors.joining(","));
+
+            if (!labVisitOnly.isEmpty()) {
+                isHomeVisit = false;
+                onlyLabVisitMsg = "Only lab visit available for: " + labVisitOnly;
+                onlyLabVisitMsgApi = onlyLabVisitMsg;
+            }
+        }
+
+        Float collectionCharge = 0.0f;
+        if ("Home_Visit".equalsIgnoreCase(collectionMode)) {
+            collectionCharge = 50.0f * paymentRate;
+        } else if ("Lab_Visit".equalsIgnoreCase(collectionMode)) {
+            collectionCharge = 0.0f;
+        } else {
+            collectionCharge = (onlyLabVisitMsg != null) ? 0.0f : 50.0f * paymentRate;
+        }
+
+        Float totalPrice = diagnosisCost + collectionCharge;
+
+        BillInfoDto response = new BillInfoDto(
+                lab.getClinicName(),
+                labDetail,
+                labVisitOnly,
+                isHomeVisit,
+                onlyLabVisitMsg,
+                onlyLabVisitMsgApi,
+                currencySym + " " + String.format("%.2f", diagnosisCost),
+                currencySym + " " + String.format("%.2f", collectionCharge),
+                currencySym + " " + String.format("%.2f", totalPrice),
+                reportName,
+                null,
+                diagnosisCost,
+                collectionCharge,
+                totalPrice
+        );
+
+        return response;
+    }
+
+    public List<ReportSubCatDto> checkHomeVisit(List<Integer> reportId) {
+        List<LabSubCategoryMaster> subCategorys = labSubCategoryMasterRepository
+                .findByIdinListAndHomeConsultant(reportId,YesNo.No);
+        List<ReportSubCatDto> response = new ArrayList<>();
+        for(LabSubCategoryMaster labSubCategoryMaster:subCategorys){
+            response.add(new ReportSubCatDto(labSubCategoryMaster.getSubCatId(),labSubCategoryMaster.getSubCatName()));
+        }
+        return response;
+    }
+
 }

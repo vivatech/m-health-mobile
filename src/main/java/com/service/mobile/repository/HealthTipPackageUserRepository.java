@@ -17,7 +17,7 @@ public interface HealthTipPackageUserRepository extends JpaRepository<HealthTipP
     @Query("Select u.id from HealthTipPackageUser u where u.user.userId = ?1 and u.isExpire = ?2")
     List<Integer> getIdByUserIdAndExpiery(Integer userId, YesNo yesNo);
 
-    @Query("SELECT p FROM HealthTipPackageUser p WHERE p.userId = :?1 AND p.healthtipPackageId = ?2 AND p.isExpire = 'No'")
+    @Query("SELECT p FROM HealthTipPackageUser p WHERE p.user.userId = ?1 AND p.healthTipPackage.packageId = ?2 AND p.isExpire = 'No'")
     HealthTipPackageUser findActivePackageForUser(Integer userId, Integer categoryId);
 
     @Query("Select u from HealthTipPackageUser u where u.id = ?1 and u.isExpire = ?2")

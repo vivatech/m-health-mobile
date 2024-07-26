@@ -11,6 +11,6 @@ import java.util.List;
 public interface DoctorAvailabilityRepository extends JpaRepository<DoctorAvailability, Integer> {
     List<DoctorAvailability> findByDoctorId(Users doctor);
 
-    @Query("Select u from DoctorAvailability u where u.slotId.slotId = ?1 and u.doctorId.userType = ?2")
+    @Query("Select u from DoctorAvailability u where u.slotId.slotId = ?1 and u.doctorId.type = ?2")
     List<DoctorAvailability> findBySlotIdAndUserType(Integer slotId, UserType userType);
 }
