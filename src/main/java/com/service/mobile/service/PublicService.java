@@ -5,12 +5,10 @@ import com.service.mobile.config.PaymentOptionConfig;
 import com.service.mobile.dto.OfferInformationDTO;
 import com.service.mobile.dto.dto.*;
 import com.service.mobile.dto.enums.*;
-import com.service.mobile.dto.request.EditProfileRequest;
-import com.service.mobile.dto.request.ListSupportTicketsRequest;
-import com.service.mobile.dto.request.NearByDoctorRequest;
-import com.service.mobile.dto.request.ThankYouRequest;
+import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.*;
 import com.service.mobile.model.*;
+import com.service.mobile.model.State;
 import com.service.mobile.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,11 +21,13 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -79,6 +79,9 @@ public class PublicService {
     @Value("${app.location.radius}")
     private Float locationRadius;
 
+    @Value("${app.log.path}")
+    private Float logPath;
+
     @Autowired
     private UserLocationRepository userLocationRepository;
 
@@ -118,6 +121,10 @@ public class PublicService {
     private LabPriceRepository labPriceRepository;
     @Autowired
     private LabSubCategoryMasterRepository labSubCategoryMasterRepository;
+    @Autowired
+    private PartnerNurseRepository partnerNurseRepository;
+    @Autowired
+    private NurseServiceStateRepository nurseServiceStateRepository;
 
     public List<Country> findAllCountry(){
         return countryRepository.findAll();
@@ -1038,4 +1045,113 @@ public class PublicService {
         return response;
     }
 
+    public String getTotalConsultationAmount(Integer caseId) {
+        Orders orders = ordersRepository.findByCaseId(caseId);
+        String currency = (orders.getCurrency()!=null && !orders.getCurrency().isEmpty())?orders.getCurrency():currencySymbolFdj;
+        Float amount = (orders.getCurrencyAmount()!=null)?orders.getCurrencyAmount():orders.getAmount();
+        return currency+" "+amount;
+    }
+
+    public List<AvailableNursesMapDto> availableNursesMap() {
+        /*TODO make this code
+        *
+        * */
+        return new ArrayList<>();
+    }
+
+    //todo check this function
+    public void sendNurseOnDemandMsg(SendNurseOnDemandMsgRequest request, String scenario, UserType userType,Locale locale) {
+//        Users userModel = null;
+//        PartnerNurse nurseModel = null;
+//        if(request.getPatient_id()!=null && request.getPatient_id()!=0){
+//            userModel = usersRepository.findById(request.getPatient_id()).orElse(null);
+//        }
+//        if(request.getNurse_id()!=null && request.getNurse_id()!=0){
+//            nurseModel = partnerNurseRepository.findById(request.getNurse_id()).orElse(null);
+//        }
+//        String prevLang  = locale.getLanguage();
+//
+//        String patientName = (userModel != null) ? userModel.getFirstName() + " " + userModel.getLastName():"";
+//
+//        if (userType == UserType.Patient && userModel.getNotificationLanguage() != null && !userModel.getNotificationLanguage().isEmpty()) {
+//            locale = new Locale(userModel.getNotificationLanguage());
+//        } else {
+//            locale = new Locale("sl");
+//        }
+//
+//        if (userType == UserType.NursePartner) {
+//            locale = new Locale("sl");
+//        }
+//
+//        String getReminderMsgData = scenario;
+//
+//        String getReminderMsg = messageSource.getMessage(scenario, null, locale);
+//        NotificationData notificationData = new NotificationData();
+//        SmsData smsData = new SmsData();
+//
+//        if (scenario.equalsIgnoreCase("NURSE_NOT_FOUND_PATIENT_NOD")) {
+//
+//            getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", userModel.getFirstName() + " " + userModel.getLastName());
+//
+//            notificationData.setFromId(request.getNurse_id());
+//            notificationData.setToId(request.getPatient_id());
+//            notificationData.setCaseId(request.getId());
+//
+//            smsData.setFromId(request.getNurse_id());
+//            smsData.setToId(request.getPatient_id());
+//            smsData.setSmsFor(scenario);
+//            smsData.setCaseId(request.getId());
+//            smsData.setUserType(UserType.Patient.name());
+//        }
+//
+//        Notifications.createNotification(notificationData, getReminderMsg);
+//        SmsLog.createSmsLog(smsData, getReminderMsg);
+//
+//        LocaleContextHolder.setLocale(new Locale(prevLang));
+//        return ResponseEntity.ok().body("Notification and SMS sent successfully");
+
+
+    }
+
+    public void confirmAck(NodAckRequest data) {
+        String type = data.getType();
+        String searchId = data.getSearch_id();
+        int reqId = data.getReqId();
+
+        if ("service_request".equals(type) && reqId == 2) {
+            List<NurseServiceState> stateModel = nurseServiceStateRepository.findBySearchId(searchId);
+            for(NurseServiceState s:stateModel){
+                s.setConfirmAck(ConfirmAck.YES);
+            }
+            nurseServiceStateRepository.saveAll(stateModel);
+            createTransactionLog("NursePartnerService", "confirmAck", "NOD web acknowledgement.", "NURSEWEBACK", data.toString());
+        }
+    }
+
+    public void createTransactionLog(String controllerName, String methodName, String returnType, String data, String handlingType) {
+        String log = generateLogMessage(controllerName, methodName, "OUTPUT", returnType, data, handlingType);
+        writeLogToFile(log);
+    }
+
+    private String generateLogMessage(String controllerName, String methodName, String transType, String returnType, String data, String handlingType) {
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime dateTime = LocalDateTime.ofInstant(now, ZoneId.systemDefault());
+        String date = dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + dateTime.format(DateTimeFormatter.ofPattern("XXX"));
+
+        return String.format("%s [%s] [TYPE : %s] [METHOD NAME : %s] %s: %s : %s%n",
+                handlingType, date, transType, methodName, controllerName, returnType, data);
+    }
+
+    private void writeLogToFile(String log) {
+        File logDir = new File(logPath + "/logs");
+        if (!logDir.exists()) {
+            logDir.mkdirs();
+        }
+        File logFile = new File(logDir, "transaction.log");
+        try (FileWriter writer = new FileWriter(logFile, true)) {
+            writer.write(log);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

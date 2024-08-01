@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.Locale;
 
 @RestController
@@ -74,5 +75,12 @@ public class PatientLabController {
     public ResponseEntity<?> getLabOrder(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                                          @RequestBody GetLabOrderRequest request) {
         return patientLabService.getLabOrder(request,locale);
+    }
+
+    @PostMapping("/get-lab-reports-by-caseid")
+    public ResponseEntity<?> getLabReportsByCaseId(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                                Locale locale,
+                                                @RequestBody GetSingleRelativeProfileRequest request) throws IOException {
+        return patientLabService.getLabReportsByCaseId(locale,request);
     }
 }

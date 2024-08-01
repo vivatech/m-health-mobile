@@ -34,6 +34,8 @@ import java.util.Locale;
 @Slf4j
 public class PatientService {
     @Autowired
+    private SpecializationRepository specializationRepository;
+    @Autowired
     private ConsultationRatingRepository consultationRatingRepository;
     @Autowired
     private HealthTipRepository healthTipRepository;
@@ -837,5 +839,70 @@ public class PatientService {
         }
         Response response = new Response();
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getSloats(Locale locale, GetSloatsRequest request,String type) {
+        Consultation consultation = consultationRepository.findById(request.getCase_id()).orElse(null);
+        if(consultation!=null){
+
+            SlotMaster slots = consultation.getSlotId();
+
+            GetSloatsResponse response = new GetSloatsResponse();
+            if(type.equalsIgnoreCase("doctor")){
+                Users users= consultation.getPatientId();
+                String photo = "";
+                if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
+                    photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getPatientId().getUserId() + "/" + users.getProfilePicture();
+                }
+
+                response.setSlot_day(slots.getSlotDay());
+                response.setSlot_time(slots.getSlotTime());
+                response.setSlot_type(slots.getSlotType());
+                response.setConsultation_date(consultation.getConsultationDate());
+                response.setTo(consultation.getPatientId().getUserId());
+                response.setName(users.getFirstName() + " " + users.getLastName());
+                response.setStatus(consultation.getRequestType());
+                response.setConsultation_type(consultation.getConsultationType());
+                response.setAdded_type(consultation.getAddedType());
+                response.setSpecialization("");
+                response.setProfile_picture(photo);
+            }else {
+                Users users= consultation.getDoctorId();
+                String specializationName = "";
+                if(users.getSpecializationId()!=null && users.getSpecializationId()!=0){
+                    Specialization specialization = specializationRepository.findById(users.getSpecializationId()).orElse(null);
+                    if(specialization!=null){specializationName = specialization.getName();}
+                }
+                String photo = "";
+                if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
+                    photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + users.getProfilePicture();
+                }
+
+                response.setSlot_day(slots.getSlotDay());
+                response.setSlot_time(slots.getSlotTime());
+                response.setSlot_type(slots.getSlotType());
+                response.setConsultation_date(consultation.getConsultationDate());
+                response.setTo(consultation.getPatientId().getUserId());
+                response.setName(users.getFirstName() + " " + users.getLastName());
+                response.setStatus(consultation.getRequestType());
+                response.setConsultation_type(consultation.getConsultationType());
+                response.setAdded_type(consultation.getAddedType());
+                response.setSpecialization(specializationName);
+                response.setProfile_picture(photo);
+            }
+
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.SLOT_DETAILS_FOUND,null,locale),
+                    response
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.NO_RECORD_FOUND_CODE,
+                    messageSource.getMessage(Constants.NO_DETAILS_FOUND,null,locale)
+            ));
+        }
     }
 }

@@ -135,4 +135,27 @@ public class Constants {
     public static final String NO_LAB_ORDER_FOUND = "app.no.lab.order.found";
     public static final String LAB_ORDER_FOUND_SUCCESSFULLY = "app.lab.order.found.successfully";
     public static final String SUPPORT_TICKET_FOUND_SUCCESSFULLY = "app.support.ticket.found.successfully";
+    public static final String SUPPORT_TICKET_CREATED_SUCCESSFULLY = "app.support.ticket.created.successfully";
+    public static final String ATTACH_FILE_ALLOWED_ONLY = "app.attach.file.allowed.only";
+    public static final String REPLIED_MSG_GET_SUCCESS = "app.replied.msg.get.success";
+    public static final String SUPPORT_TICKET_REPLYED_SUCCESS = "app.support.ticket.reply.success";
+    public static final String SUPPORT_TICKET_NOT_FOUND = "app.support.ticket.not.found";
+    public static final String SUPPORT_TICKET_UPDATED_SUCCESS = "app.support.ticket.updated.success";
+    public static final String ACTIVE_SLOT_TIME_NOT_FOUND = "app.active.slot.time.not.found";
+    public static final String SOMETHING_WENT_WRONG = "app.something.went.wrong";
+    public static final String RECENT_ORDERS_FOUND_SUCCESSFULLY = "app.recent.orders.found.successfully";
+    public static final String DATA_RETRIEVED = "app.data.retrieved";
+    public static final String GENRAL_PRACTITIONER = "app.genral.preactitioner";
+    public static final String PROFILE_FETCH_SUCCESSFULLY = "app.profile.fetch.successfully";
+    public static final String REVIEW_FOUND_SUCCESSFULLY = "app.review.found.successfully";
+    public static final String NO_LAB_REPORT_FOUND = "app.no.lab.report.found";
+    public static final String LAB_REPORT_FOUND_SUCCESSFULLY = "app.lab.report.found.successfully";
+    public static final String NO_DETAILS_FOUND = "app.no.details.found";
+    public static final String SLOT_DETAILS_FOUND = "app.slot.details";
+    public static final String VIDEO_HISTORY_SUCCESS = "app.video.history.success";
+    public static final String NURSE_SERVICE_FETCHED = "app.nurse.service.fetched";
+    public static final String REQUEST_PARAM_MISSING = "app.request.param.missing";
+    public static final String RECORD_FETCHED = "app.record.fetched";
+    public static final String ORDERS_FETCH_SUCCESSFULLY = "app.fetch.successfully";
+    public static final String ORDER_NOT_FOUND = "app.order.not.found";
 }

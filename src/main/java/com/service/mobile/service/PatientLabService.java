@@ -2,8 +2,10 @@ package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.dto.*;
+import com.service.mobile.dto.enums.AddedType;
 import com.service.mobile.dto.enums.OrderStatus;
 import com.service.mobile.dto.enums.RequestType;
+import com.service.mobile.dto.enums.Status;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.*;
 import com.service.mobile.model.*;
@@ -20,7 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -29,6 +30,10 @@ import java.util.Map;
 @Service
 @Slf4j
 public class PatientLabService {
+    @Autowired
+    private LabPriceRepository labPriceRepository;
+    @Autowired
+    private LabReportRequestRepository labReportRequestRepository;
     @Autowired
     private LabRefundRequestRepository labRefundRequestRepository;
     @Autowired
@@ -64,7 +69,7 @@ public class PatientLabService {
 
     public ResponseEntity<?> labRequest(LabRequestDto request, Locale locale) {
         if(request.getName()==null){request.setName("");}
-        List<Consultation> consultations = new ArrayList<>();
+        Page<Consultation> consultations = null;
         Pageable pageable= PageRequest.of(request.getPage(), 5);
         if(request.getDate()!=null){
             consultations = consultationRepository
@@ -73,7 +78,7 @@ public class PatientLabService {
             consultations = consultationRepository
                     .findByPatientReportSuggestedAndRequestTypeAndName(request.getUser_id(),"1", RequestType.Book,request.getName(),pageable);
         }
-        if(consultations.size()>0){
+        if(consultations!=null && consultations.getContent().size()>0){
             //TODO make remaing logic
 //            for(Consultation consultation:consultations){
 //                if(consultation.getL)
@@ -472,6 +477,137 @@ public class PatientLabService {
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.NO_LAB_ORDER_FOUND,null,locale)
+            ));
+        }
+    }
+
+    public ResponseEntity<?> getLabReportsByCaseId(Locale locale, GetSingleRelativeProfileRequest request) {
+        List<LabConsultation> consultations = new ArrayList<>();
+        if(request.getCategory_id()!=null && request.getCategory_id()!=0){
+            if(request.getSubcategory_id()!=null && request.getSubcategory_id()!=0){
+                consultations = labConsultationRepository.findByPatientIdCaseIdCategoryIdSubCategoryId(
+                        request.getUser_id(),request.getCase_id(),
+                        request.getCategory_id(),request.getSubcategory_id()
+                );
+            }else{
+                consultations = labConsultationRepository.findByPatientIdCaseIdCategoryId(
+                        request.getUser_id(),request.getCase_id(),
+                        request.getCategory_id()
+                );
+            }
+        }else{
+            if(request.getSubcategory_id()!=null && request.getSubcategory_id()!=0){
+                consultations = labConsultationRepository.findByPatientIdCaseIdSubCategoryId(
+                        request.getUser_id(),request.getCase_id(),
+                        request.getSubcategory_id()
+                );
+            }else{
+                consultations = labConsultationRepository.findByPatientIdCaseId(
+                        request.getUser_id(),request.getCase_id()
+                );
+            }
+        }
+
+        Consultation consultation = consultationRepository.findById(request.getCase_id()).orElse(null);
+        List<LabReportsByCaseIdReportResponse> reports = new ArrayList<>();
+        if(!consultations.isEmpty()){
+            for(LabConsultation labc:consultations){
+                List<LabReportDoc> reportDocs = new ArrayList<>();
+                if(labc.getLabOrdersId()!=null){
+                    reportDocs = labReportDocRepository.findByCaseIdAndStatusAndLabOrdersId(
+                            labc.getCaseId().getCaseId(), Status.A,labc.getLabOrdersId().getId());
+                }else{
+                    reportDocs = labReportDocRepository.findByCaseIdAndStatus(
+                            labc.getCaseId().getCaseId(), Status.A);
+                }
+                List<LabReportRequest> labReportRequest = labReportRequestRepository.findByLabConsultationId(labc.getLabConsultId());
+                List<DocumentDto> documentDtos = new ArrayList<>();
+                List<LabReportRequestDto> labReportRequestDtos = new ArrayList<>();
+                for(LabReportDoc lrd:reportDocs){
+                    DocumentDto temp = new DocumentDto();
+
+                    temp.setReport_doc_id(lrd.getId());
+                    temp.setDoc_name(baseUrl+"/uploaded_file/lab/"+lrd.getCaseId()+"/"+lrd.getLabReportDocName());
+                    temp.setDoc_display_name(lrd.getLabReportDocDisplayName());
+                    temp.setReport_doc_type(lrd.getLabReportDocType());
+                    temp.setAdded_type(lrd.getAddedType());
+                    temp.setAdded_by(lrd.getAddedBy());
+                    temp.setCreated_date(lrd.getCreatedAt().toLocalDate());
+                    temp.setCreated_time(lrd.getCreatedAt().toLocalTime());
+
+                    documentDtos.add(temp);
+                }
+
+                for(LabReportRequest lrr:labReportRequest){
+                    LabReportRequestDto temp = new LabReportRequestDto();
+                    List<LabPrice> labPriceList = labPriceRepository.findByLabIdAndCatIdAndSubCatId(
+                            lrr.getLabId().getUserId(),
+                            labc.getCategoryId().getCatId(),
+                            labc.getSubCatId().getSubCatId()
+                    );
+                    LabPrice labPrice = null;
+                    for(LabPrice p:labPriceList){
+                        labPrice = p;
+                    }
+                    temp.setReq_id(lrr.getLabReportReqId());
+                    temp.setLab_id(lrr.getLabId().getUserId());
+                    temp.setLab_name(
+                            (lrr.getLabId().getClinicName()!=null
+                                    && !lrr.getLabId().getClinicName().isEmpty())?lrr.getLabId().getClinicName():
+                                    lrr.getLabId().getFirstName()+" "+lrr.getLabId().getLastName()
+                    );
+                    temp.setRequest_status(lrr.getLabReportReqStatus());
+                    temp.setPayment_status(lrr.getLabReportPaymentStatus());
+                    if(labPrice!=null){
+                        temp.setLab_price(labPrice.getLabPrice());
+                    }
+                    labReportRequestDtos.add(temp);
+                }
+
+                OrderStatus repStatus = OrderStatus.Pending;
+                if(labc.getLabOrdersId()!=null){
+                    repStatus = labc.getLabOrdersId().getPaymentStatus();
+                }
+
+                List<LabReportDoc> labReportDocs = labReportDocRepository.findByCaseIdAndAddedByAddedTypeAndStatus(
+                    request.getCase_id(),request.getUser_id(), AddedType.Patient,Status.A
+                );
+                String userStatus = (!labReportDocs.isEmpty())?"Patient":"Lab";
+
+                LabReportsByCaseIdReportResponse dto = new LabReportsByCaseIdReportResponse();
+                dto.setLab_consult_id(labc.getLabConsultId());
+                dto.setCase_id(labc.getCaseId().getCaseId());
+                dto.setCategory_name(labc.getCategoryId().getCatName());
+                dto.setCategory_id(labc.getCategoryId().getCatId());
+                dto.setSub_category_name(labc.getSubCatId().getSubCatName());
+                dto.setSubcategory_id(labc.getSubCatId().getSubCatId());
+                dto.setDoc_prescription(labc.getDoctorPrescription());
+                dto.setRep_status(repStatus);
+                dto.setUsr_status(userStatus);
+                dto.setDocuments(documentDtos);
+                dto.setLab_list(labReportRequestDtos);
+                dto.setCreated_date(labc.getLabConsultCreatedAt().toLocalDate());
+                dto.setCreated_time(labc.getLabConsultCreatedAt().toLocalTime());
+
+                reports.add(dto);
+            }
+            LabReportsByCaseIdResponse response = new LabReportsByCaseIdResponse();
+
+            response.setReports(reports);
+            response.setDoctor_name(consultation.getDoctorId().getFirstName()+" "+consultation.getDoctorId().getLastName());
+            response.setCase_id(consultation.getCaseId());
+            response.setConsultation_date(consultation.getConsultationDate());
+
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.LAB_REPORT_FOUND_SUCCESSFULLY,null,locale)
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.NO_LAB_REPORT_FOUND,null,locale)
             ));
         }
     }

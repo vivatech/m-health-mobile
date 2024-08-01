@@ -15,4 +15,7 @@ public interface LabPriceRepository extends JpaRepository<LabPrice, Integer> {
 
     @Query("Select u from LabPrice u where u.labUser.userId = ?1 and u.subCatId.subCatId = ?2")
     List<LabPrice> findByLabIdAndSubCatId(Integer labId, Integer subCatId);
+
+    @Query("Select u from LabPrice u where u.labUser.userId = ?1 and u.catId.catId = ?2 and u.subCatId.subCatId = ?3")
+    List<LabPrice> findByLabIdAndCatIdAndSubCatId(Integer userId, Integer catId, Integer subCatId);
 }

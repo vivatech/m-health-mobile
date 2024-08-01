@@ -2,12 +2,10 @@ package com.service.mobile.controllers;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.dto.DoctorRattingDTO;
-import com.service.mobile.dto.request.ListSupportTicketsRequest;
-import com.service.mobile.dto.request.MobileReleaseRequest;
-import com.service.mobile.dto.request.NearByDoctorRequest;
-import com.service.mobile.dto.request.UpdatePictureRequest;
+import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.NearByDoctorResponse;
 import com.service.mobile.dto.response.Response;
+import com.service.mobile.dto.response.ViewReplyMessageRequest;
 import com.service.mobile.model.Country;
 import com.service.mobile.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestHeader;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
@@ -191,10 +190,70 @@ public class SiteController {
         return publicService.getAllCategoriesList(locale);
     }
 
-    @GetMapping("/list-support-tickets")
+    @PostMapping("/list-support-tickets")
     public ResponseEntity<?> listSupportTickets(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                 @RequestBody ListSupportTicketsRequest request) {
         return ticketService.listSupportTickets(request,locale);
+    }
+
+    @PostMapping("/create-support-ticket")
+    public ResponseEntity<?> createSupportTicket(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale,
+                                                @ModelAttribute CreateSupportTicketsRequest request) throws IOException {
+        return ticketService.createSupportTicket(request,locale);
+    }
+
+    @PostMapping("/view-reply-message")
+    public ResponseEntity<?> viewReplyMessage(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale,
+                                                @RequestBody ViewReplyMessageRequest request) throws IOException {
+        return ticketService.viewReplyMessage(request,locale);
+    }
+
+    @PostMapping("/reply-support-ticket")
+    public ResponseEntity<?> replySupportTicket(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale,
+                                                @ModelAttribute ReplySupportTicketRequest request) throws IOException {
+        return ticketService.replySupportTicket(request,locale);
+    }
+
+    @PostMapping("/change-support-ticket-status")
+    public ResponseEntity<?> changeSupportTicketStatus(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale,
+                                                @RequestBody ChangeSupportTicketStatusRequest request) throws IOException {
+        return ticketService.changeSupportTicketStatus(request,locale);
+    }
+
+    @PostMapping("/check-on-going-consultation")
+    public ResponseEntity<?> checkOnGoingConsultation(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                               Locale locale,
+                                                @RequestParam(name = "user_id")Integer user_id) throws IOException {
+        return consultationService.checkOnGoingConsultation(user_id,locale);
+    }
+
+    @PostMapping("/consultations")
+    public ResponseEntity<?> consultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
+                                           @RequestHeader(name = "X-type") String type,
+                                           @RequestBody ConsultationsRequest request) {
+        return consultationService.consultations(request,type,locale);
+    }
+
+    @PostMapping("/search-consultations")
+    public ResponseEntity<?> searchConsultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
+                                           @RequestHeader(name = "X-type") String type,
+                                           @RequestBody ConsultationsRequest request) {
+        return consultationService.searchConsultations(request,type,locale);
+    }
+
+    @GetMapping("/app-banner")
+    public ResponseEntity<?> appBanner(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
+        return siteService.appBanner(locale);
+    }
+
+    @PostMapping("/get-video-attachment")
+    public ResponseEntity<?> getVideoAttachment(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
+                                                @RequestBody GetSloatsRequest request) {
+        return siteService.getVideoAttachment(locale,request);
     }
 }

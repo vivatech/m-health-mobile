@@ -21,7 +21,7 @@ public class LabReportRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "lab_report_req_id")
-    private int labReportReqId;
+    private Integer labReportReqId;
 
     @ManyToOne
     @JoinColumn(name = "lab_consult_id", referencedColumnName = "lab_consult_id", nullable = false)

@@ -143,6 +143,9 @@ public class Users {
     @Column(name = "passing_year")
     private Integer passingYear;
 
+    @Column(name = "specialization_id")
+    private Integer specializationId;
+
     @Column(name = "country_code")
     private String countryCode;
 
@@ -157,6 +160,15 @@ public class Users {
 
     @Column(name = "clinic_name")
     private String clinicName;
+
+    @Column(name = "doctor_classification")
+    private String doctorClassification;
+
+    @Column(name = "professional_identification_number")
+    private String professionalIdentificationNumber;
+
+    @Column(name = "extra_activities")
+    private String extraActivities;
 
     private LocalDate dob;
 

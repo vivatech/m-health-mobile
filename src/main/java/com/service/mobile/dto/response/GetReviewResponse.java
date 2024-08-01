@@ -1,0 +1,21 @@
+package com.service.mobile.dto.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Setter
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
+public class GetReviewResponse {
+    private String comment;
+    private String name;
+    private Float rating;
+    private LocalDateTime created_at;
+    private String file_url;
+    private Long total_count;
+}

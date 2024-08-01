@@ -2,20 +2,27 @@ package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.controllers.FileController;
+import com.service.mobile.dto.dto.CommentsDto;
 import com.service.mobile.dto.dto.ConsultationFees;
 import com.service.mobile.dto.dto.SearchDocResponse;
 import com.service.mobile.dto.dto.TransformDto;
 import com.service.mobile.dto.enums.FeeType;
 import com.service.mobile.dto.enums.UserType;
+import com.service.mobile.dto.request.GetReviewRequest;
 import com.service.mobile.dto.request.SearchDoctorRequest;
 import com.service.mobile.dto.response.CityResponse;
+import com.service.mobile.dto.response.GetReviewResponse;
 import com.service.mobile.dto.response.Response;
+import com.service.mobile.dto.response.ViewProfileResponse;
 import com.service.mobile.model.*;
 import com.service.mobile.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -54,6 +61,10 @@ public class DoctorService {
 
     @Autowired
     private DoctorAvailabilityRepository doctorAvailabilityRepository;
+
+    @Value("${app.base.url}")
+    private String baseUrl;
+
 
     public ResponseEntity<?> getDoctorCityList(Locale locale) {
         List<City> cities = usersRepository.getCitiesByUsertype(UserType.DOCTOR);
@@ -166,7 +177,7 @@ public class DoctorService {
                     docResponse.setHospital_name(user.getClinicName());
                 }
 
-                List<DoctorSpecialization> doctorSpecializationList = doctorSpecializationRepository.findByUserId(val);
+                List<DoctorSpecialization> doctorSpecializationList = doctorSpecializationRepository.findByUserId(val.getUserId());
                 if (!doctorSpecializationList.isEmpty()) {
                     List<String> specialities = new ArrayList<>();
                     for(DoctorSpecialization item : doctorSpecializationList) {
@@ -409,5 +420,150 @@ public class DoctorService {
     //TODO : make this api based on doctor-availability-list-latest
     public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, SearchDoctorRequest request) {
         return null;
+    }
+
+    public ResponseEntity<?> viewProfile(Locale locale,Integer doctorId) {
+        Users doctor = usersRepository.findById(doctorId).orElse(null);
+        if(doctor!=null){
+            String photo = "";
+            if(doctor.getProfilePicture()!=null && !doctor.getProfilePicture().isEmpty()){
+                photo = baseUrl + "uploaded_file/UserProfile/" + doctor.getUserId() + "/" + doctor.getProfilePicture();
+            }
+            List<DoctorSpecialization> specialization = doctorSpecializationRepository.findByUserId(doctor.getUserId());
+            List<Charges> charges = chargesRepository.findByUserId(doctor.getUserId());
+            Double raiting = consultationRatingRepository.sumRatingsByDoctorId(doctor.getUserId());
+            Long raitingCount = consultationRatingRepository.countApprovedRatingsByDoctorId(doctor.getUserId());
+            Double finalCount = (raitingCount!=null && raitingCount!=0)?raiting/raitingCount:0;
+            String specsFinalString = "";
+            if(doctor.getDoctorClassification()!=null &&
+                    doctor.getDoctorClassification().equalsIgnoreCase("general_practitioner")){
+                    specsFinalString = messageSource.getMessage(Constants.GENRAL_PRACTITIONER,null,locale);
+            }else{
+                for(DoctorSpecialization docSpec :specialization){
+                    specsFinalString = specsFinalString+ docSpec.getSpecializationId().getName()+",";
+                }
+            }
+            String[] languageIds  = doctor.getLanguageFluency().split(",");
+            String languageName = "";
+            if(languageIds.length>0){
+                List<Integer> langIds = new ArrayList<>();
+                for(String s:languageIds){langIds.add(Integer.parseInt(s));}
+                List<Language> languages = languageRepository.findByIds(langIds);
+                for(Language l:languages){languageName = languageName + l.getName()+",";}
+            }
+            List<ConsultationRating> consultationRatings = consultationRatingRepository.getByDoctorIdActive(doctorId);
+            Long totalConsultCount = consultationRatingRepository.countByDoctorIdAll(doctorId);
+            List<CommentsDto> commentsDtos = new ArrayList<>();
+            if(!consultationRatings.isEmpty()){
+                for(ConsultationRating r:consultationRatings){
+                    String fileUrl = baseUrl + "/uploaded_file/no-image-found.png";
+                    if(r.getPatientId().getProfilePicture()!=null && !r.getPatientId().getProfilePicture().isEmpty()){
+                        fileUrl = baseUrl + "/uploaded_file/UserProfile/"+r.getPatientId().getUserId()+"/"+r.getPatientId().getProfilePicture();
+                    }
+                    CommentsDto dto = new CommentsDto();
+                    dto.setComment(r.getComment());
+                    dto.setName(r.getDoctorId().getFirstName()+" "+r.getDoctorId().getLastName());
+                    dto.setRating(r.getRating());
+                    dto.setCreated_at(r.getCreatedAt());
+                    dto.setFile_url(fileUrl);
+                    dto.setTotal_count(totalConsultCount);
+
+                    commentsDtos.add(dto);
+                }
+            }
+
+            Map<String, Float> chargesMap = new HashMap<>();
+
+            if (charges != null && !charges.isEmpty()) {
+                for (Charges charge : charges) {
+                    String commissionKey = charge.getFeeType() + "_commission";
+                    String finalConsFeeKey = charge.getFeeType() + "_final_consultation_fees";
+                    String feesKey = charge.getFeeType() + "_consultation_fees";
+
+                    chargesMap.put(commissionKey, charge.getCommission());
+                    chargesMap.put(finalConsFeeKey, charge.getFinalConsultationFees());
+                    chargesMap.put(feesKey, charge.getConsultationFees());
+                }
+            }
+
+            List<Object> response = new ArrayList<>();
+            ViewProfileResponse dto = new ViewProfileResponse();
+            dto.setFirst_name(doctor.getFirstName());
+            dto.setLast_name(doctor.getLastName());
+            dto.setEmail(doctor.getEmail());
+            dto.setContact_number(doctor.getContactNumber());
+            dto.setPhoto(photo);
+            dto.setCountry(
+                    (doctor.getCountry()!=null)
+                            ?doctor.getCountry().getName():"");
+            dto.setState(
+                    (doctor.getState()!=null)
+                            ?doctor.getState().getName():"");
+            dto.setCity(
+                    (doctor.getCity()!=null)
+                            ?doctor.getCity().getName():"");
+            dto.setHospital_address(doctor.getHospitalAddress());
+            dto.setResidence_address(doctor.getResidenceAddress());
+            dto.setProfessional_identification_number(doctor.getProfessionalIdentificationNumber());
+            dto.setRating(finalCount);
+            dto.setExtra_activities(doctor.getExtraActivities());
+            dto.setAbout_me(doctor.getAboutMe());
+            dto.setLanguage(languageName);
+            dto.setReview(commentsDtos);
+            dto.setGender(doctor.getGender());
+
+            response.add(dto);
+            response.add(chargesMap);
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.PROFILE_FETCH_SUCCESSFULLY,null,locale)
+            ));
+        }else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.NO_RECORD_FOUND_CODE,
+                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+            ));
+        }
+    }
+
+    public ResponseEntity<?> getReview(Locale locale, GetReviewRequest request) {
+        Pageable pageable = PageRequest.of(request.getPage(),10);
+        Page<ConsultationRating> consultationRatings = consultationRatingRepository.findByDoctorIdApproveOrderIdDesc(request.getDoctor_id(),pageable);
+        if(!consultationRatings.getContent().isEmpty()){
+            List<GetReviewResponse> responses = new ArrayList<>();
+            for(ConsultationRating rating:consultationRatings.getContent()){
+                String file = baseUrl+"/uploaded_file/no-image-found.png";
+                if(rating.getPatientId()!=null &&
+                        rating.getPatientId().getProfilePicture()!=null &&
+                            !rating.getPatientId().getProfilePicture().isEmpty()){
+                    file = baseUrl + "/uploaded_file/UserProfile/"+ rating.getPatientId().getUserId() + "/" + rating.getPatientId().getProfilePicture();
+                }
+                GetReviewResponse dto = new GetReviewResponse();
+
+                dto.setComment(rating.getComment());
+                dto.setName(rating.getPatientId().getFirstName() + " "+rating.getPatientId().getLastName());
+                dto.setRating(rating.getRating());
+                dto.setCreated_at(rating.getCreatedAt());
+                dto.setFile_url(file);
+                dto.setTotal_count(consultationRatings.getTotalElements());
+
+                responses.add(dto);
+
+            }
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.REVIEW_FOUND_SUCCESSFULLY,null,locale),
+                    responses
+            ));
+        }else{
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+            ));
+        }
     }
 }

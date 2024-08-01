@@ -3,15 +3,14 @@ package com.service.mobile.controllers;
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.Response;
-import com.service.mobile.service.DoctorService;
-import com.service.mobile.service.PatientService;
-import com.service.mobile.service.PublicService;
+import com.service.mobile.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.Locale;
 
 @RestController
@@ -29,6 +28,12 @@ public class PatientController {
 
     @Autowired
     private MessageSource messageSource;
+
+    @Autowired
+    private TransactionService transactionService;
+
+    @Autowired
+    private RelativeService relativeService;
 
     @PostMapping("/update-fullname")
     public ResponseEntity<?> actionUpdateFullName(@RequestBody UpdateFullNameRequest request,@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
@@ -200,5 +205,66 @@ public class PatientController {
                                                      @RequestBody AddRatingRequest request) {
         return patientService.addRating(locale,request);
     }
+
+    //TODO : make this api
+    @PostMapping("/my-transactions")
+    public ResponseEntity<?> myTransactions(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                                     Locale locale,
+                                                     @RequestBody MyTransactionsRequest request) {
+        return transactionService.myTransactions(locale,request);
+    }
+
+    @PostMapping("/relative-list")
+    public ResponseEntity<?> relativeList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                       Locale locale,
+                                       @RequestParam(name = "user_id") Integer user_id) {
+        return relativeService.relativeList(locale,user_id);
+    }
+
+    @PostMapping("/create-relative-profile")
+    public ResponseEntity<?> createRelativeProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                       Locale locale,
+                                       @ModelAttribute CreateRelativeProfileRequest request) throws IOException {
+        return relativeService.createRelativeProfile(locale,request);
+    }
+
+    @PostMapping("/update-relative-profile")
+    public ResponseEntity<?> updateRelativeProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                       Locale locale,
+                                       @ModelAttribute CreateRelativeProfileRequest request) throws IOException {
+        return relativeService.updateRelativeProfile(locale,request);
+    }
+
+    @PostMapping("/get-single-relative-profile")
+    public ResponseEntity<?> getSingleRelativeProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                       Locale locale,
+                                       @RequestBody GetSingleRelativeProfileRequest request) throws IOException {
+        return relativeService.getSingleRelativeProfile(locale,request);
+    }
+
+    @PostMapping("/relative-type")
+    public ResponseEntity<?> relativeType(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                       Locale locale,
+                                       @RequestBody GetSingleRelativeProfileRequest request) throws IOException {
+        return relativeService.relativeType(locale,request);
+    }
+
+    // TODO make this api
+    @PostMapping("/cancel-consultation")
+    public ResponseEntity<?> cancelConsultation(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                                Locale locale,
+                                                @RequestBody GetSingleRelativeProfileRequest request) throws IOException {
+//        return relativeService.cancelConsultation(locale,request);
+        return null;
+    }
+
+    @PostMapping("/get-sloats")
+    public ResponseEntity<?> getSloats(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                                Locale locale,
+                                        @RequestHeader(name = "X-type", required = false) String type,
+                                        @RequestBody GetSloatsRequest request) throws IOException {
+        return patientService.getSloats(locale,request,type);
+    }
+
 
 }
