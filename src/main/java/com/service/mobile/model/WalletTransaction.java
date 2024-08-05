@@ -18,7 +18,7 @@ public class WalletTransaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(name = "payment_method", nullable = false)
     private String paymentMethod;
@@ -28,7 +28,7 @@ public class WalletTransaction {
     private Users patientId;
 
     @Column(name = "order_id")
-    private Long orderId;
+    private Integer orderId;
 
     @Column(name = "payment_gateway_type")
     private String paymentGatewayType;
@@ -76,10 +76,10 @@ public class WalletTransaction {
     private String paymentNumber;
 
     @Column(name = "payer_mobile", nullable = false)
-    private Integer payerMobile;
+    private String payerMobile;
 
     @Column(name = "payee_mobile", nullable = false)
-    private Integer payeeMobile;
+    private String payeeMobile;
 
     @Column(name = "remarks")
     private String remarks;

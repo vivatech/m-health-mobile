@@ -401,6 +401,7 @@ public class PatientLabService {
         if(!orders.isEmpty()){
             List<OrderDto> dataList = new ArrayList<>();
             for(LabOrders order:orders){
+                LabReportRequest labReportRequest = order.getReportId();
                 LabDetailDto labDetail = new LabDetailDto();
                 labDetail.setId(order.getLab().getUserId());
                 labDetail.setName(order.getLab().getClinicName());
@@ -455,11 +456,7 @@ public class PatientLabService {
                 orderDto.setLab_name(order.getLab().getClinicName() != null
                         ? order.getLab().getClinicName()
                         : order.getLab().getFirstName() + " " + order.getLab().getLastName());
-                //todo Set this prescription
-                /*
-                 * 'doc_prescription' => $consultData['labConsultation']['lab_consult_doc_prescription'],
-                 * */
-                orderDto.setDoc_prescription( null);
+                orderDto.setDoc_prescription( labReportRequest.getLabConsultId().getDoctorPrescription());
                 orderDto.setCreated_at(order.getCreatedAt());
                 orderDto.setRefund_status(refundStatus);
                 orderDto.setTotal_count(total);

@@ -56,6 +56,9 @@ public class Constants {
     public static final String ACTIVITIES_NOT_FOUND = "app.activities.not.found";
     public static final String ACTIVITIES_FETCH_SUCCESSFULLY = "app.activities.found";
     public static final String ACTIVE = "Active";
+    public static final String ACTIVE_MSG = "app.active";
+    public static final String CANCELLED_MSG = "app.cancelled";
+    public static final String UNSUBSCRIBED_MSG = "app.unsubscribed";
     public static final String VIDEO_CONSULTATION = "app.video.consultation";
     public static final String HEALTH_TIP_PACKAGE_SUBSCRIBED_FOR_USER = "app.healthtip.package.subscribe.user";
     public static final String HEALTH_TIP_PACKAGE_FORUSER_NOT_FOUND = "app.healthtip.package.subscribe.user.not.found";
@@ -158,4 +161,10 @@ public class Constants {
     public static final String RECORD_FETCHED = "app.record.fetched";
     public static final String ORDERS_FETCH_SUCCESSFULLY = "app.fetch.successfully";
     public static final String ORDER_NOT_FOUND = "app.order.not.found";
+    public static final String UNABLE_BOOK_PKG = "app.unable.book.pkg";
+    public static final String NOT_ENOUGH_BALANCE = "app.not.enough.balance";
+    public static final String HTIP_CAT_SUBSCRIBED = "app.htip.cat.subscribed";
+    public static final String HOME_CONSULTATION_NOT_AVAILABLE_THIS_TIME = "app.home.consultation.not.available.this.time";
+    public static final String FOUND_NUMBER_PACKAGE = "app.found.number.package";
+    public static final String NO_HEALTHTIP_FOUND = "app.no.healthtip.found";
 }

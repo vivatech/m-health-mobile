@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 @Service
 public class PublicService {
 
+    public static final String PATIENT ="patient";
     @Autowired
     private CountryRepository countryRepository;
 
@@ -82,6 +83,9 @@ public class PublicService {
     @Value("${app.log.path}")
     private Float logPath;
 
+    @Value("${app.system.user.id}")
+    private Integer SystemUserId;
+
     @Autowired
     private UserLocationRepository userLocationRepository;
 
@@ -125,6 +129,8 @@ public class PublicService {
     private PartnerNurseRepository partnerNurseRepository;
     @Autowired
     private NurseServiceStateRepository nurseServiceStateRepository;
+    @Autowired
+    private WalletTransactionRepository walletTransactionRepository;
 
     public List<Country> findAllCountry(){
         return countryRepository.findAll();
@@ -630,8 +636,8 @@ public class PublicService {
                 response.setStatus("info");
                 response.setMessage(messageSource.getMessage(Constants.AVAILABLE_OFFER_MESSAGE,null,locale));
             } else {
-                double currentAmount = price;
-                double discountAmount = 0;
+                Float currentAmount = price;
+                Float discountAmount = 0.0f;
 
                 calculateDiscountAmount(checkCoupon, currentAmount);
                 String discountAmountWithCurrency = formatDiscountAmount(discountAmount, currencySymbol);
@@ -1153,5 +1159,214 @@ public class PublicService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public Float getSlshAmount(Float finalConsultationFees) {
+        GlobalConfiguration globalConfiguration = globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE");
+        return finalConsultationFees * Float.valueOf(globalConfiguration.getValue());
+    }
+
+    //TODO check this with Shamshad sir
+    public OrderPaymentResponse orderPayment(Integer userId, Float amount, int i, String currencyOption, String evc, ArrayList<Object> objects, String paymentNumber) {
+        return null;
+    }
+
+    public WalletTransaction getWalletBalance(Integer patientId) {
+        List<WalletTransaction> walletTransaction = walletTransactionRepository.findByPatientIdDesc(patientId);
+        if(!walletTransaction.isEmpty() && walletTransaction.size()>0){
+            return walletTransaction.get(0);
+        }
+        return null;
+    }
+
+    public Integer createTransaction(WalletTransaction userTransaction, UserType patient, String transactionId,String paymentMethod) {
+        Users systemUsers = usersRepository.findById(SystemUserId).orElse(null);
+        if (transactionId == null) {
+            transactionId = String.valueOf(System.currentTimeMillis());
+        }
+
+        WalletTransaction walletBalance = null;
+        if (userTransaction.getPatientId() != null) {
+            walletBalance = getWalletBalance(userTransaction.getPatientId().getUserId());
+        }
+        WalletTransaction sysWalletBalance = getWalletBalance(systemUsers.getUserId());
+
+        WalletTransaction walletModel = new WalletTransaction();
+        walletModel.setAmount(userTransaction.getAmount());
+        walletModel.setTransactionId(transactionId);
+        walletModel.setPaymentMethod(paymentMethod != null ? paymentMethod : currencySymbolFdj);
+        walletModel.setPaymentGatewayType(userTransaction.getPaymentGatewayType());
+        walletModel.setTransactionType(userTransaction.getTransactionType());
+        walletModel.setTransactionDate(LocalDateTime.now());
+        walletModel.setTransactionStatus(userTransaction.getTransactionStatus());
+        walletModel.setRefTransactionId(userTransaction.getRefTransactionId());
+        walletModel.setServiceType(userTransaction.getServiceType());
+        walletModel.setIsDebitCredit(userTransaction.getIsDebitCredit());
+        walletModel.setReferenceNumber(userTransaction.getReferenceNumber());
+        walletModel.setIssuerTransactionId(userTransaction.getIssuerTransactionId());
+        walletModel.setPatientId(userTransaction.getPatientId());
+        walletModel.setOrderId(userTransaction.getOrderId());
+        walletModel.setCreatedAt(LocalDateTime.now());
+        walletModel.setPaymentNumber(userTransaction.getPaymentNumber());
+
+        if (patient == UserType.Patient && userTransaction.getIsDebitCredit().equals("CREDIT")) {
+            if (walletBalance != null) {
+                walletModel.setPreviousBalance(walletBalance.getCurrentBalance());
+                walletModel.setCurrentBalance(walletBalance.getCurrentBalance() + userTransaction.getAmount());
+            } else {
+                walletModel.setPreviousBalance(userTransaction.getPatientId().getTotalMoney());
+                walletModel.setCurrentBalance(userTransaction.getAmount());
+            }
+            walletModel.setPayerId(userTransaction.getPatientId().getUserId());
+            walletModel.setPayerMobile(userTransaction.getPayerMobile());
+            walletModel.setPayeeId(SystemUserId);
+            walletModel.setPayeeMobile(systemUsers.getContactNumber());
+        }
+
+        if (patient == UserType.PATIENT && userTransaction.getIsDebitCredit().equals("DEBIT")) {
+            Float balance = walletBalance != null ? walletBalance.getCurrentBalance() : userTransaction.getPatientId().getTotalMoney();
+            walletModel.setPreviousBalance(balance);
+            walletModel.setCurrentBalance(balance - userTransaction.getAmount());
+            walletModel.setPayerId(userTransaction.getPatientId().getUserId());
+            walletModel.setPayerMobile(userTransaction.getPayerMobile());
+            walletModel.setPayeeId(SystemUserId);
+            walletModel.setPayeeMobile(systemUsers.getContactNumber());
+        }
+
+        if (patient == UserType.SYSTEM && userTransaction.getIsDebitCredit().equals("CREDIT")) {
+            walletModel.setPatientId(systemUsers);
+            walletModel.setPayerId(systemUsers.getUserId());
+            walletModel.setPayerMobile(systemUsers.getContactNumber());
+            walletModel.setPayeeId(userTransaction.getPayeeId());
+            walletModel.setPayeeMobile(userTransaction.getPayeeMobile());
+            if (sysWalletBalance != null) {
+                walletModel.setPreviousBalance(sysWalletBalance.getCurrentBalance());
+                walletModel.setCurrentBalance(sysWalletBalance.getCurrentBalance() + userTransaction.getAmount());
+            } else {
+                walletModel.setPreviousBalance(0.0f);
+                walletModel.setCurrentBalance(userTransaction.getAmount());
+            }
+        }
+
+        if (patient == UserType.SYSTEM && userTransaction.getIsDebitCredit().equals("DEBIT")) {
+            walletModel.setPatientId(systemUsers);
+            walletModel.setPayerId(systemUsers.getUserId());
+            walletModel.setPayerMobile(systemUsers.getContactNumber());
+            walletModel.setPayeeId(userTransaction.getPayeeId());
+            walletModel.setPayeeMobile(userTransaction.getPayeeMobile());
+            if (sysWalletBalance != null) {
+                walletModel.setPreviousBalance(sysWalletBalance.getCurrentBalance());
+                walletModel.setCurrentBalance(sysWalletBalance.getCurrentBalance() - userTransaction.getAmount());
+            } else {
+                walletModel.setPreviousBalance(0.0f);
+                walletModel.setCurrentBalance(userTransaction.getAmount());
+            }
+        }
+
+        // Additional user type checks (e.g., NURSEPARTNER, LAB) can be added similarly
+
+        walletModel = walletTransactionRepository.save(walletModel);
+        return walletModel.getId();
+
+    }
+
+
+
+    public void updateSystemUserWallet(Float finalConsultationFees,String type) {
+        Users users = usersRepository.findById(SystemUserId).orElse(null);
+        if(users!=null){
+            if(type!=null && type.equalsIgnoreCase("sub")){
+                users.setTotalMoney(users.getTotalMoney() - finalConsultationFees);
+            }else{
+                users.setTotalMoney(users.getTotalMoney() + finalConsultationFees);
+            }
+            usersRepository.save(users);
+        }
+    }
+
+    public void sendHealthTipsMsg(Users model, String healthtipsSupscriptionConfirmation, String patient) {
+
+    }
+
+    public NurseAvailability checkNursesAvailable(Integer slotId, List<Integer> reservedSlotIds, Integer numberOfSlots, LocalDate consultationDate) {
+        NurseAvailability response = new NurseAvailability();
+        Map<Integer,Long> countNurse = new HashMap<>();
+        List<Integer> nursesId = new ArrayList<>();
+
+        Long checkReservedSlots = homecareReservedSlotRepository.countBySlotIdAndConsultDate(slotId, consultationDate);
+
+        if (checkReservedSlots == 0) {
+            List<Users> availableNurses = usersRepository.findByType(UserType.Nurse);
+            for (Users nurse : availableNurses) {
+                Long nursesCount = doctorAvailabilityRepository.countBySlotIdAndDoctorId(slotId, nurse.getUserId());
+                countNurse.put(nurse.getUserId(),nursesCount);
+            }
+        }
+
+        if (reservedSlotIds != null) {
+            String status = countNurse.keySet().stream().anyMatch(reservedSlotIds::contains) ? "available" : "not_available";
+
+            if ("available".equals(status)) {
+                for (Integer id : countNurse.keySet()) {
+                    if (reservedSlotIds.contains(id)) {
+                        nursesId.add(id);
+                    }
+                }
+                int nurseId = nursesId.get(new Random().nextInt(nursesId.size()));
+                response.setNurse_id(nurseId);
+                response.setStatus("available");
+            } else {
+                response.setNurse_id(0);
+                response.setStatus("not_available");
+            }
+        } else {
+            response.setNurse_id(0);
+            response.setStatus("not_available");
+        }
+
+        return response;
+    }
+
+    public Boolean checkDoctorAvailability(SlotMaster slotInfo, Integer doctorId, Integer numberSlotsToAllocate, List<Integer> allocatedSlots, LocalDate consultationDate) {
+        Long doctorSlotAvailableCount = doctorAvailabilityRepository.countBySlotTypeIdAndSlotIdAndDoctorId(slotInfo.getSlotType(), allocatedSlots, doctorId);
+
+        if (doctorSlotAvailableCount != Long.valueOf(numberSlotsToAllocate)) {
+            return false;
+        } else {
+            Long slotListingCount = consultationRepository.countByRequestTypeAndSlotIdAndDoctorIdAndConsultationDate(
+                    Arrays.asList(RequestType.Inprocess, RequestType.Pending, RequestType.Book),
+                    allocatedSlots,
+                    doctorId,
+                    consultationDate
+            );
+
+            return slotListingCount == 0;
+        }
+    }
+
+    public void exportReports(List<HealthTip> healthTips, String filePath) {
+        // TODO make this fucntion to creaet a csv file on this filepath which include file name too
+        /*$file = ExportReport::exportReportsAPI($query, $fileName);
+                            $arr = [
+                                'file_url' => Yii::$app->params['BASE_URL'] . 'export_csv/' . $file_name,
+                                'file_path' => $file
+                            ];
+
+                             public static function exportReportsAPI($sql, $file){
+        $db = Yii::$app->db;
+
+        $dbName = ExportReport::getDsnAttribute('dbname', $db->dsn);
+        $host = ExportReport::getDsnAttribute('host', $db->dsn);
+        $userName = Yii::$app->db->username;
+        $password = Yii::$app->db->password;
+        $cmd = "mysql -u " . $userName . " -p" . $password . " --database " . $dbName . " -h " . $host . " --default-character-set=utf8 -e '" . $sql . "' | sed \"s/^//;s/\t/,/g;s/$//\" >" . $file;
+
+        shell_exec($cmd);
+        if (file_exists($file)) {
+            return $file;
+        }
+        exit;
+    }
+        * */
     }
 }

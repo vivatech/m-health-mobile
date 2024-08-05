@@ -132,7 +132,7 @@ public class UserService {
             responseDto.setMessage(Constants.USER_NOT_FOUND);
         }
         else {
-            int otp  = saveOtp(user, Constants.Login); //TODO : resend is from register or login
+            int otp  = saveOtp(user, Constants.Login); //NOTE : resend is from register or login
             response.setOtp(String.valueOf(otp));
             responseDto.setMessage(Constants.OTP_SENT_MESSAGE);
             responseDto.setData(response);
@@ -148,7 +148,7 @@ public class UserService {
         //generate otp of 6 digit in integer
         Random random = new Random();
         int randomNumber = 123456; //random.nextInt(900000) + 100000; //this will use for integration
-        //TODO: sms integration
+        //NOTE: sms integration
         System.out.println(randomNumber);
         //sendMessageToUsers(String.valueOf(randomNumber));
 
@@ -210,8 +210,8 @@ public class UserService {
                         responseRegistration.setIsRegistered(Constants.FALSE); //save
                         responseRegistration.setUserId(userOTP.getUserId());
 
-                        responseRegistration.setHasApp(Constants.TRUE); //TODO : need to ask
-                        responseRegistration.setDataBundleOffer(Constants.TRUE); //TODO : need to ask
+                        responseRegistration.setHasApp(Constants.TRUE); //NOTE : need to ask
+                        responseRegistration.setDataBundleOffer(Constants.TRUE); //NOTE : need to ask
 
                         responseDto.setMessage(Constants.USER_REGISTERED);
 //                    responseDto.setResponseStatus(APIGatewayEnum.ResponseStatus.SUCCESS);

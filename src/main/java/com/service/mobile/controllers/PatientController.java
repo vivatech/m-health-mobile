@@ -87,7 +87,6 @@ public class PatientController {
         return doctorService.searchDoctor(locale,request);
     }
 
-    //TODO check this api with Shamshad sir
     @GetMapping("/doctor-availability-list-latest")
     public ResponseEntity<?> doctorAvailabilityListLatest(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale, @RequestBody SearchDoctorRequest request) {
@@ -119,7 +118,7 @@ public class PatientController {
     }
 
     @PostMapping("/thank-you")
-    public ResponseEntity<?> applyCouponCode(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+    public ResponseEntity<?> thankYou(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                         Locale locale,
                                         @RequestBody ThankYouRequest request
     ) {
@@ -176,7 +175,6 @@ public class PatientController {
         return patientService.getHealthTipsList(locale,request);
     }
 
-    //TODO make this api
     @PostMapping("/healthtips-export")
     public ResponseEntity<?> healthTipsExport(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
@@ -191,7 +189,6 @@ public class PatientController {
         return patientService.deleteExportFile(locale,request);
     }
 
-    //TODO make this api
     @PostMapping("/healthtip-package-history")
     public ResponseEntity<?> healthTipPackageHistory(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                      Locale locale,

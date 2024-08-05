@@ -11,7 +11,7 @@ public class SMSService {
     SmsConfig config;
 
     public void sendSMS(String message,String notificationMsg){
-        //TODO complete this function
+        //NOTE complete this function
     }
 
     public String getValue(String key){
