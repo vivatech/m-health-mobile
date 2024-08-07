@@ -203,7 +203,6 @@ public class PatientController {
         return patientService.addRating(locale,request);
     }
 
-    //TODO : make this api
     @PostMapping("/my-transactions")
     public ResponseEntity<?> myTransactions(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                      Locale locale,
@@ -246,13 +245,11 @@ public class PatientController {
         return relativeService.relativeType(locale,request);
     }
 
-    // TODO make this api
     @PostMapping("/cancel-consultation")
     public ResponseEntity<?> cancelConsultation(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                 Locale locale,
                                                 @RequestBody GetSingleRelativeProfileRequest request) throws IOException {
-//        return relativeService.cancelConsultation(locale,request);
-        return null;
+        return relativeService.cancelConsultation(locale,request);
     }
 
     @PostMapping("/get-sloats")

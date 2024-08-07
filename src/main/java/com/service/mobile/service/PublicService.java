@@ -131,6 +131,8 @@ public class PublicService {
     private NurseServiceStateRepository nurseServiceStateRepository;
     @Autowired
     private WalletTransactionRepository walletTransactionRepository;
+    @Autowired
+    private LabConsultationRepository labConsultationRepository;
 
     public List<Country> findAllCountry(){
         return countryRepository.findAll();
@@ -1065,7 +1067,7 @@ public class PublicService {
         return new ArrayList<>();
     }
 
-    //todo check this function
+    //NOTE : Not in Baannoo check this function
     public void sendNurseOnDemandMsg(SendNurseOnDemandMsgRequest request, String scenario, UserType userType,Locale locale) {
 //        Users userModel = null;
 //        PartnerNurse nurseModel = null;
@@ -1368,5 +1370,38 @@ public class PublicService {
         exit;
     }
         * */
+    }
+
+    public PaymentServiceTypeResponse getPaymentServiceType(Locale locale) {
+        PaymentServiceTypeResponse response = new PaymentServiceTypeResponse();
+
+        response.setConsultation(messageSource.getMessage(Constants.WALLET_CONSULTATION,null,locale));
+        response.setLab(messageSource.getMessage(Constants.WALLET_LAB,null,locale));
+        response.setHealthtip(messageSource.getMessage(Constants.WALLET_HEALTHTIP,null,locale));
+        response.setLoad_wallet_balance(messageSource.getMessage(Constants.WALLET_LOAD_BALANCE,null,locale));
+        response.setPharmacy(messageSource.getMessage(Constants.WALLET_PHARMACY,null,locale));
+        response.setNurse_on_demand(messageSource.getMessage(Constants.NURSE_ON_DEMAND,null,locale));
+        response.setLab_cart(messageSource.getMessage(Constants.LAB_CART,null,locale));
+
+        return response;
+    }
+
+    public void sendConsultationMsg(Consultation consultation, String cancleConsultRequestFromPatient, String patient) {
+        // TODO-NOTE make this function
+    }
+
+    public CompleteAndPendingReportsDto getCompleteAndPendingReports(Integer caseId) {
+        List<LabConsultation> labConsultations = labConsultationRepository.findByCaseId(caseId);
+        CompleteAndPendingReportsDto response = new CompleteAndPendingReportsDto();
+        int completed=0;
+        for(LabConsultation temp:labConsultations){
+            if(temp.getLabOrdersId()!=null){
+                completed++;
+            }
+        }
+        response.setCompleted_report(completed);
+        response.setPending_report(labConsultations.size() - completed);
+
+        return response;
     }
 }

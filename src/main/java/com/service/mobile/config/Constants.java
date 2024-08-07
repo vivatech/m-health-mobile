@@ -167,4 +167,27 @@ public class Constants {
     public static final String HOME_CONSULTATION_NOT_AVAILABLE_THIS_TIME = "app.home.consultation.not.available.this.time";
     public static final String FOUND_NUMBER_PACKAGE = "app.found.number.package";
     public static final String NO_HEALTHTIP_FOUND = "app.no.healthtip.found";
+    public static final String BOOKED_LAB_MSG = "app.booked.lab";
+    public static final String NURSE_ON_DEMAND = "app.nurse.on.demand";
+    public static final String WALLET_CONSULTATION = "app.wallet.consultation";
+    public static final String WALLET_LAB = "app.wallet.lab";
+    public static final String WALLET_HEALTHTIP = "app.wallet.health.tip";
+    public static final String WALLET_LOAD_BALANCE = "app.wallet.load.balance";
+    public static final String WALLET_PHARMACY = "app.wallet.pharmacy";
+    public static final String LAB_CART = "app.lab.cart";
+    public static final String HEALTHTIP_PURCHASED = "app.healthtip.purchased";
+    public static final String CONSULT_REQUEST_REJECT = "app.consult.request.reject";
+    public static final String MONEY_ADDED_WALLET = "app.money.added.wallet";
+    public static final String BOOKED_CONSULT = "app.book.consult";
+    public static final String PURCHASE_PACKAGE = "app.purchase.package";
+    public static final String PAID_MSG = "app.paid";
+    public static final String TRANSACTION_FETCH_SUCCESSFULLY = "app.transaction.fetch.successfully";
+    public static final String CANCEL_REQUEST_ALREADY_LEFT = "app.cancel.request.already.left";
+    public static final String DONE_FREE_BOOKING = "app.done.free.booking";
+    public static final String CANCEL_REQUEST_CANT_BLANK = "app.cancel.request.cant.blank";
+    public static final String NO_TRANSFER_ID_FOUND = "app.no.transfer.id.found";
+    public static final String REQUEST_CANCELLED_SUCCESSFULLY = "app.request.cancelled.successfully";
+    public static final String ADD_REPORT_FOUND_SUCCESS = "app.add.report.found.success";
+    public static final String REQUEST_RESULT_TEXT = "app.request.result.text";
+    public static final String LAB_CONSULTATION_FOUND_SUCCESSFULLY = "app.lab.consultation.found.successfully";
 }
