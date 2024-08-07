@@ -1,5 +1,6 @@
 package com.service.mobile.dto.request;
 
+import com.service.mobile.dto.enums.PackageType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,7 +15,9 @@ import java.time.LocalDate;
 public class HealthTipPackageHistoryRequest {
     private Integer user_id;
     private Integer page;
-    private String type;
+    private String package_name;
+    private PackageType type;
     private LocalDate created_date;
     private Integer category_id;
+    private String status;
 }

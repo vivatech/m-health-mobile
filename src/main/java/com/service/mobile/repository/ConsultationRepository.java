@@ -1,5 +1,6 @@
 package com.service.mobile.repository;
 
+import com.service.mobile.dto.enums.ConsultationType;
 import com.service.mobile.dto.enums.RequestType;
 import com.service.mobile.model.Consultation;
 import com.service.mobile.model.LabConsultation;
@@ -55,4 +56,19 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
 
     @Query("Select u from Consultation u where u.doctorId.userId = ?1 and u.consultationDate = ?2 order by u.caseId DESC")
     List<Consultation> findByDoctorIdAndDateOrderByCaseId(Integer userId, LocalDate date);
+
+    @Query("Select count(u.caseId) from Consultation u where u.requestType in ?1 and u.slotId.slotId in ?2 and u.doctorId.userId = ?3 and u.consultationDate = ?4")
+    Long countByRequestTypeAndSlotIdAndDoctorIdAndConsultationDate(List<RequestType> list, List<Integer> allocatedSlots, Integer doctorId, LocalDate consultationDate);
+
+    @Query("Select u from Consultation u where u.requestType = ?1 and u.createdAt = ?2 and u.patientId.userId = ?3 and" +
+            " u.doctorId.userId = ?4 and u.consultationType = ?5 and u.consultationDate = ?6 order by u.consultationDate DESC")
+    List<Consultation> findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
+            RequestType requestType,LocalDate newOrderDate, Integer patient, Integer doctor, ConsultationType consultationType,
+            LocalDate consultationDate);
+
+    @Query("Select count(u.caseId) from Consultation u where u.patientId.userId = ?1 and u.doctorId.userId = ?2 and " +
+            "u.requestType = ?4 and u.consultationDate = ?3")
+    Long countByPatientIdAndDoctorIdAndConsultationDateAndConsultationTypeAndRequestType(
+            Users patientId, Integer userId,
+            LocalDate consultationDate, RequestType requestType);
 }

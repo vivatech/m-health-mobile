@@ -78,12 +78,59 @@ public class PatientLabService {
             consultations = consultationRepository
                     .findByPatientReportSuggestedAndRequestTypeAndName(request.getUser_id(),"1", RequestType.Book,request.getName(),pageable);
         }
-        if(consultations!=null && consultations.getContent().size()>0){
-            //TODO make remaing logic
-//            for(Consultation consultation:consultations){
-//                if(consultation.getL)
-//            }
-            return null;
+        if(consultations!=null && !consultations.getContent().isEmpty()){
+            List<LabRequestsResponse> responses = new ArrayList<>();
+            for(Consultation c:consultations.getContent()){
+                List<LabOrders> labOrdersList = labOrdersRepository.findByConsultationId(c.getCaseId());
+                List<String> labReportDoc = new ArrayList<>();
+                LabOrders labOrders = null;
+                String status = null;
+                if(!labOrdersList.isEmpty()){
+                    labOrders = labOrdersList.get(0);
+                }
+                if(labOrders!=null && labOrders.getPaymentStatus()==OrderStatus.Pending){
+                    status = labOrders.getPaymentStatus().toString();
+                }else if(labOrders!=null && labOrders.getPaymentStatus()==OrderStatus.Completed){
+                    List<LabReportDoc> labReportDocs = labReportDocRepository.findByCaseIdAndStatus(c.getCaseId(),Status.A);
+                    for(LabReportDoc lrd:labReportDocs){
+                        labReportDoc.add(baseUrl + "lab/" + labOrders.getCaseId().getCaseId() + "/" + lrd.getLabReportDocName());
+                    }
+                    status = labOrders.getPaymentStatus().toString();
+                }else if(labOrders!=null && labOrders.getPaymentStatus()==OrderStatus.Inprogress){
+                    status = labOrders.getPaymentStatus().toString();
+                }else{
+                    status = OrderStatus.New.toString();
+                }
+                String requestResultText = "";
+                if(c.getCaseId()!=null){
+                    CompleteAndPendingReportsDto countData = publicService.getCompleteAndPendingReports(c.getCaseId());
+                    String tempRequestResultText = messageSource.getMessage(Constants.REQUEST_RESULT_TEXT,null,locale);
+                    tempRequestResultText = tempRequestResultText.replace("{total}",countData.getCompleted_report().toString());
+                    tempRequestResultText = tempRequestResultText.replace("{pending}",countData.getCompleted_report().toString());
+                    requestResultText = tempRequestResultText;
+                    if(countData.getCompleted_report()>0 && countData.getPending_report()>0){
+                        status = "Partailly Completed";
+                    }
+                }
+                LabRequestsResponse data = new LabRequestsResponse();
+
+                data.setCase_id(c.getCaseId());
+                data.setDate(c.getConsultationDate());
+                data.setTime(c.getSlotId().getSlotTime());
+                data.setStatus(status);
+                data.setLabReportDoc(labReportDoc);
+                data.setTotal_count(consultations.getTotalElements());
+                data.setRequest_result_text(requestResultText);
+
+                responses.add(data);
+
+            }
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.LAB_CONSULTATION_FOUND_SUCCESSFULLY,null,locale),
+                    responses
+            ));
         }else{
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
@@ -97,9 +144,58 @@ public class PatientLabService {
 
     public ResponseEntity<?> addedReports(Integer userId, Locale locale) {
         List<LabConsultation> categoryList = labConsultationRepository.findByPatientIdANdLabOrderIsNullAndCaseIsNull(userId);
+        List<AddedReportsDto> list = new ArrayList<>();
 
-        //todo  waiting for sample response
-        return null;
+        for(LabConsultation data:categoryList){
+            try{
+
+                AddedReportsDto response = new AddedReportsDto();
+                AddedReportsCategoryDTO categoryDTO = new AddedReportsCategoryDTO();
+                AddedReportsSubCategoryDTO subCategoryDTO = new AddedReportsSubCategoryDTO();
+
+                response.setLab_consult_id(data.getLabConsultId());
+                response.setCase_id(data.getCaseId().getCaseId());
+                response.setLab_orders_id(data.getLabOrdersId().getId());
+                response.setCategory_id(data.getCategoryId().getCatId());
+                response.setSub_cat_id(data.getSubCatId().getSubCatId());
+                response.setRelative_id(null);
+                response.setLab_consult_patient_id(data.getPatient().getUserId());
+                response.setLab_consult_doctor_id(data.getDoctor().getUserId());
+                response.setLab_consult_doc_prescription(data.getDoctorPrescription());
+                response.setLab_consult_created_at(data.getLabConsultCreatedAt());
+
+                LabCategoryMaster category = data.getCategoryId();
+                LabSubCategoryMaster subCat = data.getSubCatId();
+
+                categoryDTO.setCat_id(category.getCatId());
+                categoryDTO.setCat_name(category.getCatName());
+                categoryDTO.setCat_name_sl(category.getCatNameSl());
+                categoryDTO.setCat_status(category.getCatStatus());
+                categoryDTO.setCat_created_at(category.getCatCreatedAt());
+                categoryDTO.setCat_updated_at(category.getCatUpdatedAt());
+
+                subCategoryDTO.setSub_cat_id(subCat.getSubCatId());
+                subCategoryDTO.setCat_id(subCat.getLabCategory().getCatId());
+                subCategoryDTO.setSub_cat_name(subCat.getSubCatName());
+                subCategoryDTO.setSub_cat_name_sl(subCat.getSubCatNameSl());
+                subCategoryDTO.setSub_cat_status(subCat.getSubCatStatus());
+                subCategoryDTO.setIs_home_consultant_available(subCat.getIsHomeConsultantAvailable());
+                subCategoryDTO.setSub_cat_created_at(subCat.getSubCatCreatedAt());
+                subCategoryDTO.setSub_cat_updated_at(subCat.getSubCatUpdatedAt());
+
+                response.setCategory(categoryDTO);
+                response.setSubcategory(subCategoryDTO);
+                list.add(response);
+            }catch (Exception e){
+
+            }
+
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.ADD_REPORT_FOUND_SUCCESS,null,locale)
+        ));
     }
 
     public ResponseEntity<?> addReports(AddReportRequest request, Locale locale) {
@@ -401,6 +497,7 @@ public class PatientLabService {
         if(!orders.isEmpty()){
             List<OrderDto> dataList = new ArrayList<>();
             for(LabOrders order:orders){
+                LabReportRequest labReportRequest = order.getReportId();
                 LabDetailDto labDetail = new LabDetailDto();
                 labDetail.setId(order.getLab().getUserId());
                 labDetail.setName(order.getLab().getClinicName());
@@ -455,11 +552,7 @@ public class PatientLabService {
                 orderDto.setLab_name(order.getLab().getClinicName() != null
                         ? order.getLab().getClinicName()
                         : order.getLab().getFirstName() + " " + order.getLab().getLastName());
-                //todo Set this prescription
-                /*
-                 * 'doc_prescription' => $consultData['labConsultation']['lab_consult_doc_prescription'],
-                 * */
-                orderDto.setDoc_prescription( null);
+                orderDto.setDoc_prescription( labReportRequest.getLabConsultId().getDoctorPrescription());
                 orderDto.setCreated_at(order.getCreatedAt());
                 orderDto.setRefund_status(refundStatus);
                 orderDto.setTotal_count(total);

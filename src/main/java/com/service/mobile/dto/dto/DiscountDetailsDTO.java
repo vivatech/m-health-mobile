@@ -16,8 +16,8 @@ public class DiscountDetailsDTO {
     private String discount_amount_with_slsh_currency;
     private String alert_msg_usd;
     private String alert_msg_slsh;
-    private double discount_amount_slsh;
-    private double discount_amount;
+    private Float discount_amount_slsh;
+    private Float discount_amount;
     private OfferType type;
-    private long coupon_id;
+    private Integer coupon_id;
 }

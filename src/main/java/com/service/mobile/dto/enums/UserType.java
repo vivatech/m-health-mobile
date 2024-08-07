@@ -4,6 +4,10 @@ public enum UserType {
     Patient,
     NursePartner,
     DOCTOR,
+    PATIENT,
+    SYSTEM,
+    NURSEPARTNER,
+    LAB,
     Clinic,
     Superadmin,
     Subadmin,
@@ -13,5 +17,6 @@ public enum UserType {
     Pharmacy,
     Agentuser,
     Marketing,
-    Hospital
+    Hospital,
+    System
 }

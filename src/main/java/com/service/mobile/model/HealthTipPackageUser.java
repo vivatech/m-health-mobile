@@ -27,6 +27,12 @@ public class HealthTipPackageUser {
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
     private Users user;
 
+    @Column(name = "total_chat")
+    private Integer totalChat;
+
+    @Column(name = "total_video_call")
+    private Integer totalVideoCall;
+
     @Column(name = "expired_at")
     private LocalDateTime expiredAt;
 
