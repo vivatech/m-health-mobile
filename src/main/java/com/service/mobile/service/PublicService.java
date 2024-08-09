@@ -689,14 +689,17 @@ public class PublicService {
 
         if (getType != null && getType.getCaseId() != null) {
             Orders model = ordersRepository.findById(request.getOrder_id()).orElse(null);
-
+            List<WalletTransaction> transactionList = walletTransactionRepository.findByOrderId(getType.getId());
+            WalletTransaction transaction = null;
+            if(!transactionList.isEmpty()){
+                transaction = transactionList.get(0);
+            }
             if (model != null) {
                 String photo = getProfilePhoto(model);
                 data.setFirst_name(model.getDoctorId().getFirstName() + " " + model.getDoctorId().getLastName());
                 data.setConsultation_date(model.getCaseId().getConsultationDate());
-                //todo manage this error
-//                data.setTransaction_id(model.getTransactionList().get(0).getTransactionId());
-//                data.setSlot_time(model.getCaseId().getSlotDetail().getSlotTime());
+                data.setTransaction_id((transaction!=null)?transaction.getTransactionId():"");
+                data.setSlot_time(model.getCaseId().getSlotId().getSlotTime());
                 data.setAmount(formatAmount(getType));
                 data.setConsultation_type(model.getCaseId().getConsultationType());
                 data.setProfile_photo(photo);
@@ -720,10 +723,15 @@ public class PublicService {
             }
         } else {
             Orders model = ordersRepository.findById(request.getOrder_id()).orElse(null);
+            List<WalletTransaction> transactionList = walletTransactionRepository.findByOrderId(getType.getId());
+            WalletTransaction transaction = null;
+            if(!transactionList.isEmpty()){
+                transaction = transactionList.get(0);
+            }
             if (model != null) {
                 data.setPackage_name(model.getPackageId().getPackageName());
-                //todo manage this error
-//                data.setTransaction_id(model.getTransactionList().get(0).getTransactionId());
+                data.setTransaction_id((transaction!=null)?transaction.getTransactionId():"");
+                data.setSlot_time(model.getCaseId().getSlotId().getSlotTime());
                 data.setAmount(formatAmount(getType));
 
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
@@ -1061,7 +1069,7 @@ public class PublicService {
     }
 
     public List<AvailableNursesMapDto> availableNursesMap() {
-        /*TODO make this code
+        /*NOTE-TODO make this code
         *
         * */
         return new ArrayList<>();
@@ -1347,7 +1355,7 @@ public class PublicService {
     }
 
     public void exportReports(List<HealthTip> healthTips, String filePath) {
-        // TODO make this fucntion to creaet a csv file on this filepath which include file name too
+        // NOTE-TODO make this fucntion to creaet a csv file on this filepath which include file name too
         /*$file = ExportReport::exportReportsAPI($query, $fileName);
                             $arr = [
                                 'file_url' => Yii::$app->params['BASE_URL'] . 'export_csv/' . $file_name,

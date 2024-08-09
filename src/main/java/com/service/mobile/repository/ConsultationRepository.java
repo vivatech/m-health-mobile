@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,9 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
 
     @Query("Select u from Consultation u where u.slotId.slotId = ?2 and u.consultationDate=?4 and u.doctorId.userId = ?1 and u.requestType = ?3")
     List<Consultation> findByDoctorIdAndSlotIdAndRequestTypeAndDate(Integer doctorId, Integer slotId, RequestType requestType, LocalDate date);
+
+    @Query("Select u from Consultation u where u.slotId.slotId = ?2 and u.consultationDate=?3 and u.requestType = ?4")
+    List<Consultation> findByDoctorIdAndSlotIdAndRequestTypeAndDate(Integer doctorId, Integer slotId, LocalDate date, RequestType requestType);
 
     @Query("Select u from Consultation u where u.patientId.userId = ?1 and u.reportSuggested like ?2 and u.requestType =?3 and CONCAT(u.doctorId.firstName,' ', u.doctorId.lastName) like %?4% order by u.caseId DESC")
     Page<Consultation> findByPatientReportSuggestedAndRequestTypeAndName(Integer userId, String number, RequestType requestType,String name,Pageable pageable);
@@ -61,9 +65,10 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     Long countByRequestTypeAndSlotIdAndDoctorIdAndConsultationDate(List<RequestType> list, List<Integer> allocatedSlots, Integer doctorId, LocalDate consultationDate);
 
     @Query("Select u from Consultation u where u.requestType = ?1 and u.createdAt = ?2 and u.patientId.userId = ?3 and" +
-            " u.doctorId.userId = ?4 and u.consultationType = ?5 and u.consultationDate = ?6 order by u.consultationDate DESC")
+            " u.doctorId.userId = ?4 and u.consultationType = ?5 and u.consultationDate = ?6 order by u.consultationDate DESC, u.createdAt DESC")
     List<Consultation> findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
-            RequestType requestType,LocalDate newOrderDate, Integer patient, Integer doctor, ConsultationType consultationType,
+            RequestType requestType,LocalDate newOrderDate, Integer patient, Integer doctor
+            , ConsultationType consultationType,
             LocalDate consultationDate);
 
     @Query("Select count(u.caseId) from Consultation u where u.patientId.userId = ?1 and u.doctorId.userId = ?2 and " +
@@ -71,4 +76,16 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     Long countByPatientIdAndDoctorIdAndConsultationDateAndConsultationTypeAndRequestType(
             Users patientId, Integer userId,
             LocalDate consultationDate, RequestType requestType);
+
+    @Query("Select count(u.caseId) from Consultation u where u.patientId.userId = ?1 and  u.doctorId.userId = ?2 and " +
+            "Date(u.createdAt) = ?3 and u.consultationType = ?4 and u.consultType = ?5 and " +
+            "CONCAT(c.consultationDate, ' ', SUBSTRING(c.slotId.slotTime, -5), ':00') >= ?6 ")
+    Long countByPatientIdAndDoctorIdCreatedAtAndConstaitionTypeConsultTypeAndConstationDate(
+            Integer patient, Integer doctor,LocalDate createdAt
+            , ConsultationType consultationType, String consultType,
+            LocalDateTime consultationDate);
+
+    @Query("Select count(u.caseId) from Consultation u where u.slotId.slotId = ?1 and u.doctorId.userId = ?2 and " +
+            " u.consultationDate = ?3")
+    Long countBySlotIdAndDoctorIdConsultationDate(Integer slotId, Integer doctorId, LocalDate date);
 }

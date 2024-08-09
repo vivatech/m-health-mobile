@@ -190,4 +190,8 @@ public class Constants {
     public static final String ADD_REPORT_FOUND_SUCCESS = "app.add.report.found.success";
     public static final String REQUEST_RESULT_TEXT = "app.request.result.text";
     public static final String LAB_CONSULTATION_FOUND_SUCCESSFULLY = "app.lab.consultation.found.successfully";
+    public static final String PROFILE_PIC_UPLOAD_SUCCESS = "app.profile.pic.upload.success";
+    public static final String RECORD_CREATED_SUCCESS = "app.record.created.success";
+    public static final String ORDER_ALREADY_CREATED = "app.order.already.created";
+    public static final String ORDER_CREATED_SUCCESS = "app.order.created.success";
 }

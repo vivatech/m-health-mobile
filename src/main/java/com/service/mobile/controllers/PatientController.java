@@ -89,7 +89,7 @@ public class PatientController {
 
     @GetMapping("/doctor-availability-list-latest")
     public ResponseEntity<?> doctorAvailabilityListLatest(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
-                                       Locale locale, @RequestBody SearchDoctorRequest request) {
+                                       Locale locale, @RequestBody DoctorAvailabilityListLatestRequest request) {
         return doctorService.doctorAvailabilityListLatest(locale,request);
     }
 

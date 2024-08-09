@@ -2,10 +2,7 @@ package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.dto.*;
-import com.service.mobile.dto.enums.AddedType;
-import com.service.mobile.dto.enums.OrderStatus;
-import com.service.mobile.dto.enums.RequestType;
-import com.service.mobile.dto.enums.Status;
+import com.service.mobile.dto.enums.*;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.*;
 import com.service.mobile.model.*;
@@ -20,8 +17,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -31,17 +30,28 @@ import java.util.Map;
 @Slf4j
 public class PatientLabService {
     @Autowired
+    private GlobalConfigurationRepository globalConfigurationRepository;
+
+    @Autowired
     private LabPriceRepository labPriceRepository;
+
     @Autowired
     private LabReportRequestRepository labReportRequestRepository;
+
     @Autowired
     private LabRefundRequestRepository labRefundRequestRepository;
+
     @Autowired
     private LabReportDocRepository labReportDocRepository;
+
     @Autowired
     private LabOrdersRepository labOrdersRepository;
+
     @Autowired
     private LabSubCategoryMasterRepository labSubCategoryMasterRepository;
+
+    @Autowired
+    private EVCPlusPaymentService eVCPlusPaymentService;
 
     @Autowired
     private UsersRepository usersRepository;
@@ -212,32 +222,11 @@ public class PatientLabService {
             consultation.setSubCatId(subCategory);
             labConsultationRepository.save(consultation);
 
-            /*
-            * TODO discuss this with shamshad sir
-            *  $model->scenario = 'addLabRequest';
-                        if($model->load($postData) && $model->validate()) {
-                            //echo "<pre>";print_r($model); exit;
-                            $model->lab_consult_patient_id = $data['user_id'];
-                            $model->save();
-                            http_response_code(200);
-                            $response = [
-                                'status' => '200',
-                                'message' => Yii::t('app', 'record_create_success'),
-                                'data' => (object)array(),
-                            ];
-                        }else{
-                            $errors = $model->errors;
-                            //echo "<pre>"; print_r($model->errors); exit;
-                            http_response_code(403);
-                            $response = [
-                                'status' => '403',
-                                'message' => reset($errors)[0],
-                                'data' => (object)array(),
-                            ];
-                        }
-            *
-            * */
-            return null;
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.RECORD_CREATED_SUCCESS,null,locale)
+            ));
         }else{
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_CONTENT_FOUNT_CODE,
@@ -470,9 +459,93 @@ public class PatientLabService {
         return null;
     }
 
-    // TODO make this api
-    public ResponseEntity<?> addLabRequest(BillInfoRequest request, Locale locale) {
-        return null;
+
+    public ResponseEntity<?> addLabRequest(AddLabRequestDto data, Locale locale) {
+        Integer caseId = data.getCase_id();
+        List<Integer> subCatId = data.getSub_cat_id();
+        Consultation consultDetail = consultationRepository.findById(data.getCase_id()).orElse(null);
+        Users labUser = usersRepository.findById(data.getLab_id()).orElse(null);
+        Users patient = usersRepository.findById(data.getUser_id()).orElse(null);
+
+        // Check only for doctor prescribed request
+        List<LabConsultation> checkConsultation = labConsultationRepository.findBySubCategoryIdCaseIdLadIdNotNull(subCatId,caseId);
+
+        if (checkConsultation.isEmpty() || caseId == null) {
+            String currencyOption = data.getCurrency_option() != null ? data.getCurrency_option() : "USD";
+            LabOrders labOrder = new LabOrders();
+            labOrder.setCaseId(consultDetail);
+            labOrder.setLab(labUser);
+            labOrder.setReportDate(data.getReport_date());
+            labOrder.setReportTimeSlot(data.getReport_time_slot());
+            labOrder.setPaymentMethod(data.getPayment_method());
+            labOrder.setAddress(data.getAddress());
+            labOrder.setSampleCollectionMode(data.getSample_collection_mode());
+
+            BillInfoDto billData = publicService.getBillInfo(data.getLab_id(), subCatId, data.getSample_collection_mode(),"");
+
+            Float finalConsultationFees = billData.getTotal();
+            Float currencyAmount = 0F;
+            if ("slsh".equalsIgnoreCase(currencyOption)) {
+                currencyAmount = getSlshAmount(finalConsultationFees);
+            }
+
+            Float amount = currencyAmount > 0 ? currencyAmount : finalConsultationFees;
+            labOrder.setCurrencyAmount(amount);
+            labOrder.setCurrency(currencyOption);
+
+            if (!"Pay_Home".equals(data.getPayment_method())) {
+                Users user = patient;
+
+                OrderPaymentResponse payment = publicService.orderPayment(user.getUserId(), amount, 0, currencyOption, "evc",null, data.getPayer_mobile());
+
+                if (payment != null && payment.getStatus() == 100) {
+                    return buildErrorResponse("403", payment.getMessage());
+                } else {
+                    eVCPlusPaymentService.processPayment(user, finalConsultationFees, payment, data.getPayer_mobile());
+                }
+            }
+
+            String transactionId = String.valueOf(System.currentTimeMillis());
+            labOrder.setPatientId(patient);
+            labOrder.setDoctor(consultDetail != null ? consultDetail.getDoctorId() : null);
+            labOrder.setLab(labUser);
+            labOrder.setReportCharge(billData.getReportCharge());
+            labOrder.setExtraCharges(billData.getExtraCharges());
+            labOrder.setAmount(billData.getTotal());
+            labOrder.setPaymentStatus(data.getPayment_method().toString().equalsIgnoreCase("Pay_Home")? OrderStatus.Pending : OrderStatus.Completed);
+            labOrder.setTransactionId(!"Pay_Home".equals(data.getPayment_method()) ? transactionId : null);
+            labOrder.setReportDate(data.getReport_date());
+            labOrder.setAddress(data.getAddress());
+            labOrder.setSampleCollectionMode(data.getSample_collection_mode());
+            labOrder.setReportTimeSlot(data.getReport_time_slot());
+            labOrder.setPaymentMethod(data.getPayment_method());
+            labOrdersRepository.save(labOrder);
+
+            updateLabConsultations(subCatId, caseId, data.getUser_id(), labOrder.getId());
+            if (!"Pay_Home".equals(data.getPayment_method())) {
+                processTransactions(data, finalConsultationFees, transactionId, patient);
+            }
+
+            sendNotifications(labOrder, data.getSampleCollectionMode(), caseId != null);
+
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.ORDER_CREATED_SUCCESS,null,locale)
+            ));
+        }
+        else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.ORDER_ALREADY_CREATED,null,locale)
+            ));
+        }
+    }
+
+    private Float getSlshAmount(Float amount) {
+        GlobalConfiguration configuration = globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE");
+        return amount * Float.parseFloat(configuration.getValue());
     }
 
     public ResponseEntity<?> getLabOrder(GetLabOrderRequest request, Locale locale) {

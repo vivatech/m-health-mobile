@@ -6,14 +6,14 @@ import com.service.mobile.dto.dto.CommentsDto;
 import com.service.mobile.dto.dto.ConsultationFees;
 import com.service.mobile.dto.dto.SearchDocResponse;
 import com.service.mobile.dto.dto.TransformDto;
+import com.service.mobile.dto.enums.ConsultationType;
 import com.service.mobile.dto.enums.FeeType;
+import com.service.mobile.dto.enums.RequestType;
 import com.service.mobile.dto.enums.UserType;
+import com.service.mobile.dto.request.DoctorAvailabilityListLatestRequest;
 import com.service.mobile.dto.request.GetReviewRequest;
 import com.service.mobile.dto.request.SearchDoctorRequest;
-import com.service.mobile.dto.response.CityResponse;
-import com.service.mobile.dto.response.GetReviewResponse;
-import com.service.mobile.dto.response.Response;
-import com.service.mobile.dto.response.ViewProfileResponse;
+import com.service.mobile.dto.response.*;
 import com.service.mobile.model.*;
 import com.service.mobile.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +32,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -64,6 +66,10 @@ public class DoctorService {
 
     @Value("${app.base.url}")
     private String baseUrl;
+    @Autowired
+    private SlotMasterRepository slotMasterRepository;
+    @Autowired
+    private GlobalConfigurationRepository globalConfigurationRepository;
 
 
     public ResponseEntity<?> getDoctorCityList(Locale locale) {
@@ -418,7 +424,156 @@ public class DoctorService {
     }
 
     //TODO : make this api based on doctor-availability-list-latest
-    public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, SearchDoctorRequest request) {
+    public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, DoctorAvailabilityListLatestRequest request) {
+        Users slot_type_id = usersRepository.findById(request.getDoctor_id()).orElse(null);
+        List<SlotMaster> slotListing = slotMasterRepository.findBySlotTypeIdAndSlotDay(slot_type_id.getSlotTypeId(),request.getDate());
+
+
+        List<Consultation> constantsList = consultationRepository.findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
+                RequestType.Book,request.getNew_order_date(), request.getUser_id(),request.getDoctor_id(), ConsultationType.Paid,request.getDate()
+        );
+        Consultation last_consult_data = (constantsList.isEmpty())?null:constantsList.get(0);
+
+        ConsultationType consultation_type = ConsultationType.Paid;
+        if(request.getConsult_type() == FeeType.VIDEO){
+            request.setConsult_type(FeeType.CALL);
+        }
+
+        List<Charges> doctorchargesList = chargesRepository.findByUserIdAndConsultantType(request.getDoctor_id(),request.getConsult_type());
+        Charges doctorcharges = (doctorchargesList.isEmpty())?null:doctorchargesList.get(0);
+
+        String rem_cnt_msg = "";
+        if(last_consult_data!=null){
+            GlobalConfiguration free_cnt = globalConfigurationRepository.findByKey("NO_OF_FREE_BOOKING");
+            GlobalConfiguration free_days = globalConfigurationRepository.findByKey("DAYS_FOR_FREE_BOOKING");
+
+            LocalDate last_free_date = last_consult_data.getConsultationDate().plusDays(Integer.parseInt(free_cnt.getValue()));
+            SlotMaster timeslot = last_consult_data.getSlotId();
+            LocalTime time_array = LocalTime.parse(timeslot.getSlotTime());
+            LocalDateTime sconsultant_date = last_consult_data.getConsultationDate().atTime(time_array);
+
+            Long free_consult_cnt = consultationRepository.countByPatientIdAndDoctorIdCreatedAtAndConstaitionTypeConsultTypeAndConstationDate(
+                    request.getUser_id(),request.getDoctor_id(),request.getNew_order_date(),
+                    ConsultationType.Free,last_consult_data.getConsultType(),sconsultant_date
+                    );
+            Long rem_cnt = Long.valueOf(free_cnt.getValue()) - free_consult_cnt;
+            if(rem_cnt>0){
+                rem_cnt_msg = "(You have "+rem_cnt+" Free booking(s) for "+last_consult_data.getConsultType()+" till "+last_free_date+" )";
+            }
+        }
+
+        Map<String, List<SlotResponse>> slotArray = new LinkedHashMap<>();
+        slotArray.put("Morning", new ArrayList<>());
+        slotArray.put("Afternoon", new ArrayList<>());
+        slotArray.put("Evening", new ArrayList<>());
+
+
+        for (SlotMaster slot : slotListing) {
+            Long available_count = doctorAvailabilityRepository.countBySlotIdAndDoctorId(slot.getSlotId(),request.getDoctor_id());
+
+            Long check_consultant_count = consultationRepository.countBySlotIdAndDoctorIdConsultationDate(
+                    slot.getSlotId(),request.getDoctor_id(),  request.getDate());
+
+            List<Consultation> consultantInfoList = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(
+                    request.getDoctor_id(), slot.getSlotId(),request.getDate(), RequestType.Cancel);
+
+            Consultation consultantInfo = (consultantInfoList.isEmpty())?null:constantsList.get(0);
+
+            String userIdInSlot = consultantInfo != null ? consultantInfo.getPatientId().toString() : "";
+            Integer caseId = consultantInfo != null ? consultantInfo.getCaseId() : null;
+
+            LocalDateTime consultantDateTime = LocalDateTime.of(request.getDate(), slot.getSlotStartTime());
+
+            LocalDateTime currentDateTime = LocalDateTime.now();
+
+            Long diff = Math.abs(java.time.Duration.between(consultantDateTime, currentDateTime).toMinutes());
+
+            Integer timeLimit = Integer.parseInt(globalConfigurationRepository.findByKey("CANCEL_CONSULT_PATIENT").getValue());
+
+            Boolean isCancel = (timeLimit <= diff) && (consultantInfo != null && consultantInfo.getRequestType() == RequestType.Book && consultantDateTime.isAfter(currentDateTime));
+
+            if (check_consultant_count > 0 || currentDateTime.isAfter(consultantDateTime)) {
+                available_count = 0L;
+            }
+
+            String status;
+            if (available_count > 0) {
+                status = "Available";
+            } else {
+                status = "Not Available";
+            }
+
+            SlotResponse finalArray = new SlotResponse(
+                    slot.getSlotId(),
+                    slot.getSlotDay(),
+                    slot.getSlotTime(),
+                    userIdInSlot,
+                    caseId,
+                    status,
+                    isCancel,
+                    consultantInfo != null ? consultantInfo.getRequestType().name() : "",
+                    consultation_type.name(),
+                    last_consult_data != null ? last_consult_data.getConsultType() : "",
+                    slot.getSlotStartTime().format(DateTimeFormatter.ofPattern("hh:mm a"))
+            );
+
+            String slotTime = getSlotTime(slot.getSlotStartTime());
+
+            if (status.equals("Available") && slotTime != null) {
+                slotArray.get(slotTime).add(finalArray);
+            }
+        }
+
+        // Sorting slots and preparing the response
+
+        int morningSlotCount = slotArray.get("Morning").size();
+        int afternoonSlotCount = slotArray.get("Afternoon").size();
+        int eveningSlotCount = slotArray.get("Evening").size();
+
+        double paymentRate = Double.parseDouble(globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE").getValue());
+
+        double finalConsultFee = doctorcharges != null ? doctorcharges.getFinalConsultationFees() : 0.0;
+        String doctorFinalConsultFee = finalConsultFee > 0 ? "USD " + finalConsultFee : "Free";
+        String doctorFinalConsultSlsh = finalConsultFee > 0 ? "SLSH " + (finalConsultFee * paymentRate) : "Free";
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "200");
+        response.put("message", "Availability found successfully");
+        response.put("totalSlot", morningSlotCount + afternoonSlotCount + eveningSlotCount);
+        response.put("final_consultation_fees", doctorFinalConsultFee);
+        response.put("amount_slsh", doctorFinalConsultSlsh);
+        response.put("price_usd", finalConsultFee);
+        response.put("price_slsh", finalConsultFee * paymentRate);
+        response.put("morningSlotCount", morningSlotCount);
+        response.put("afternoonSlotCount", afternoonSlotCount);
+        response.put("eveningSlotCount", eveningSlotCount);
+        response.put("rem_cnt_msg", rem_cnt_msg);
+        response.put("data", slotArray);
+
+
+        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+                response
+        ));
+    }
+
+
+    private String getSlotTime(LocalTime fromTime) {
+        LocalTime morningStart = LocalTime.parse("06:00");
+        LocalTime morningEnd = LocalTime.parse("11:59");
+        LocalTime afternoonStart = LocalTime.parse("12:00");
+        LocalTime afternoonEnd = LocalTime.parse("17:59");
+        LocalTime eveningStart = LocalTime.parse("18:00");
+
+        if (fromTime.isAfter(morningStart.minusSeconds(1)) && fromTime.isBefore(morningEnd.plusSeconds(1))) {
+            return "Morning";
+        } else if (fromTime.isAfter(afternoonStart.minusSeconds(1)) && fromTime.isBefore(afternoonEnd.plusSeconds(1))) {
+            return "Afternoon";
+        } else if (fromTime.isAfter(eveningStart.minusSeconds(1))) {
+            return "Evening";
+        }
         return null;
     }
 

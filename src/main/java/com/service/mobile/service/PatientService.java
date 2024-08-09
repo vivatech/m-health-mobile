@@ -398,7 +398,7 @@ public class PatientService {
                         }
 
                         consultationRepository.save(consultation);
-                        //TODO write this functionality
+                        //NOTE-TODO write this functionality
                         /*
                         * $data = $this->actionPayment($consul_model->case_id,$data['user_id'],$currency_option,$coupon_code,$payment_number);
                             $response = json_decode($data);

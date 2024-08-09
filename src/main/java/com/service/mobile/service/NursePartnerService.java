@@ -273,7 +273,7 @@ public class NursePartnerService {
         }
     }
 
-    //TODO make this api
+    //NOTE-TODO make this api
     public ResponseEntity<?> processPayment(Locale locale, ProcessPaymentRequest request) {
         return null;
     }

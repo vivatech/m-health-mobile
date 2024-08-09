@@ -33,4 +33,7 @@ public interface LabConsultationRepository extends JpaRepository<LabConsultation
 
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCaseId(Integer userId, Integer caseId);
+
+    @Query("Select u from LabConsultation u where u.subCatId.subCatId in ?1 and u.caseId.caseId = ?2 and labOrdersId IS NOT NULL")
+    List<LabConsultation> findBySubCategoryIdCaseIdLadIdNotNull(List<Integer> subCatId,Integer caseId);
 }
