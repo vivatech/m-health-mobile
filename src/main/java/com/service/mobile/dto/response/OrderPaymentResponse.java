@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Map;
+
 @Setter
 @Getter
 @AllArgsConstructor
@@ -13,5 +15,10 @@ import lombok.Setter;
 public class OrderPaymentResponse {
     private Integer status;
     private String message;
-    private OrderPaymentResponseData data;
+    private Map<String, Object> data;
+
+    public  OrderPaymentResponse (Integer status,String message){
+        this.status = status;
+        this.message = message;
+    }
 }

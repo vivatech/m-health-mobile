@@ -31,6 +31,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.service.mobile.dto.enums.UserType.NursePartner;
+
 @Service
 public class PublicService {
 
@@ -133,6 +135,12 @@ public class PublicService {
     private WalletTransactionRepository walletTransactionRepository;
     @Autowired
     private LabConsultationRepository labConsultationRepository;
+    @Autowired
+    private WalletRepository walletRepository;
+    @Autowired
+    private LanguageService languageService;
+    @Autowired
+    private SDFSMSService sdfsmsService;
 
     public List<Country> findAllCountry(){
         return countryRepository.findAll();
@@ -1069,7 +1077,7 @@ public class PublicService {
     }
 
     public List<AvailableNursesMapDto> availableNursesMap() {
-        /*NOTE-TODO make this code
+        /*NOTE-TODO make this code (NOT IN BAANOO)
         *
         * */
         return new ArrayList<>();
@@ -1177,7 +1185,120 @@ public class PublicService {
     }
 
     //TODO check this with Shamshad sir
-    public OrderPaymentResponse orderPayment(Integer userId, Float amount, int i, String currencyOption, String evc, ArrayList<Object> objects, String paymentNumber) {
+    public OrderPaymentResponse orderPayment(Integer userId, Float amount, int i,
+                                             String currencyOption, String evc, ArrayList<Object> objects,
+                                             String paymentNumber) {
+//        PaymentRequest request = new PaymentRequest();
+//        request.setPatientId(userId);
+//        request.setAmount(amount);
+//        request.setCurrency(currencyOption);
+//        request.setPaymentMethod(evc);
+//        request.set
+//
+//
+//        Response responseDto = new Response();
+//        String message;
+//        String statusCode = Constants.FAIL;
+//
+//        if(request.getPatientId() != null && request.getPatientId() > 0
+//                && request.getCurrency() != null && request.getCurrencyAmount() !=null
+//                && request.getCurrencyAmount() >=0 && request.getAmount() != null
+//                && request.getPaymentMethod() != null && request.getAmount() >=0) {
+//
+//            Users patient = usersRepository.findById(request.getPatientId()).orElse(null);
+//            if (patient != null) {
+//
+//                //save existing data into user table
+//                patient.setFirstName(request.getFullName());
+//                patient.setDob(request.getDob());
+//                patient.setResidenceAddress(request.getResidenceAddress());
+//                usersRepository.save(patient);
+//
+//                Coupon coupon = null;
+//                if (request.getCouponId() != null && request.getCouponId() > 0) {
+//                    coupon = couponRepository.findById(request.getCouponId()).orElse(null);
+//                }
+//                LocalDateTime dateTime = LocalDateTime.now().plusMinutes(plusMin);
+//                // consultation
+//                if (request.getDoctorId() != null && request.getConsultType() != null && request.getSlotId() != null
+//                        && request.getDoctorId() > 0 && request.getConsultationType() != null) {
+//
+//                    PUser doctor = usersRepository.findByUserIdAndType(request.getDoctorId(), APIGatewayEnum.UserType.Doctor);
+//                    //check whether user already booked that slots in that given time or not
+//                    SlotMaster slotMaster = slotMasterRepository.findById(request.getSlotId()).orElse(null);
+//
+//                    if (doctor != null && slotMaster != null && !consultationRepository.existsByPatientIdAndConsultationDateAndSlotId(patient, request.getConsultationDate(), slotMaster)) {
+//                        //new consultation creating
+//                        Consultation consultation = saveConsultation(patient, doctor, request, slotMaster, dateTime);
+//
+//                        //Save order into order table
+//                        Orders orders = saveOrders(consultation, patient, doctor, coupon, request, dateTime);
+//
+//                        // method for dyte meeting
+//                        saveDyteMeeting(consultation);
+//
+//                        try{
+//                            String transactionType ="";
+//                            if(request.getConsultType().equalsIgnoreCase(CONSULT_VIDEO)) transactionType = Paid_Consultation_Video;
+//                            else transactionType = Paid_Consultation_Clinic_Visit;
+//
+//                            WalletTransaction transaction = transactionService.createConsultationTransaction(orders,doctor,patient, consultation, request, transactionType);
+//
+//                            ThankYouResponse response = saveResponse(consultation, orders, transaction);
+//                            //notification messages
+//                            String m = languageService.gettingMessages("REMINDER.SMS.FOR.CLINIC.VISIT", patient.getFirstName()+" "+patient.getLastName(), response.getDoctorName(), response.getConsultationDate()+" "+response.getTimeSlot(), doctor.getHospitalAddress());
+//                            String m1 = languageService.gettingMessages("REMINDER.SMS.FOR.CLINIC.VISIT.DOCTOR", response.getDoctorName(), patient.getFirstName()+" "+patient.getLastName(), response.getConsultationDate()+" "+response.getTimeSlot());
+//                            String m2 = languageService.gettingMessages("BOOKING.NOTIFICATION.CLINIC.TO.HOSPITAL", doctor.getClinicName(), patient.getFirstName()+" "+patient.getLastName(), response.getDoctorName(), response.getConsultationDate()+" "+response.getTimeSlot());
+//                            //save into database
+//                            transformDto.saveNotification(patient.getUserId(), m, Consult);
+//                            transformDto.saveNotification(doctor.getUserId(), m1, Consult);
+//                            transformDto.saveNotification(doctor.getHospitalId(), m2, Consult);
+//
+//                            responseDto.setData(response);
+//                            message = languageService.getMessage("Payment.Complete");
+//                            statusCode = SUCCESS;
+//                            status = APIGatewayEnum.ResponseStatus.SUCCESS;
+//
+//                        }catch (Exception e) {return new BaseResponseDto(e);}
+//                    }
+//                    else{
+//                        if(doctor == null) message = languageService.getMessage("DOCTOR.NOT.FOUND");
+//                        else if(slotMaster == null) message = languageService.getMessage("Slot.Not.Found");
+//                        else message = languageService.getMessage("Slot.Already.Booked");
+//                    }
+//                }
+//                //healthtip
+//                else if (request.getHealthTipPackageId() != null && request.getHealthTipPackageId() > 0) {
+//                    HealthTipPackage healthTipPackage = healthTipPackageRepositoryJpa.findById(request.getHealthTipPackageId()).orElse(null);
+//                    if (healthTipPackage != null) {
+//
+//                        //TODO : coupon
+//                        HealthTipOrders healthTipOrders = saveHealthTipOrder(patient, healthTipPackage, request, coupon, dateTime);
+//
+//                        //save healthtip package into user
+//                        HealthTipPackageUser healthTipPackageUser = saveIntoHealthTipPackageUser(patient, healthTipPackage, request, dateTime);
+//
+//                        transactionService.createHealthTipTransaction(healthTipOrders, patient, healthTipPackageUser, request, Paid_HealthTip_Package);
+//                        //save notification
+//                        String m = languageService.gettingMessages("HEALTHTIPS.SUPSCRIPTION.CONFIRMATION", patient.getFirstName()+" "+patient.getLastName());
+//                        String m1 = languageService.gettingMessages("Payment.Success", patient.getFirstName()+" "+patient.getLastName(), request.getAmount());
+//                        transformDto.saveNotification(patient.getUserId(), m, APIGatewayEnum.NotificationType.HEALTHTIP);
+//                        transformDto.saveNotification(patient.getUserId(), m1, APIGatewayEnum.NotificationType.HEALTHTIP);
+//
+//                        message = (languageService.getMessage("Payment.Complete"));
+//                        status = APIGatewayEnum.ResponseStatus.SUCCESS;
+//                        statusCode = SUCCESS;
+//
+//                    } else message = languageService.getMessage("HEALTHTIP.PACKAGE.NOT.FOUND");
+//                } else message = languageService.getMessage("FIELD.MISSING");
+//            } else message = languageService.getMessage("USER.NOT.FOUND");
+//        } else message = languageService.getMessage("FIELD.MISSING");
+//
+//        responseDto.setMessage(message);
+//        responseDto.setResponseStatus(status);
+//        responseDto.setStatusCode(statusCode);
+//
+//        return responseDto;
         return null;
     }
 
@@ -1356,6 +1477,7 @@ public class PublicService {
 
     public void exportReports(List<HealthTip> healthTips, String filePath) {
         // NOTE-TODO make this fucntion to creaet a csv file on this filepath which include file name too
+        // NOT IN USE
         /*$file = ExportReport::exportReportsAPI($query, $fileName);
                             $arr = [
                                 'file_url' => Yii::$app->params['BASE_URL'] . 'export_csv/' . $file_name,
@@ -1394,8 +1516,36 @@ public class PublicService {
         return response;
     }
 
-    public void sendConsultationMsg(Consultation consultation, String cancleConsultRequestFromPatient, String patient) {
-        // TODO-NOTE make this function
+    public void sendConsultationMsg(Consultation consultation, String cancleConsultRequestFromPatient, UserType patient) {
+        String message = "";
+        String to = "";
+        if(cancleConsultRequestFromPatient.equalsIgnoreCase("CANCLE_CONSULT_REQUEST_FROM_PATIENT")){
+            message = languageService.gettingMessages("CANCLE_CONSULT_REQUEST_FROM_PATIENT",
+                    consultation.getDoctorId().getFirstName()+" "+consultation.getDoctorId().getLastName(),
+                    consultation.getConsultationDate()+" "+consultation.getSlotId().getSlotTime()
+            );
+            to = consultation.getPatientId().getContactNumber();
+        }else if(cancleConsultRequestFromPatient.equalsIgnoreCase("CANCLE_CONSULT_REQUEST")){
+            message = languageService.gettingMessages("CANCLE_CONSULT_REQUEST_FROM_PATIENT",
+                    consultation.getDoctorId().getFirstName()+" "+consultation.getDoctorId().getLastName(),
+                    consultation.getConsultationDate()+" "+consultation.getSlotId().getSlotTime()
+            );
+            to = consultation.getDoctorId().getContactNumber();
+        }else if(cancleConsultRequestFromPatient.equalsIgnoreCase("CANCLE_NOTIFICATION_HOSPITAL")){
+            String hospitalName = (consultation.getDoctorId().getFirstName()!=null && !consultation.getDoctorId().getFirstName().isEmpty())?
+                    consultation.getDoctorId().getFirstName()+" "+consultation.getDoctorId().getLastName():consultation.getDoctorId().getClinicName();
+
+            message = languageService.gettingMessages("CANCLE_NOTIFICATION_HOSPITAL",hospitalName,
+                    consultation.getPatientId().getFirstName()+" "+consultation.getPatientId().getLastName(),
+                    consultation.getDoctorId().getFirstName()+" "+consultation.getDoctorId().getLastName(),
+                    consultation.getConsultationDate()+" "+consultation.getSlotId().getSlotTime()
+            );
+            Users users = usersRepository.findById(consultation.getDoctorId().getHospitalId()).orElse(null);
+            if(users!=null){
+                to = users.getContactNumber();
+            }
+        }
+        sdfsmsService.sendOTPSMS(to,message);
     }
 
     public CompleteAndPendingReportsDto getCompleteAndPendingReports(Integer caseId) {
@@ -1411,5 +1561,53 @@ public class PublicService {
         response.setPending_report(labConsultations.size() - completed);
 
         return response;
+    }
+
+    public void addUserWalletBalance(Integer transactionId, Users patient, UserType userType,
+                                     String isDebitCredit, Float amount) {
+
+        String CREDIT = "CREDIT";
+        String DEBIT = "DEBIT";
+        String NURSEPARTNER = "NURSEPARTNER";
+
+        Float balanceCredit = null;
+        Float balanceDebit = null;
+        Float previousBalance = 0f;
+        Float balance = 0f;
+
+        Wallet walletModel = new Wallet();
+
+        List<Wallet> transList = walletRepository.findLastTransacton(patient.getUserId());
+
+        Wallet trans = null;
+        for(Wallet w:transList){
+            trans = w;
+        }
+        Float exBalance = trans != null ? trans.getBalance() : patient.getTotalMoney();
+        Float exPrevBalance = trans != null ? trans.getPreviousBalance() : patient.getTotalMoney();
+
+        if (CREDIT.equals(isDebitCredit)) {
+            balanceCredit = amount;
+            balance = exBalance + amount;
+            previousBalance = exBalance;
+        } else if (DEBIT.equals(isDebitCredit)) {
+            balanceDebit = amount;
+            balance = exBalance - amount;
+            previousBalance = exBalance;
+        }
+
+        walletModel.setWalletId(patient.getWalletId());
+        walletModel.setWalletNumber(Integer.parseInt(patient.getContactNumber()));
+        walletModel.setTransactionId(transactionId);
+        walletModel.setUserId(patient.getUserId());
+        walletModel.setUserType(patient.getType());
+        walletModel.setBalance(balance);
+        walletModel.setPreviousBalance(previousBalance);
+        walletModel.setBalanceCredit(balanceCredit);
+        walletModel.setBalanceDebit(balanceDebit);
+        walletModel.setStatus(1);
+        walletModel.setCreatedAt(LocalDateTime.now());
+
+        walletRepository.save(walletModel);
     }
 }

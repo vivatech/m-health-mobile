@@ -329,9 +329,9 @@ public class RelativeService {
                                     }
                                 }
                             }
-                            publicService.sendConsultationMsg(consultation,"CANCLE_CONSULT_REQUEST_FROM_PATIENT","PATIENT");
-                            publicService.sendConsultationMsg(consultation,"CANCLE_CONSULT_REQUEST","DOCTOR");
-                            publicService.sendConsultationMsg(consultation,"CANCLE_NOTIFICATION_HOSPITAL","HOSPITAL");
+                            publicService.sendConsultationMsg(consultation,"CANCLE_CONSULT_REQUEST_FROM_PATIENT",UserType.PATIENT);
+                            publicService.sendConsultationMsg(consultation,"CANCLE_CONSULT_REQUEST",UserType.DOCTOR);
+                            publicService.sendConsultationMsg(consultation,"CANCLE_NOTIFICATION_HOSPITAL",UserType.HOSPITAL);
 
                             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                     Constants.SUCCESS_CODE,

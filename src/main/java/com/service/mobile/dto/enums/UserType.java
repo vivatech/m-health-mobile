@@ -18,5 +18,5 @@ public enum UserType {
     Agentuser,
     Marketing,
     Hospital,
-    System
+    HOSPITAL, System
 }

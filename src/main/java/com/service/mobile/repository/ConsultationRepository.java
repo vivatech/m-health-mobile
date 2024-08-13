@@ -37,7 +37,7 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     @Query("Select u from Consultation u where u.slotId.slotId = ?2 and u.consultationDate=?4 and u.doctorId.userId = ?1 and u.requestType = ?3")
     List<Consultation> findByDoctorIdAndSlotIdAndRequestTypeAndDate(Integer doctorId, Integer slotId, RequestType requestType, LocalDate date);
 
-    @Query("Select u from Consultation u where u.slotId.slotId = ?2 and u.consultationDate=?3 and u.requestType = ?4")
+    @Query("Select u from Consultation u where u.doctorId.userId = ?1 and  u.slotId.slotId = ?2 and u.consultationDate=?3 and u.requestType = ?4")
     List<Consultation> findByDoctorIdAndSlotIdAndRequestTypeAndDate(Integer doctorId, Integer slotId, LocalDate date, RequestType requestType);
 
     @Query("Select u from Consultation u where u.patientId.userId = ?1 and u.reportSuggested like ?2 and u.requestType =?3 and CONCAT(u.doctorId.firstName,' ', u.doctorId.lastName) like %?4% order by u.caseId DESC")
@@ -77,9 +77,9 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
             Users patientId, Integer userId,
             LocalDate consultationDate, RequestType requestType);
 
-    @Query("Select count(u.caseId) from Consultation u where u.patientId.userId = ?1 and  u.doctorId.userId = ?2 and " +
-            "Date(u.createdAt) = ?3 and u.consultationType = ?4 and u.consultType = ?5 and " +
-            "CONCAT(c.consultationDate, ' ', SUBSTRING(c.slotId.slotTime, -5), ':00') >= ?6 ")
+    @Query("SELECT COUNT(u.caseId) FROM Consultation u WHERE u.patientId.userId = ?1 AND u.doctorId.userId = ?2 AND " +
+            "DATE(u.createdAt) = ?3 AND u.consultationType = ?4 AND u.consultType = ?5 AND " +
+            "CONCAT(u.consultationDate, ' ', SUBSTRING(u.slotId.slotTime, -5), ':00') >= ?6")
     Long countByPatientIdAndDoctorIdCreatedAtAndConstaitionTypeConsultTypeAndConstationDate(
             Integer patient, Integer doctor,LocalDate createdAt
             , ConsultationType consultationType, String consultType,

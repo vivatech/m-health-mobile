@@ -423,7 +423,7 @@ public class DoctorService {
         return setA;
     }
 
-    //TODO : make this api based on doctor-availability-list-latest
+
     public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, DoctorAvailabilityListLatestRequest request) {
         Users slot_type_id = usersRepository.findById(request.getDoctor_id()).orElse(null);
         List<SlotMaster> slotListing = slotMasterRepository.findBySlotTypeIdAndSlotDay(slot_type_id.getSlotTypeId(),request.getDate());
