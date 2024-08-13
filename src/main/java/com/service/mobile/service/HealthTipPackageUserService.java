@@ -62,7 +62,7 @@ public class HealthTipPackageUserService {
             }else{
                 categories = pcat.getHealthTipCategoryMaster().getNameSl();
             }
-            //TODO : manage image URL
+
             String image = getCategoryImageUrl(pcat.getHealthTipCategoryMaster());
             HealthTipOrders order = healthTipOrdersRepository.findByPatientIdAndHathTipPackageId(userId,pcat.getHealthTipPackage().getPackageId()).orElse(null);
             if(order!=null){

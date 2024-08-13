@@ -1,11 +1,9 @@
 package com.service.mobile.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.dto.*;
-import com.service.mobile.dto.enums.AddedType;
-import com.service.mobile.dto.enums.OrderStatus;
-import com.service.mobile.dto.enums.RequestType;
-import com.service.mobile.dto.enums.Status;
+import com.service.mobile.dto.enums.*;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.*;
 import com.service.mobile.model.*;
@@ -20,28 +18,39 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @Slf4j
 public class PatientLabService {
     @Autowired
+    private GlobalConfigurationRepository globalConfigurationRepository;
+
+    @Autowired
     private LabPriceRepository labPriceRepository;
+
     @Autowired
     private LabReportRequestRepository labReportRequestRepository;
+
     @Autowired
     private LabRefundRequestRepository labRefundRequestRepository;
+
     @Autowired
     private LabReportDocRepository labReportDocRepository;
+
     @Autowired
     private LabOrdersRepository labOrdersRepository;
+
     @Autowired
     private LabSubCategoryMasterRepository labSubCategoryMasterRepository;
+
+    @Autowired
+    private EVCPlusPaymentService eVCPlusPaymentService;
 
     @Autowired
     private UsersRepository usersRepository;
@@ -61,11 +70,20 @@ public class PatientLabService {
     @Autowired
     private PublicService publicService;
 
+    @Autowired
+    private LanguageService languageService;
+
+    @Autowired
+    private SDFSMSService sdfsmsService;
+
     @Value("${app.currency.symbol.fdj}")
     private String currencySymbolFdj;
 
     @Value("${app.base.url}")
     private String baseUrl;
+
+    @Value("${app.system.user.id}")
+    private Integer SystemUserId;
 
     public ResponseEntity<?> labRequest(LabRequestDto request, Locale locale) {
         if(request.getName()==null){request.setName("");}
@@ -212,32 +230,11 @@ public class PatientLabService {
             consultation.setSubCatId(subCategory);
             labConsultationRepository.save(consultation);
 
-            /*
-            * TODO discuss this with shamshad sir
-            *  $model->scenario = 'addLabRequest';
-                        if($model->load($postData) && $model->validate()) {
-                            //echo "<pre>";print_r($model); exit;
-                            $model->lab_consult_patient_id = $data['user_id'];
-                            $model->save();
-                            http_response_code(200);
-                            $response = [
-                                'status' => '200',
-                                'message' => Yii::t('app', 'record_create_success'),
-                                'data' => (object)array(),
-                            ];
-                        }else{
-                            $errors = $model->errors;
-                            //echo "<pre>"; print_r($model->errors); exit;
-                            http_response_code(403);
-                            $response = [
-                                'status' => '403',
-                                'message' => reset($errors)[0],
-                                'data' => (object)array(),
-                            ];
-                        }
-            *
-            * */
-            return null;
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.RECORD_CREATED_SUCCESS,null,locale)
+            ));
         }else{
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_CONTENT_FOUNT_CODE,
@@ -470,9 +467,217 @@ public class PatientLabService {
         return null;
     }
 
-    // TODO make this api
-    public ResponseEntity<?> addLabRequest(BillInfoRequest request, Locale locale) {
-        return null;
+
+    public ResponseEntity<?> addLabRequest(AddLabRequestDto data, Locale locale) throws JsonProcessingException {
+        Integer caseId = data.getCase_id();
+        List<Integer> subCatId = data.getSub_cat_id();
+        Consultation consultDetail = consultationRepository.findById(data.getCase_id()).orElse(null);
+        Users labUser = usersRepository.findById(data.getLab_id()).orElse(null);
+        Users patient = usersRepository.findById(data.getUser_id()).orElse(null);
+
+        // Check only for doctor prescribed request
+        List<LabConsultation> checkConsultation = labConsultationRepository.findBySubCategoryIdCaseIdLadIdNotNull(subCatId,caseId);
+
+        if (checkConsultation.isEmpty() || caseId == null) {
+            String currencyOption = data.getCurrency_option() != null ? data.getCurrency_option() : "USD";
+            LabOrders labOrder = new LabOrders();
+            labOrder.setCaseId(consultDetail);
+            labOrder.setLab(labUser);
+            labOrder.setReportDate(data.getReport_date());
+            labOrder.setReportTimeSlot(data.getReport_time_slot());
+            labOrder.setPaymentMethod(data.getPayment_method());
+            labOrder.setAddress(data.getAddress());
+            labOrder.setSampleCollectionMode(data.getSample_collection_mode());
+
+            BillInfoDto billData = publicService.getBillInfo(data.getLab_id(), subCatId, data.getSample_collection_mode(),"");
+
+            Float finalConsultationFees = billData.getTotal();
+            Float currencyAmount = 0F;
+            if ("slsh".equalsIgnoreCase(currencyOption)) {
+                currencyAmount = getSlshAmount(finalConsultationFees);
+            }
+
+            Float amount = currencyAmount > 0 ? currencyAmount : finalConsultationFees;
+            labOrder.setCurrencyAmount(amount);
+            labOrder.setCurrency(currencyOption);
+            labOrder = labOrdersRepository.save(labOrder);
+            if (!"Pay_Home".equals(data.getPayment_method())) {
+                Users user = patient;
+                String refId = generateDateTime();
+                OrderPaymentResponse payment = eVCPlusPaymentService.processPayment(
+                        "API_PURCHASE",refId,labOrder.getId().toString()
+                        ,amount,data.getPayer_mobile()
+                        ,patient,currencyOption,"paid_against_lab_report",locale);
+
+                if (payment != null && payment.getStatus() == 100) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            payment.getMessage()
+                    ));
+                } else {
+
+                    WalletTransaction userTransaction = new WalletTransaction();
+                    userTransaction.setOrderId(null);
+                    userTransaction.setAmount(finalConsultationFees);
+                    userTransaction.setServiceType("load_wallet_balance");
+                    userTransaction.setTransactionType("wallet_balance_load");
+                    userTransaction.setTransactionStatus("Completed");
+                    userTransaction.setIsDebitCredit("CREDIT");
+                    userTransaction.setPatientId(user);
+                    userTransaction.setPayerMobile(data.getPayer_mobile());
+                    userTransaction.setPaymentNumber(data.getPayer_mobile());
+
+                    Integer userTrans = publicService.createTransaction(userTransaction,UserType.Patient,null,null);
+                    publicService.addUserWalletBalance(userTrans,patient,UserType.Patient,"CREDIT",finalConsultationFees);
+                    patient.setTotalMoney(patient.getTotalMoney() + finalConsultationFees);
+                    patient = usersRepository.save(patient);
+                }
+            }
+
+            String transactionId = String.valueOf(System.currentTimeMillis());
+            labOrder.setPatientId(patient);
+            labOrder.setDoctor(consultDetail != null ? consultDetail.getDoctorId() : null);
+            labOrder.setLab(labUser);
+            labOrder.setReportCharge(billData.getReportCharge());
+            labOrder.setExtraCharges(billData.getExtraCharges());
+            labOrder.setAmount(billData.getTotal());
+            labOrder.setPaymentStatus(data.getPayment_method().toString().equalsIgnoreCase("Pay_Home")? OrderStatus.Pending : OrderStatus.Completed);
+            labOrder.setTransactionId(!"Pay_Home".equals(data.getPayment_method()) ? transactionId : null);
+            labOrder.setReportDate(data.getReport_date());
+            labOrder.setAddress(data.getAddress());
+            labOrder.setSampleCollectionMode(data.getSample_collection_mode());
+            labOrder.setReportTimeSlot(data.getReport_time_slot());
+            labOrder.setPaymentMethod(data.getPayment_method());
+            labOrder = labOrdersRepository.save(labOrder);
+
+            updateLabConsultations(subCatId, caseId, data.getUser_id(), labOrder);
+            if (!"Pay_Home".equals(data.getPayment_method())) {
+                processTransactions(data, finalConsultationFees, transactionId, patient);
+            }
+
+            sendNotifications(labOrder, data.getSample_collection_mode(), caseId != null);
+
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.ORDER_CREATED_SUCCESS,null,locale)
+            ));
+        }
+        else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.ORDER_ALREADY_CREATED,null,locale)
+            ));
+        }
+    }
+
+    private void sendNotifications(LabOrders labOrder, String sampleCollectionMode, boolean b) {
+        String lrn_wd_hv_p = languageService.gettingMessages("LAB_REQUEST_NOTIFICATION_PATIENT_HV",
+                labOrder.getPatientId().getFirstName()+" "+labOrder.getPatientId().getLastName(),
+                labOrder.getLab().getClinicName());
+
+        String lrn_wd_hv_l = languageService.gettingMessages("LAB_REQUEST_NOTIFICATION_LAB_HV",
+                labOrder.getLab().getClinicName(),
+                labOrder.getPatientId().getFirstName()+" "+labOrder.getPatientId().getLastName(),
+                labOrder.getAddress(),labOrder.getReportDate());
+
+        String lrn_wd_cv_p = languageService.gettingMessages("LAB_REQUEST_NOTIFICATION_PATIENT_WITH_DOCTOR_CV",
+                labOrder.getPatientId().getFirstName()+" "+labOrder.getPatientId().getLastName(),
+                labOrder.getDoctor().getFirstName()+" "+labOrder.getDoctor().getLastName());
+
+        String lrn_wd_cv_l = languageService.gettingMessages("LAB_REQUEST_NOTIFICATION_LAB_WITH_DOCTOR",
+                labOrder.getLab().getClinicName(),labOrder.getPatientId().getFirstName()+" "+labOrder.getPatientId().getLastName()
+                ,labOrder.getReportDate());
+
+
+
+        String lrn_wod_hv_p = languageService.gettingMessages("LAB_REQUEST_NOTIFICATION_PATIENT_HV",
+                labOrder.getPatientId().getFirstName()+" "+labOrder.getPatientId().getLastName(),labOrder.getLab().getClinicName());
+
+        String lrn_wod_hv_l = languageService.gettingMessages("LAB_REQUEST_NOTIFICATION_LAB_HV",
+                labOrder.getLab().getClinicName(),labOrder.getPatientId().getFirstName()+" "+labOrder.getPatientId().getLastName(),
+                labOrder.getAddress(),labOrder.getReportDate());
+
+        String lrn_wod_cv_p = languageService.gettingMessages("LAB_REQUEST_NOTIFICATION_PATIENT_WITHOUT_DOCTOR_CV",
+                labOrder.getPatientId().getFirstName()+" "+labOrder.getPatientId().getLastName(),
+                labOrder.getAddress(),labOrder.getAddress(),labOrder.getReportDate());
+        String lrn_wod_cv_l = languageService.gettingMessages("LAB_REQUEST_NOTIFICATION_LAB_WITH_DOCTOR",
+                labOrder.getLab().getClinicName(),
+                labOrder.getPatientId().getFirstName()+" "+labOrder.getPatientId().getLastName(),labOrder.getReportDate());
+
+        sdfsmsService.sendOTPSMS(labOrder.getPatientId().getContactNumber(),lrn_wd_hv_p);
+        sdfsmsService.sendOTPSMS(labOrder.getPatientId().getContactNumber(),lrn_wd_cv_p);
+        sdfsmsService.sendOTPSMS(labOrder.getPatientId().getContactNumber(),lrn_wod_hv_p);
+        sdfsmsService.sendOTPSMS(labOrder.getPatientId().getContactNumber(),lrn_wod_cv_p);
+
+        sdfsmsService.sendOTPSMS(labOrder.getLab().getContactNumber(),lrn_wd_hv_l);
+        sdfsmsService.sendOTPSMS(labOrder.getLab().getContactNumber(),lrn_wd_cv_l);
+        sdfsmsService.sendOTPSMS(labOrder.getLab().getContactNumber(),lrn_wod_hv_l);
+        sdfsmsService.sendOTPSMS(labOrder.getLab().getContactNumber(),lrn_wod_cv_l);
+    }
+
+    private void processTransactions(AddLabRequestDto data, Float finalConsultationFees,
+                                     String transactionId, Users patient) {
+        WalletTransaction userTransaction = new WalletTransaction();
+        userTransaction.setOrderId(null);
+        userTransaction.setAmount(finalConsultationFees);
+        userTransaction.setServiceType("lab");
+        userTransaction.setTransactionType("paid_wallet_balance_lab");
+        userTransaction.setTransactionStatus("Completed");
+        userTransaction.setIsDebitCredit("CREDIT");
+        userTransaction.setPatientId(patient);
+        userTransaction.setPayerMobile(data.getPayer_mobile());
+        userTransaction.setPaymentNumber(data.getPayer_mobile());
+
+        Integer userTrans = publicService.createTransaction(userTransaction,UserType.Patient,null,null);
+        publicService.addUserWalletBalance(userTrans,patient,UserType.Patient,"CREDIT",finalConsultationFees);
+
+        Users payeeMobile = usersRepository.findById(SystemUserId).orElse(null);
+
+        WalletTransaction userTransaction2 = new WalletTransaction();
+        userTransaction2.setOrderId(null);
+        userTransaction2.setAmount(finalConsultationFees);
+        userTransaction2.setServiceType("lab");
+        userTransaction2.setTransactionType("system_credit_consultation_lab");
+        userTransaction2.setTransactionStatus("Completed");
+        userTransaction2.setIsDebitCredit("CREDIT");
+        userTransaction2.setPatientId(patient);
+        userTransaction2.setPayerMobile(data.getPayer_mobile());
+        userTransaction2.setPaymentNumber(data.getPayer_mobile());
+
+        Integer userTrans2 = publicService.createTransaction(userTransaction2,UserType.Patient,null,null);
+        publicService.addUserWalletBalance(userTrans2,payeeMobile,UserType.Patient,"CREDIT",finalConsultationFees);
+
+        publicService.updateSystemUserWallet(finalConsultationFees,null);
+
+        patient.setTotalMoney(patient.getTotalMoney() + finalConsultationFees);
+        usersRepository.save(patient);
+    }
+
+    private void updateLabConsultations(List<Integer> subCatId, Integer caseId, Integer userId, LabOrders id) {
+        for(Integer i:subCatId){
+            List<LabConsultation> labConsultations = new ArrayList<>();
+            if(caseId!=null){
+                labConsultations = labConsultationRepository.findBySubCategoryIdCaseId(i,caseId);
+            }else{
+                labConsultations = labConsultationRepository.findBySubCategoryIdCaseIdNullLabOrderNullPatientId(i,userId);
+            }
+            for(LabConsultation l:labConsultations){
+                l.setLabOrdersId(id);
+            }
+            labConsultationRepository.saveAll(labConsultations);
+        }
+    }
+
+    String generateDateTime() {
+        return new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + (int) (Math.random() * 1000);
+    }
+
+    private Float getSlshAmount(Float amount) {
+        GlobalConfiguration configuration = globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE");
+        return amount * Float.parseFloat(configuration.getValue());
     }
 
     public ResponseEntity<?> getLabOrder(GetLabOrderRequest request, Locale locale) {

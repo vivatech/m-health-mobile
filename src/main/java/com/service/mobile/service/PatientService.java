@@ -142,6 +142,9 @@ public class PatientService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @Autowired
+    private EVCPlusPaymentService evcPlusPaymentService;
+
     public ResponseEntity<?> actionUpdateFullname(UpdateFullNameRequest request, Locale locale) {
         if(request !=null&&request.getUser_id()!=null)
 
@@ -398,7 +401,8 @@ public class PatientService {
                         }
 
                         consultationRepository.save(consultation);
-                        //TODO write this functionality
+                        //NOTE-TODO write this functionality
+//                        evcPlusPaymentService.processPayment()
                         /*
                         * $data = $this->actionPayment($consul_model->case_id,$data['user_id'],$currency_option,$coupon_code,$payment_number);
                             $response = json_decode($data);
@@ -884,7 +888,8 @@ public class PatientService {
                     if((paymentMethod.equalsIgnoreCase("waafi") ||
                             paymentMethod.equalsIgnoreCase("zaad") ||
                             paymentMethod.equalsIgnoreCase("evc"))){
-                        payment = publicService.orderPayment(request.getUser_id(),amount,0,currencyOption,"evc",new ArrayList<>(),paymentNumber);
+                        payment = publicService.orderPayment(request.getUser_id(),
+                                amount,0,currencyOption,"evc",new ArrayList<>(),paymentNumber);
                     }
                 }
 
@@ -916,7 +921,8 @@ public class PatientService {
                     // Wallet Transaction
                     Integer patientId = request.getUser_id();
                     if (finalConsultationFees!=null && finalConsultationFees != 0) {
-                        String transactionId = payment.getData().getTransactionId();
+                        // TODO get this from payment response(payment.getData()) dto
+                        String transactionId = (String)payment.getData().get("transaction_id");
                         Users payerMobile = usersRepository.findById(SystemUserId).orElse(null);
                         WalletTransaction userWalletBalance = publicService.getWalletBalance(patientId);
                         WalletTransaction sysWalletBalance = publicService.getWalletBalance(SystemUserId);

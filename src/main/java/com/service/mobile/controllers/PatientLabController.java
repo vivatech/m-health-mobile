@@ -1,5 +1,7 @@
 package com.service.mobile.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.service.mobile.dto.dto.AddLabRequestDto;
 import com.service.mobile.dto.dto.LabRequestDto;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.service.PatientLabService;
@@ -67,7 +69,7 @@ public class PatientLabController {
 
     @PostMapping("/add-lab-request")
     public ResponseEntity<?> addLabRequest(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
-                                         @RequestBody BillInfoRequest request) {
+                                         @RequestBody AddLabRequestDto request) throws JsonProcessingException {
         return patientLabService.addLabRequest(request,locale);
     }
 

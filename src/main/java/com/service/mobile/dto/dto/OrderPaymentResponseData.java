@@ -11,4 +11,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class OrderPaymentResponseData {
     private String transactionId;
+    private String ref_transaction_id;
+    private String reference_number="";
 }

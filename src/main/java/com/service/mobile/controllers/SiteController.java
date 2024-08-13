@@ -126,11 +126,10 @@ public class SiteController {
         return publicService.getCityList(locale);
     }
 
-    //TODO Discuss with shamshad sir
     @PostMapping("/update-profile-picture") //in post man post method is written
     public ResponseEntity<?> updateProfilePicture(@ModelAttribute UpdatePictureRequest request,
         @RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
-        return usersService.updateProfilePicture(request);
+        return usersService.updateProfilePicture(request,locale);
     }
 
     @GetMapping("/get-doctor-city-list")

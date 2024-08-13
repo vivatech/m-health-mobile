@@ -15,10 +15,12 @@ import com.service.mobile.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -273,7 +275,7 @@ public class NursePartnerService {
         }
     }
 
-    //TODO make this api
+    //NOTE-TODO (NOT IN BAANNOO)
     public ResponseEntity<?> processPayment(Locale locale, ProcessPaymentRequest request) {
         return null;
     }
