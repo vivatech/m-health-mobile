@@ -73,15 +73,15 @@ public class DoctorService {
 
 
     public ResponseEntity<?> getDoctorCityList(Locale locale) {
-        List<City> cities = usersRepository.getCitiesByUsertype(UserType.DOCTOR);
-        if(cities.size()>0){
+        List<City> cities = usersRepository.getCitiesByUsertype(UserType.Doctor);
+        if(!cities.isEmpty()){
             List<CityResponse> responses = new ArrayList<>();
             for(City c:cities){
                 responses.add(new CityResponse(c.getId(),c.getName(),null));
             }
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.BLANK_DATA_GIVEN_CODE,
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.CITY_FOUND_SUCCESSFULLY,null,locale),
                     responses
             ));
@@ -113,9 +113,9 @@ public class DoctorService {
                 listOfDoctor = listOfDoctor.stream().filter(item -> item.getCity().getId() != null && item.getCity().getId().equals(request.getCity_id())).toList();
             }
 
-            if (request.getConsult_type().equalsIgnoreCase(Constants.VIDEO)) {
+            if (request.getConsult_type()!=null && request.getConsult_type().equalsIgnoreCase(Constants.VIDEO)) {
                 listOfDoctor = listOfDoctor.stream().filter(item -> item.getHasDoctorVideo() != null && item.getHasDoctorVideo().equalsIgnoreCase(Constants.CONSULT_BOTH)).toList();
-            } else if (request.getConsult_type().equalsIgnoreCase(Constants.CONSULT_VISIT)) {
+            } else if (request.getConsult_type()!=null && request.getConsult_type().equalsIgnoreCase(Constants.CONSULT_VISIT)) {
                 listOfDoctor = listOfDoctor.stream().filter(item -> item.getHasDoctorVideo() != null && item.getHasDoctorVideo().equalsIgnoreCase(Constants.CONSULT_VISIT)).toList();
             }
             List<SearchDocResponse> responses = new ArrayList<>();
@@ -207,19 +207,19 @@ public class DoctorService {
             List<SearchDocResponse> languageDoctorList = getLanguageList(responses, request);
 
             //only specialization
-            if (!request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() <= 0 && request.getAvailability().isEmpty()) {
+            if (request.getSpecialization_id()!=null && !request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() <= 0 && request.getAvailability().isEmpty()) {
                 responses = specializationDoctorList;
             }
             //only language
-            else if (request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() > 0 && request.getAvailability().isEmpty()) {
+            else if (request.getSpecialization_id()!=null && request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() > 0 && request.getAvailability().isEmpty()) {
                 responses = languageDoctorList;
             }
             //only availability
-            else if (!request.getAvailability().isEmpty() && request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() <= 0) {
+            else if (request.getAvailability()!=null && !request.getAvailability().isEmpty() && request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() <= 0) {
                 responses = availabilityDoctorList;
             }
             //all condition up
-            else if (!request.getAvailability().isEmpty() && !request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() > 0) {
+            else if (request.getAvailability()!=null && !request.getAvailability().isEmpty() && request.getSpecialization_id()!=null && !request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() > 0) {
                 // Use sets to find common user IDs
                 Set<SearchDocResponse> set1 = new HashSet<>(availabilityDoctorList);
                 Set<SearchDocResponse> set2 = new HashSet<>(specializationDoctorList);
@@ -231,7 +231,7 @@ public class DoctorService {
                 responses = new ArrayList<>(set1);
             }
             //only specialization and Language is up
-            else if (request.getAvailability().isEmpty() && !request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() > 0){
+            else if (request.getAvailability()!=null && request.getAvailability().isEmpty() && request.getSpecialization_id()!=null && !request.getSpecialization_id().isEmpty() && request.getLanguage_fluency()!=null && request.getLanguage_fluency() > 0){
                 Set<SearchDocResponse> set2 = new HashSet<>(specializationDoctorList);
                 Set<SearchDocResponse> set3 = new HashSet<>(languageDoctorList);
 
@@ -240,7 +240,7 @@ public class DoctorService {
                 responses = new ArrayList<>(set2);
             }
             //only availability and specialization
-            else if (!request.getAvailability().isEmpty() && !request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() <= 0){
+            else if (request.getAvailability()!=null && !request.getAvailability().isEmpty() && !request.getSpecialization_id().isEmpty() && request.getLanguage_fluency()!=null && request.getLanguage_fluency() <= 0){
                 Set<SearchDocResponse> set1 = new HashSet<>(availabilityDoctorList);
                 Set<SearchDocResponse> set2 = new HashSet<>(specializationDoctorList);
 
@@ -249,7 +249,7 @@ public class DoctorService {
                 responses = new ArrayList<>(set1);
             }
             //only availability and language
-            else if (!request.getAvailability().isEmpty() && request.getSpecialization_id().isEmpty() && request.getLanguage_fluency() > 0){
+            else if (request.getAvailability()!=null && !request.getAvailability().isEmpty() && request.getSpecialization_id()!=null && request.getSpecialization_id().isEmpty() && request.getLanguage_fluency()!=null && request.getLanguage_fluency() > 0){
                 Set<SearchDocResponse> set1 = new HashSet<>(availabilityDoctorList);
                 Set<SearchDocResponse> set3 = new HashSet<>(languageDoctorList);
 
@@ -258,7 +258,7 @@ public class DoctorService {
                 responses = new ArrayList<>(set1);
             }
             //doctor search by name
-            if (!request.getDoctor_name().isEmpty()) {
+            if (request.getDoctor_name()!=null && !request.getDoctor_name().isEmpty()) {
                 List<SearchDocResponse> list = new ArrayList<>();
                 for (SearchDocResponse t : responses) {
                     if(t.getName().toLowerCase().contains(request.getDoctor_name().toLowerCase())) list.add(t);
@@ -268,7 +268,7 @@ public class DoctorService {
 
             Map<String, Object> responseMap = new HashMap<>();
             //experience
-            if (!request.getSort_by().isEmpty()) {
+            if (request.getSort_by()!=null && !request.getSort_by().isEmpty()) {
                 if (request.getSort_by().equalsIgnoreCase(Constants.EXPERIENCE)) {
                     responses.sort(Comparator.comparing(response -> extractExperienceAsDouble(response.getExperience())));
                 } else {
@@ -359,9 +359,11 @@ public class DoctorService {
     private List<SearchDocResponse> getSpecializationList(List<SearchDocResponse> responses, SearchDoctorRequest request){
         HashSet<Integer> set = new HashSet<>();
         List<SearchDocResponse> specializationDoctorList = new ArrayList<>();
-        for (Integer specializationId : request.getSpecialization_id()) {
-            List<Integer> docId = doctorSpecializationRepository.getDoctorIdFromSpecializationId(specializationId);
-            set.addAll(docId);
+        if(request.getSpecialization_id()!=null && !request.getSpecialization_id().isEmpty()){
+            for (Integer specializationId : request.getSpecialization_id()) {
+                List<Integer> docId = doctorSpecializationRepository.getDoctorIdFromSpecializationId(specializationId);
+                set.addAll(docId);
+            }
         }
         for(SearchDocResponse item : responses){
             if(set.contains(item.getId())) specializationDoctorList.add(item);
@@ -374,12 +376,12 @@ public class DoctorService {
         for (SearchDocResponse obj : responses) {
             List<DoctorAvailability> uniqueObj;
             Users item = usersRepository.findById(obj.getId()).orElse(null);
-            if (request.getAvailability().equalsIgnoreCase(Constants.CONS_TODAY)) {
+            if (request.getAvailability()!=null && request.getAvailability().equalsIgnoreCase(Constants.CONS_TODAY)) {
                 uniqueObj = getAvailabilityByDay(LocalDate.now(), item);
                 if (uniqueObj != null && !uniqueObj.isEmpty()) {
                     set.add(obj);
                 }
-            } else if (request.getAvailability().equalsIgnoreCase(Constants.CONS_TOMORROW)) {
+            } else if (request.getAvailability()!=null && request.getAvailability().equalsIgnoreCase(Constants.CONS_TOMORROW)) {
                 uniqueObj = getAvailabilityByDay(LocalDate.now().plusDays(1), item);
                 if (uniqueObj != null && !uniqueObj.isEmpty()) {
                     set.add(obj);
@@ -396,11 +398,13 @@ public class DoctorService {
 
     private List<SearchDocResponse> getLanguageList(List<SearchDocResponse> responses, SearchDoctorRequest request){
         List<SearchDocResponse> languageList = new ArrayList<>();
-        Language language = languageRepository.findById(request.getLanguage_fluency()).orElse(null);
-        if(language != null) {
-            for(SearchDocResponse response : responses){
-                for(String value : response.getLanguage()){
-                    if(value.equalsIgnoreCase(language.getName())) languageList.add(response);
+        if(request.getLanguage_fluency()!=null){
+            Language language = languageRepository.findById(request.getLanguage_fluency()).orElse(null);
+            if(language != null) {
+                for(SearchDocResponse response : responses){
+                    for(String value : response.getLanguage()){
+                        if(value.equalsIgnoreCase(language.getName())) languageList.add(response);
+                    }
                 }
             }
         }

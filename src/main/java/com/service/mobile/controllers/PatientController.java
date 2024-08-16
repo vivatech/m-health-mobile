@@ -62,10 +62,10 @@ public class PatientController {
         return publicService.getProfile(locale,user_id);
     }
 
-    @PostMapping("/edit-profile")
+    @PostMapping(path = "/edit-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> editProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                         Locale locale,
-                                         @RequestBody EditProfileRequest request
+                                         @ModelAttribute EditProfileRequest request
                                          ) {
         return publicService.editProfile(locale,request);
     }
@@ -82,15 +82,15 @@ public class PatientController {
         return patientService.getAvailability(locale);
     }
 
-    @GetMapping("/search-doctor")
+    @PostMapping(path = "/search-doctor", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> searchDoctor(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
-                                       Locale locale, @RequestBody SearchDoctorRequest request) {
+                                       Locale locale, @ModelAttribute SearchDoctorRequest request) {
         return doctorService.searchDoctor(locale,request);
     }
 
-    @GetMapping("/doctor-availability-list-latest")
+    @PostMapping(path = "/doctor-availability-list-latest", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> doctorAvailabilityListLatest(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
-                                       Locale locale, @RequestBody DoctorAvailabilityListLatestRequest request) {
+                                       Locale locale, @ModelAttribute DoctorAvailabilityListLatestRequest request) {
         return doctorService.doctorAvailabilityListLatest(locale,request);
     }
 

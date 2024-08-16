@@ -508,15 +508,19 @@ public class PublicService {
 
 
     public ResponseEntity<?> getSpecialization(Locale locale) {
-        List<Specialization> specializations = specializationRepository.findAllByStatus("A");
-        if (specializations.size()>0) {
+        List<Specialization> specializations = specializationRepository.findAllByStatus(Status.A);
+        if (!specializations.isEmpty()) {
             List<SpecializationResponse> responses = new ArrayList<>();
             String photo = baseUrl+defaultImage;
             for(Specialization specialization:specializations){
                 SpecializationResponse data = new SpecializationResponse();
-                String photoPath = baseUrl+"/uploaded_file/specialisation/"+specialization.getId()+"/"+specialization.getPhoto();
+                if(specialization.getPhoto()!=null && !specialization.getPhoto().isEmpty()){
+                    String photoPath = baseUrl+"/uploaded_file/specialisation/"+specialization.getId()+"/"+specialization.getPhoto();
+                    data.setPhoto(photoPath);
+                }else{
+                    data.setPhoto(photo);
+                }
 
-                data.setPhoto(photoPath);
                 if(locale.getLanguage().equals("en")){
                     data.setName(specialization.getName());
                 }else {data.setName(specialization.getNameSl());}

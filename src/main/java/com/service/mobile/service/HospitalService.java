@@ -27,7 +27,7 @@ public class HospitalService {
 
     public ResponseEntity<?> getHospitalList(Locale locale) {
         List<Users> users = usersRepository.findByStatusAndTypeAndVerified("A", UserType.Hospital,"Yes");
-        if(users.size()>0){
+        if(!users.isEmpty()){
 
             List<HospitalListResponse> responses = new ArrayList<>();
             for(Users u:users){
