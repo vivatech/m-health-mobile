@@ -10,7 +10,6 @@ import static com.service.mobile.config.Constants.*;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 public class Response {
     private String code = SUCCESS_CODE;
@@ -32,6 +31,13 @@ public class Response {
         this.status = status;
         this.code = code;
         this.message = message;
+    }
+
+    public Response(String status,String code,String message,Object data){
+        this.status = status;
+        this.code = code;
+        this.message = message;
+        this.data = data;
     }
 
 }

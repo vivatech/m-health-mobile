@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MobileReleaseRequest {
-    private String appVersion;
-    private String deviceType;
+    private String app_version;
+    private String device_type;
 }

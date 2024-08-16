@@ -64,13 +64,16 @@ public class HealthTipPackageUserService {
             }
 
             String image = getCategoryImageUrl(pcat.getHealthTipCategoryMaster());
-            HealthTipOrders order = healthTipOrdersRepository.findByPatientIdAndHathTipPackageId(userId,pcat.getHealthTipPackage().getPackageId()).orElse(null);
-            if(order!=null){
-                String currency = (order.getCurrency()!=null && !order.getCurrency().isEmpty())?
-                        order.getCurrency():currencySymbolFdj;
-                Float ammount = (order.getCurrencyAmount()!=null)? order.getCurrencyAmount() : order.getAmount();
+            List<HealthTipOrders> orders = healthTipOrdersRepository.findByPatientIdAndHathTipPackageId(userId,pcat.getHealthTipPackage().getPackageId());
+            if(orders!=null){
+                String currency = "";
+                Float ammount = 0f;
+                for(HealthTipOrders order:orders){
+                    currency = (order.getCurrency()!=null && !order.getCurrency().isEmpty())?
+                            order.getCurrency():currencySymbolFdj;
+                    ammount = (order.getCurrencyAmount()!=null)? order.getCurrencyAmount() : order.getAmount();
+                }
                 HealthTipPackageUser t =tipPackageUsers.stream().filter(c->c.getHealthTipPackage().getPackageId()==pcat.getHealthTipPackage().getPackageId()).findFirst().orElse(null);
-
                 ActiveHealthTipsPackageResponse temp = new ActiveHealthTipsPackageResponse();
                 temp.setPackage_id(pcat.getHealthTipPackage().getPackageId());
                 temp.setPackage_name(categories);

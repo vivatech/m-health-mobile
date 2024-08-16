@@ -7,6 +7,7 @@ import com.service.mobile.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,13 +36,13 @@ public class PatientController {
     @Autowired
     private RelativeService relativeService;
 
-    @PostMapping("/update-fullname")
+    @PostMapping(path="/update-fullname", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> actionUpdateFullName(@RequestBody UpdateFullNameRequest request,@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
         return patientService.actionUpdateFullname(request,locale);
     }
 
-    @PostMapping("/get-active-healthtips-package")
-    public ResponseEntity<?> getActiveHealthTipsPackage(@RequestBody UpdateFullNameRequest request,@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
+    @PostMapping(path="/get-active-healthtips-package", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> getActiveHealthTipsPackage(@ModelAttribute UpdateFullNameRequest request,@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
         return patientService.getActiveHealthTipsPackage(request,locale);
     }
 

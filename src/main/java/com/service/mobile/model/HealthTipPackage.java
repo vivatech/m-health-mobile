@@ -1,6 +1,6 @@
 package com.service.mobile.model;
 
-import com.service.mobile.dto.Status;
+import com.service.mobile.dto.enums.Status;
 import com.service.mobile.dto.enums.PackageType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

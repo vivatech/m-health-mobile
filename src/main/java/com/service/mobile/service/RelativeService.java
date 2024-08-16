@@ -64,6 +64,8 @@ public class RelativeService {
 
     @Autowired
     private PublicService publicService;
+    @Autowired
+    private PackageUserRepository packageUserRepository;
 
     public ResponseEntity<?> relativeList(Locale locale, Integer userId) {
         List<UserRelative> relatives = userRelativeRepository.findByCreatedBy(userId);
@@ -313,19 +315,21 @@ public class RelativeService {
                                     ));
                                 }
                             }else{
-                                HealthTipPackageUser packageUser = healthTipPackageUserRepository.findByUserIdAndPackageId(request.getUser_id(),consultation.getPackageId().getPackageId()).orElse(null);
-                                if(packageUser!=null){
-                                    if(consultation.getConsultType().equalsIgnoreCase("chat")){
-                                        packageUser.setTotalChat(
-                                                (packageUser.getTotalChat()!=null && packageUser.getTotalChat()>0)?
-                                                        packageUser.getTotalChat()+1 : 0);
-                                        packageUser = healthTipPackageUserRepository.save(packageUser);
-                                    }
-                                    if(consultation.getConsultType().equalsIgnoreCase("video")){
-                                        packageUser.setTotalVideoCall(
-                                                (packageUser.getTotalVideoCall()!=null && packageUser.getTotalVideoCall()>0)?
-                                                        packageUser.getTotalVideoCall()+1 : 0);
-                                        packageUser = healthTipPackageUserRepository.save(packageUser);
+                                List<PackageUser> packageUsers = packageUserRepository.findByUserIdAndPackageId(request.getUser_id(),consultation.getPackageId().getPackageId());
+                                for(PackageUser packageUser:packageUsers){
+                                    if(packageUser!=null){
+                                        if(consultation.getConsultType().equalsIgnoreCase("chat")){
+                                            packageUser.setTotalChat(
+                                                    (packageUser.getTotalChat()!=null && packageUser.getTotalChat()>0)?
+                                                            packageUser.getTotalChat()+1 : 0);
+                                            packageUser = packageUserRepository.save(packageUser);
+                                        }
+                                        if(consultation.getConsultType().equalsIgnoreCase("video")){
+                                            packageUser.setTotalVideoCall(
+                                                    (packageUser.getTotalVideoCall()!=null && packageUser.getTotalVideoCall()>0)?
+                                                            packageUser.getTotalVideoCall()+1 : 0);
+                                            packageUser = packageUserRepository.save(packageUser);
+                                        }
                                     }
                                 }
                             }

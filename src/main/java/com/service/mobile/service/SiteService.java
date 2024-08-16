@@ -57,8 +57,8 @@ public class SiteService {
     public ResponseEntity<?> getMobileRelease(MobileReleaseRequest request, Locale locale) {
         Response response = new Response();
         if (request != null) {
-            DeviceType deviceType = getDeviceType(request.getDeviceType());
-            String appVersion = request.getAppVersion();
+            DeviceType deviceType = getDeviceType(request.getDevice_type());
+            String appVersion = request.getApp_version();
 
             MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceType(appVersion, deviceType);
 

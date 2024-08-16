@@ -11,6 +11,7 @@ import com.service.mobile.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -47,8 +48,8 @@ public class SiteController {
     @Autowired
     private TicketService ticketService;
 
-    @PostMapping("/mobile-release")
-    public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
+    @PostMapping(path="/mobile-release", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute MobileReleaseRequest request) {
         return siteService.getMobileRelease(request,locale);
     }
 

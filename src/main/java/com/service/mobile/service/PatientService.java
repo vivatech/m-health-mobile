@@ -286,13 +286,15 @@ public class PatientService {
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_SUBSCRIBED_FOR_USER,null,locale)
+                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_SUBSCRIBED_FOR_USER,null,locale),
+                        true
                 ));
             } else {
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_FORUSER_NOT_FOUND,null,locale)
+                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_FORUSER_NOT_FOUND,null,locale),
+                        false
                 ));
             }
         }else{

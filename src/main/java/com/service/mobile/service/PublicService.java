@@ -269,7 +269,6 @@ public class PublicService {
     }
 
     public ResponseEntity<?> getOffers(Locale locale) {
-        Response response = new Response();
         List<Coupon> coupons = couponRepository.findByStatus(1);
         if (coupons.size()>0) {
             OfferResponseDTO responseDTO = new OfferResponseDTO();
