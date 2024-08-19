@@ -549,7 +549,7 @@ public class PublicService {
         for (Map.Entry<String, String> entry : paymentOptionConfig.getCurrency().entrySet()) {
             PaymentMethodResponse.Option option = new PaymentMethodResponse.Option();
             option.setValue(entry.getKey());
-            option.setTitle(messageSource.getMessage(entry.getValue().toLowerCase(), null, locale));
+            option.setTitle(entry.getValue());
             currencyOptions.add(option);
         }
 
@@ -557,16 +557,16 @@ public class PublicService {
         for (Map.Entry<String, String> entry : paymentOptionConfig.getPaymentMethod().entrySet()) {
             PaymentMethodResponse.Option option = new PaymentMethodResponse.Option();
             option.setValue(entry.getKey());
-            option.setTitle(messageSource.getMessage(entry.getValue(), null, locale));
+            option.setTitle(entry.getValue());
             paymentMethods.add(option);
         }
+        PaymentMethodResponse response = new PaymentMethodResponse();
+        response.setCurrency_option(currencyOptions);
+        response.setData(paymentMethods);
+        response.setStatus(Constants.SUCCESS_CODE);
+        response.setMessage(messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale));
 
-        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                Constants.SUCCESS_CODE,
-                Constants.SUCCESS_CODE,
-                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
-                currencyOptions
-        ));
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     public List<PaymentMethodResponse.Option> getPaymentMethod() {

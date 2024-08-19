@@ -15,7 +15,7 @@ public class PaymentMethodResponse {
     private String status;
     private String message;
     private List<Option> data;
-    private List<Option> currencyOption;
+    private List<Option> currency_option;
 
     @Setter
     @Getter
