@@ -30,11 +30,11 @@ public interface HealthTipPackageUserRepository extends JpaRepository<HealthTipP
     @Query("Select u from HealthTipPackageUser u where u.id = ?1 and u.isExpire = ?2")
     Optional<HealthTipPackageUser> getByIdAndExpiry(Integer userId, YesNo yesNo);
 
-    @Query("Select u.healthTipPackage.packageId from HealthTipPackageUser u where u.id = ?1 and u.isExpire = ?2")
+    @Query("Select u.healthTipPackage.packageId from HealthTipPackageUser u where u.user.userId = ?1 and u.isExpire = ?2")
     List<Integer> findPackageIdsByUserIdAndExpire(int userId, YesNo yesNo);
 
     @Query("Select u from HealthTipPackageUser u where u.user.userId = ?1 and u.healthTipPackage.packageId = ?2")
-    Optional<HealthTipPackageUser> findByUserIdAndPackageId(Integer userId, Integer categoryId);
+    List<HealthTipPackageUser> findByUserIdAndPackageId(Integer userId, Integer categoryId);
 
     @Query("SELECT u FROM HealthTipPackageUser u " +
             "JOIN HealthTipPackageCategories h ON u.healthTipPackage.packageId = h.healthTipPackage.packageId " +
@@ -84,6 +84,13 @@ public interface HealthTipPackageUserRepository extends JpaRepository<HealthTipP
                                                                            Pageable pageable);
 
     @Query("SELECT u FROM HealthTipPackageUser u " +
+            "WHERE u.isCancel = ?1 AND  u.healthTipPackage.packageName LIKE %?2% AND " +
+            " u.user.userId = ?3")
+    Page<HealthTipPackageUser> findByIsCanceledPackageNameUserId(YesNo yesNo, String packageName,
+                                                                            Integer userId,
+                                                                           Pageable pageable);
+
+    @Query("SELECT u FROM HealthTipPackageUser u " +
             "JOIN HealthTipPackageCategories h ON u.healthTipPackage.packageId = h.healthTipPackage.packageId " +
             "WHERE u.createdAt = ?1 AND u.healthTipPackage.type = ?2 AND " +
             "u.healthTipPackage.packageName LIKE %?3% AND h.healthTipCategoryMaster.categoryId = ?4 AND u.user.userId = ?5")
@@ -124,4 +131,9 @@ public interface HealthTipPackageUserRepository extends JpaRepository<HealthTipP
             "h.healthTipCategoryMaster.categoryId = ?2 AND u.user.userId = ?3")
     Page<HealthTipPackageUser> findByPackageNameCategoryIdUserId(String packageName, Integer categoryId,
                                                                  Integer userId, Pageable pageable);
+
+    @Query("SELECT u FROM HealthTipPackageUser u " +
+            " WHERE u.healthTipPackage.packageName LIKE %?1% AND " +
+            " u.user.userId = ?2")
+    Page<HealthTipPackageUser> findByPackageNameUserId(String packageName, Integer userId, Pageable pageable);
 }

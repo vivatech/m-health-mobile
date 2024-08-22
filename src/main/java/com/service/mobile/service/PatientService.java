@@ -22,6 +22,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +30,8 @@ import org.springframework.stereotype.Service;
 
 import javax.management.Query;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -38,10 +41,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.security.SecureRandom;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class PatientService {
+    @Autowired
+    private DoctorSpecializationRepository doctorSpecializationRepository;
+    @Autowired
+    private OrdersRepository ordersRepository;
     @Autowired
     private WalletTransactionRepository walletTransactionRepository;
     @Autowired
@@ -459,7 +467,7 @@ public class PatientService {
         }else if(request.getConsultation_date()==null){
             message = messageSource.getMessage(Constants.CONSULTATION_DATE_REQUIRED,null,locale);
         }
-        if(message!=null){
+        if(!message.isEmpty()){
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.NO_CONTENT_FOUNT_CODE,
                     Constants.NO_CONTENT_FOUNT_CODE,
@@ -542,8 +550,8 @@ public class PatientService {
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
-                        data
+                        data.getMessage(),
+                        data.getData()
                 ));
             }else{
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
@@ -669,7 +677,9 @@ public class PatientService {
         }
         else{
             if(request.getCat_ids()!=null && !request.getCat_ids().isEmpty()){
-                String[] catIds = request.getCat_ids().toString().split(",");
+                String[] catIdsString = request.getCat_ids().toString().split(",");
+                List<Integer> catIds = new ArrayList<>();
+                for(String s:catIdsString){catIds.add(Integer.parseInt(s));}
                 if(request.getSort_by_price()!=null && !request.getSort_by_price().isEmpty()){
                     //cat, sort price order
                     if(request.getSort_by_price().equalsIgnoreCase("ASC")){
@@ -735,8 +745,8 @@ public class PatientService {
 
                 HealthTipCategoryMaster cat = val.getHealthTipCategoryMaster();
                 HealthTipPackageCategories packageCat = val;
-                HealthTipPackageUser healthTipPackageUser = healthTipPackageUserRepository.findByUserIdAndPackageId(request.getUser_id(), packageCat.getHealthTipPackage().getPackageId()).orElse(null);
-                String isPurchased = (healthTipPackageUser!=null) ? "Yes" : "No";
+                List<HealthTipPackageUser> healthTipPackageUser = healthTipPackageUserRepository.findByUserIdAndPackageId(request.getUser_id(), packageCat.getHealthTipPackage().getPackageId());
+                String isPurchased = (!healthTipPackageUser.isEmpty()) ? "Yes" : "No";
 
                 String image = val.getHealthTipCategoryMaster().getPhoto() != null &&
                         !val.getHealthTipCategoryMaster().getPhoto().isEmpty() &&
@@ -777,7 +787,7 @@ public class PatientService {
                 tempData.setTotal_money(totalMoney);
                 tempData.setExpiry_date(packageExpiredDate);
                 tempData.setIs_purchased(isPurchased);
-                tempData.setPurchased_package_user_id(isPurchased.equals("Yes") ? healthTipPackageUser.getId().toString() : "");
+                tempData.setPurchased_package_user_id(isPurchased.equalsIgnoreCase("Yes") ? healthTipPackageUser.get(0).getId().toString() : "");
                 tempData.setMaxPackagefee(maxFee);
                 tempData.setTotal_count(total);
                 tempData.setImage(image);
@@ -808,9 +818,9 @@ public class PatientService {
             BalanceResponseDTO dto = new BalanceResponseDTO();
             dto.setMessage(messageSource.getMessage(Constants.BALANCE_GET_SUCCESSFULLY,null,locale));
             dto.setStatus(Constants.SUCCESS_CODE);
-            dto.setCountryCode(users.getCountryCode());
-            dto.setContactNumber(users.getContactNumber());
-            dto.setTotalMoney(users.getTotalMoney());
+            dto.setCountry_code(users.getCountryCode());
+            dto.setContact_number(users.getContactNumber());
+            dto.setTotal_money(users.getTotalMoney());
             dto.setData(currencySymbolFdj);
             return ResponseEntity.status(HttpStatus.OK).body(dto);
         }else{
@@ -1047,8 +1057,13 @@ public class PatientService {
 
     public ResponseEntity<?> getHealthTipsList(Locale locale, HealthTipsListRequest request) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
-        List<Integer> healthTipPackageIds = healthTipPackageUserService.findPackageIdsByUserIdAndExpire(request.getUser_id(),YesNo.No);
-        if(healthTipPackageIds.size()>0){
+        List<Integer> healthTipPackageIds = new ArrayList<>();
+        if(request.getPackage_id()!=null && request.getPackage_id()!=0){
+            healthTipPackageIds.add(request.getPackage_id());
+        }else{
+            healthTipPackageIds = healthTipPackageUserService.findPackageIdsByUserIdAndExpire(request.getUser_id(),YesNo.No);
+        }
+        if(!healthTipPackageIds.isEmpty()){
             List<Integer> categoriesIds = healthTipPackageCategoriesRepository.findCategoriesIdsByPackageIds(healthTipPackageIds);
             if(request.getTitle()==null){
                 request.setTitle("");
@@ -1097,8 +1112,8 @@ public class PatientService {
                     if(healthTip.getVideo()!=null && !healthTip.getVideo().isEmpty()){
                         HealthTipPackageCategories healthTipPackageCategories = healthTipPackageCategoriesRepository.findByCategoriesId(healthTip.getHealthTipCategory().getCategoryId()).orElse(null);
                         if(healthTipPackageCategories!=null){
-                            HealthTipPackageUser user = healthTipPackageUserService.findByUserIdAndPackageId(request.getUser_id(),healthTipPackageCategories.getHealthTipPackage().getPackageId()).orElse(null);
-                            if(user!=null){
+                            List<HealthTipPackageUser> user = healthTipPackageUserService.findByUserIdAndPackageId(request.getUser_id(),healthTipPackageCategories.getHealthTipPackage().getPackageId());
+                            if(user!=null && !user.isEmpty()){
                                 video = baseUrl + "/video/" +healthTip.getVideo();
                                 videoThump = baseUrl + "/healthTip/" +healthTip.getHealthTipId()+"/thumb/"+healthTip.getVideoThumb();
                             }
@@ -1531,15 +1546,15 @@ public class PatientService {
                         healthTipPackageUsers = page.getContent();
                         total = page.getTotalElements();
                     }
-                }else{
+                }
+                else{
                     if(request.getStatus()!=null){
                         if(request.getStatus().equalsIgnoreCase("Unsubscribed")){
                             Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByIsCanceledTypePackageNameCategoryIdUserId(
+                                    .findByIsCanceledTypePackageNameUserId(
                                             YesNo.Yes,
                                             PackageType.Free,
                                             request.getPackage_name(),
-                                            request.getCategory_id(),
                                             request.getUser_id(),
                                             pageable
                                     );
@@ -1548,11 +1563,10 @@ public class PatientService {
                         }
                         else if(request.getStatus().equalsIgnoreCase("Cancelled")){
                             Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByIsCanceledTypePackageNameCategoryIdUserId(
+                                    .findByIsCanceledTypePackageNameUserId(
                                             YesNo.Yes,
                                             PackageType.Paid,
                                             request.getPackage_name(),
-                                            request.getCategory_id(),
                                             request.getUser_id(),
                                             pageable
                                     );
@@ -1561,9 +1575,8 @@ public class PatientService {
                         }
                         else{
                             Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByIsCanceledPackageNameCategoryIdUserId(
-                                            YesNo.No, request.getPackage_name(),
-                                            request.getCategory_id(), request.getUser_id(), pageable
+                                    findByIsCanceledPackageNameUserId(
+                                            YesNo.No, request.getPackage_name(), request.getUser_id(), pageable
                                     );
                             healthTipPackageUsers = page.getContent();
                             total = page.getTotalElements();
@@ -1571,8 +1584,8 @@ public class PatientService {
                         }
                     }else{
                         Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByPackageNameCategoryIdUserId(
-                                        request.getPackage_name(), request.getCategory_id(),
+                                findByPackageNameUserId(
+                                        request.getPackage_name(),
                                         request.getUser_id(), pageable
                                 );
                         healthTipPackageUsers = page.getContent();
@@ -1640,91 +1653,229 @@ public class PatientService {
 
     public ResponseEntity<?> addRating(Locale locale, AddRatingRequest request) {
         List<ConsultationRating> ratings = consultationRatingRepository.getByCaseId(request.getCase_id());
-        if (ratings.size() > 0) {
+        if (!ratings.isEmpty()) {
             for(ConsultationRating r:ratings){
                 r.setComment(request.getComment());
                 r.setRating(request.getRating());
+                r.setUpdatedAt(LocalDateTime.now());
                 consultationRatingRepository.save(r);
             }
         } else {
             ConsultationRating raiting = new ConsultationRating();
             Users u = usersRepository.findById(request.getUser_id()).orElse(null);
             Users doctor = usersRepository.findById(request.getDoctor_id()).orElse(null);
+            if(u!=null && doctor!=null){
+                raiting.setPatientId(u);
+                raiting.setDoctorId(doctor);
+                raiting.setStatus(ConsultationStatus.Pending);
+                raiting.setRating(request.getRating() != null ? request.getRating() : 0.00f);
+                raiting.setComment(request.getComment());
+                raiting.setCaseId(request.getCase_id());
+                raiting.setCreatedAt(LocalDateTime.now());
+                raiting.setUpdatedAt(LocalDateTime.now());
 
-            raiting.setPatientId(u);
-            raiting.setDoctorId(doctor);
-            raiting.setStatus(ConsultationStatus.Pending);
-            raiting.setRating(request.getRating() != null ? request.getRating() : 0.00f);
-            raiting.setComment(request.getComment());
-            raiting.setCaseId(request.getCase_id());
-
-            consultationRatingRepository.save(raiting);
+                consultationRatingRepository.save(raiting);
+            }
         }
         Response response = new Response();
+        response.setCode(Constants.SUCCESS_CODE);
+        response.setStatus(Constants.SUCCESS_CODE);
+        response.setMessage(messageSource.getMessage(Constants.RATING_ADDED,null,locale));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getSloats(Locale locale, GetSloatsRequest request,String type) {
-        Consultation consultation = consultationRepository.findById(request.getCase_id()).orElse(null);
-        if(consultation!=null){
+        if(request.getCase_id()!=null && request.getCase_id()!=0){
 
-            SlotMaster slots = consultation.getSlotId();
+            Consultation consultation = consultationRepository.findById(request.getCase_id()).orElse(null);
+            if(consultation!=null){
 
-            GetSloatsResponse response = new GetSloatsResponse();
-            if(type.equalsIgnoreCase("doctor")){
-                Users users= consultation.getPatientId();
-                String photo = "";
-                if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
-                    photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getPatientId().getUserId() + "/" + users.getProfilePicture();
+                SlotMaster slots = consultation.getSlotId();
+
+                GetSloatsResponse response = new GetSloatsResponse();
+                if(type.equalsIgnoreCase("doctor")){
+                    Users users= consultation.getPatientId();
+                    String photo = "";
+                    if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
+                        photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getPatientId().getUserId() + "/" + users.getProfilePicture();
+                    }
+
+                    response.setSlot_day(slots.getSlotDay());
+                    response.setSlot_time(slots.getSlotTime());
+                    response.setSlot_type(slots.getSlotType());
+                    response.setConsultation_date(consultation.getConsultationDate());
+                    response.setTo(consultation.getPatientId().getUserId());
+                    response.setName(users.getFirstName() + " " + users.getLastName());
+                    response.setStatus(consultation.getRequestType());
+                    response.setConsultation_type(consultation.getConsultationType());
+                    response.setAdded_type(consultation.getAddedType());
+                    response.setSpecialization("");
+                    response.setProfile_picture(photo);
+                }else {
+                    Users users= consultation.getDoctorId();
+                    String specializationName = "";
+                    if(users.getSpecializationId()!=null && users.getSpecializationId()!=0){
+                        Specialization specialization = specializationRepository.findById(users.getSpecializationId()).orElse(null);
+                        if(specialization!=null){specializationName = specialization.getName();}
+                    }
+                    String photo = "";
+                    if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
+                        photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + users.getProfilePicture();
+                    }
+
+                    response.setSlot_day(slots.getSlotDay());
+                    response.setSlot_time(slots.getSlotTime());
+                    response.setSlot_type(slots.getSlotType());
+                    response.setConsultation_date(consultation.getConsultationDate());
+                    response.setTo(consultation.getPatientId().getUserId());
+                    response.setName(users.getFirstName() + " " + users.getLastName());
+                    response.setStatus(consultation.getRequestType());
+                    response.setConsultation_type(consultation.getConsultationType());
+                    response.setAdded_type(consultation.getAddedType());
+                    response.setSpecialization(specializationName);
+                    response.setProfile_picture(photo);
                 }
 
-                response.setSlot_day(slots.getSlotDay());
-                response.setSlot_time(slots.getSlotTime());
-                response.setSlot_type(slots.getSlotType());
-                response.setConsultation_date(consultation.getConsultationDate());
-                response.setTo(consultation.getPatientId().getUserId());
-                response.setName(users.getFirstName() + " " + users.getLastName());
-                response.setStatus(consultation.getRequestType());
-                response.setConsultation_type(consultation.getConsultationType());
-                response.setAdded_type(consultation.getAddedType());
-                response.setSpecialization("");
-                response.setProfile_picture(photo);
-            }else {
-                Users users= consultation.getDoctorId();
-                String specializationName = "";
-                if(users.getSpecializationId()!=null && users.getSpecializationId()!=0){
-                    Specialization specialization = specializationRepository.findById(users.getSpecializationId()).orElse(null);
-                    if(specialization!=null){specializationName = specialization.getName();}
-                }
-                String photo = "";
-                if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
-                    photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + users.getProfilePicture();
-                }
-
-                response.setSlot_day(slots.getSlotDay());
-                response.setSlot_time(slots.getSlotTime());
-                response.setSlot_type(slots.getSlotType());
-                response.setConsultation_date(consultation.getConsultationDate());
-                response.setTo(consultation.getPatientId().getUserId());
-                response.setName(users.getFirstName() + " " + users.getLastName());
-                response.setStatus(consultation.getRequestType());
-                response.setConsultation_type(consultation.getConsultationType());
-                response.setAdded_type(consultation.getAddedType());
-                response.setSpecialization(specializationName);
-                response.setProfile_picture(photo);
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.SLOT_DETAILS_FOUND,null,locale),
+                        response
+                ));
+            }else{
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
+                        Constants.NO_RECORD_FOUND_CODE,
+                        Constants.NO_RECORD_FOUND_CODE,
+                        messageSource.getMessage(Constants.NO_DETAILS_FOUND,null,locale)
+                ));
             }
-
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.SLOT_DETAILS_FOUND,null,locale),
-                    response
-            ));
         }else{
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.NO_RECORD_FOUND_CODE,
                     messageSource.getMessage(Constants.NO_DETAILS_FOUND,null,locale)
+            ));
+        }
+    }
+
+    public ResponseEntity<?> myOrders(Locale locale, HealthTipPackageHistoryRequest request) {
+        Pageable pageable = PageRequest.of(request.getPage(), 10);
+        if(request.getDoctor_name()==null){
+            request.setDoctor_name("");
+        }
+        // Fetch Orders with pagination
+        List<Orders> orders = new ArrayList<>();
+        Long ordersNumber = 0L;
+        if(request.getConsultation_date()!=null){
+            if(request.getCase_id()!=null && request.getCase_id()!=0){
+                Page<Orders> ordersPage = ordersRepository.findByConsultationDateAndCaseIdAndDoctorName(
+                        request.getConsultation_date(),request.getCase_id(),request.getDoctor_name(),pageable);
+                ordersNumber = ordersPage.getTotalElements();
+                orders = ordersPage.getContent();
+            }else{
+                Page<Orders> ordersPage = ordersRepository.findByConsultationDateAndDoctorName(
+                        request.getConsultation_date(),request.getDoctor_name(),pageable);
+                ordersNumber = ordersPage.getTotalElements();
+                orders = ordersPage.getContent();
+            }
+        }else{
+            if(request.getCase_id()!=null && request.getCase_id()!=0){
+                Page<Orders> ordersPage = ordersRepository.findByCaseIdAndDoctorName(
+                        request.getCase_id(),request.getDoctor_name(),pageable);
+                ordersNumber = ordersPage.getTotalElements();
+                orders = ordersPage.getContent();
+            }else{
+                Page<Orders> ordersPage = ordersRepository.findByDoctorName(
+                        request.getDoctor_name(),pageable);
+                ordersNumber = ordersPage.getTotalElements();
+                orders = ordersPage.getContent();
+            }
+        }
+
+        List<OrderData> orderDataList = new ArrayList<>();
+        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+
+        for (Orders order : orders) {
+            // Get Rating
+            List<ConsultationRating> ratingList = consultationRatingRepository.getByCaseIdAndDoctorId(order.getCaseId().getCaseId(), order.getDoctorId().getUserId());
+            ConsultationRating rating = null;
+            if(!ratingList.isEmpty()){
+                rating = ratingList.get(0);
+            }
+            // Prepare photo URL
+            String photoPath = "";
+            if (order.getDoctorId().getProfilePicture() != null) {
+                photoPath = baseUrl + "uploaded_file/UserProfile/" +
+                        order.getDoctorId().getUserId() + "/" + order.getDoctorId().getProfilePicture();
+            }
+
+            // Get Transaction IDs
+            List<WalletTransaction> walletHistories = walletTransactionRepository.findByOrderId(order.getId());
+            String transactionIdString = walletHistories.stream()
+                    .map(WalletTransaction::getTransactionId)
+                    .collect(Collectors.joining(","));
+
+            // Get Consultation Data
+            Consultation consultation = order.getCaseId();
+            SlotMaster slotData = consultation.getSlotId();
+
+            // Prepare Specialization String
+            List<DoctorSpecialization> specializations = doctorSpecializationRepository.findByUserId(order.getDoctorId().getUserId());
+            String specializationString = specializations.stream()
+                    .map(specialization -> specialization.getSpecializationId().getName())
+                    .collect(Collectors.joining(","));
+
+            // Check if rating is allowed
+            boolean isRatingAllowed = false;
+            String finalTime = consultation.getConsultationDate() + " " + (slotData != null ? slotData.getSlotTime() : "");
+            if (consultationRatingRepository.countByCaseIdAndPatientId(order.getCaseId().getCaseId(), request.getUser_id()) > 0) {
+                isRatingAllowed = true;
+            }
+
+            // Prepare PDF URL
+            String pdfUrl = "";
+            if (Files.exists(Paths.get(baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf"))
+                    && currentTime.compareTo(finalTime) > 0) {
+                pdfUrl = baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf";
+            }
+
+            // Prepare Response Data
+            OrderData tempData = new OrderData();
+            tempData.setId(order.getId());
+            tempData.setCase_id(order.getCaseId().getCaseId());
+            tempData.setDoctor_id(order.getDoctorId().getUserId());
+            tempData.setPhoto(photoPath);
+            tempData.setTransaction_id(transactionIdString);
+            tempData.setConsultation_date(consultation.getConsultationDate());
+            tempData.setConsultation_type(consultation.getConsultType());
+            tempData.setSlot_time(slotData != null ? slotData.getSlotTime() : "");
+            tempData.setSpecialization(specializationString);
+            tempData.setPackage_name(order.getPackageId() != null ? order.getPackageId().getPackageName() : "");
+            tempData.setDoctor_name(order.getDoctorId().getFirstName() + " " + order.getDoctorId().getLastName());
+            tempData.setRating(rating != null ? rating.getRating() : 0.0F);
+            tempData.setReview(rating != null ? rating.getComment() : "");
+            tempData.setIs_rating(isRatingAllowed ? 1 : 0);
+            tempData.setPdf_url(pdfUrl);
+            tempData.setStatus(order.getCaseId().getRequestType());
+            tempData.setCancel_message(order.getCaseId().getCancelMessage());
+            tempData.setTotal_count(ordersNumber);
+
+            orderDataList.add(tempData);
+        }
+
+        // Prepare Response
+        if (!orderDataList.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.ORDERS_FETCH_SUCCESSFULLY,null,locale),
+                    orderDataList
+            ));
+        } else {
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
             ));
         }
     }

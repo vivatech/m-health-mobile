@@ -13,6 +13,9 @@ import java.util.Optional;
 @Repository
 public interface UsersRepository extends JpaRepository<Users,Integer> {
 
+    @Query("Select u from Users u where u.userId = ?1")
+    Optional<Users> findById(Integer id);
+
     @Query("Select u from Users u where u.contactNumber like ?1")
     Optional<Users> findByContactNumber(String contactNumber);
 

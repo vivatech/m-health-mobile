@@ -102,41 +102,41 @@ public class PatientController {
         return patientService.bookDoctor(locale,request);
     }
 
-    @PostMapping("/check-home-visit-availability")
+    @PostMapping(path = "/check-home-visit-availability", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> checkHomeVisitAvailability(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                          Locale locale,
-                                         @RequestBody HomeVisitAvailabilityRequest request
+                                         @ModelAttribute HomeVisitAvailabilityRequest request
     ) {
         return patientService.checkHomeVisitAvailability(locale,request);
     }
 
-    @PostMapping("/apply-coupon-code")
+    @PostMapping(path = "/apply-coupon-code", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> applyCouponCode(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                         Locale locale,
-                                        @RequestBody ApplyCouponCodeRequest request
+                                        @ModelAttribute ApplyCouponCodeRequest request
     ) {
         return patientService.applyCouponCode(locale,request);
     }
 
-    @PostMapping("/thank-you")
+    @PostMapping(path = "/thank-you", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> thankYou(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                         Locale locale,
-                                        @RequestBody ThankYouRequest request
+                                        @ModelAttribute ThankYouRequest request
     ) {
         return publicService.thankYou(locale,request);
     }
 
-    @PostMapping("/clinic-list")
+    @PostMapping(path = "/clinic-list", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> getClinicList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                              @RequestParam(name = "user_id",required = false) Integer user_id) {
+                                              @ModelAttribute ThankYouRequest request) {
         return patientService.getClinicList(locale);
     }
 
-    @PostMapping("/healthtip-package-list")
+    @PostMapping(path= "/healthtip-package-list", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> healthTipPackageList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                              @RequestBody HealthTipPackageListRequest request) {
+                                              @ModelAttribute HealthTipPackageListRequest request) {
         return patientService.healthTipPackageList(locale,request);
     }
 
@@ -145,119 +145,126 @@ public class PatientController {
                                               Locale locale,
                                               @RequestParam(name = "user_id",required = false) Integer user_id) {
         if(user_id!=null && user_id!=0){
+            return patientService.getBalance(locale,user_id);
+        }else{
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
             ));
-        }else{
-            return patientService.getBalance(locale,user_id);
         }
     }
 
-    @PostMapping("/healthtip-package-booking")
+    @PostMapping(path = "/healthtip-package-booking", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> healthTipPackageBooking(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                              @RequestBody HealthTipPackageBookingRequest request) {
+                                              @ModelAttribute HealthTipPackageBookingRequest request) {
         return patientService.healthTipPackageBooking(locale,request);
     }
 
-    @PostMapping("/cancel-healthtip-package")
+    @PostMapping(path = "/cancel-healthtip-package", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> cancelHealthTipPackage(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                              @RequestBody CancelHealthTipPackageRequest request) {
+                                              @ModelAttribute CancelHealthTipPackageRequest request) {
         return patientService.cancelHealthTipPackage(locale,request);
     }
 
-    @PostMapping("/get-healthtips-list")
+    @PostMapping(path= "/get-healthtips-list", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> getHealthTipsList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                              @RequestBody HealthTipsListRequest request) {
+                                              @ModelAttribute HealthTipsListRequest request) {
         return patientService.getHealthTipsList(locale,request);
     }
 
-    @PostMapping("/healthtips-export")
+    @PostMapping(path="/healthtips-export", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> healthTipsExport(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                              @RequestBody HealthTipsListRequest request) {
+                                              @ModelAttribute HealthTipsListRequest request) {
         return patientService.healthTipsExport(locale,request);
     }
 
-    @PostMapping("/delete-export-file")
+    @PostMapping(path ="/delete-export-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> deleteExportFile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                              @RequestBody DeleteExportFileRequest request) {
+                                              @ModelAttribute DeleteExportFileRequest request) {
         return patientService.deleteExportFile(locale,request);
     }
 
-    @PostMapping("/healthtip-package-history")
+    @PostMapping(path="/healthtip-package-history", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> healthTipPackageHistory(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                      Locale locale,
-                                                     @RequestBody HealthTipPackageHistoryRequest request) {
+                                                     @ModelAttribute HealthTipPackageHistoryRequest request) {
         return patientService.healthTipPackageHistory(locale,request);
     }
 
-    @PostMapping("/add-rating")
+    @PostMapping(path="/my-orders", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> myOrders(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                                     Locale locale,
+                                                     @ModelAttribute HealthTipPackageHistoryRequest request) {
+        return patientService.myOrders(locale,request);
+    }
+
+    @PostMapping(path="/add-rating", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> addRating(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                      Locale locale,
-                                                     @RequestBody AddRatingRequest request) {
+                                                     @ModelAttribute AddRatingRequest request) {
         return patientService.addRating(locale,request);
     }
 
-    @PostMapping("/my-transactions")
+    @PostMapping(path="/my-transactions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> myTransactions(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                      Locale locale,
-                                                     @RequestBody MyTransactionsRequest request) {
+                                                     @ModelAttribute MyTransactionsRequest request) {
         return transactionService.myTransactions(locale,request);
     }
 
-    @PostMapping("/relative-list")
+    @PostMapping(path = "/relative-list", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> relativeList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale,
-                                       @RequestParam(name = "user_id") Integer user_id) {
-        return relativeService.relativeList(locale,user_id);
+                                          @ModelAttribute CreateRelativeProfileRequest request) {
+        return relativeService.relativeList(locale,request.getUser_id());
     }
 
-    @PostMapping("/create-relative-profile")
+    @PostMapping(path = "/create-relative-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createRelativeProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale,
                                        @ModelAttribute CreateRelativeProfileRequest request) throws IOException {
         return relativeService.createRelativeProfile(locale,request);
     }
 
-    @PostMapping("/update-relative-profile")
+    @PostMapping(path = "/update-relative-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateRelativeProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale,
                                        @ModelAttribute CreateRelativeProfileRequest request) throws IOException {
         return relativeService.updateRelativeProfile(locale,request);
     }
 
-    @PostMapping("/get-single-relative-profile")
+    @PostMapping(path = "/get-single-relative-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> getSingleRelativeProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale,
-                                       @RequestBody GetSingleRelativeProfileRequest request) throws IOException {
+                                       @ModelAttribute GetSingleRelativeProfileRequest request) throws IOException {
         return relativeService.getSingleRelativeProfile(locale,request);
     }
 
-    @PostMapping("/relative-type")
+    @PostMapping(path = "/relative-type", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> relativeType(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale,
-                                       @RequestBody GetSingleRelativeProfileRequest request) throws IOException {
+                                       @ModelAttribute GetSingleRelativeProfileRequest request) throws IOException {
         return relativeService.relativeType(locale,request);
     }
 
-    @PostMapping("/cancel-consultation")
+    @PostMapping(path = "/cancel-consultation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> cancelConsultation(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                 Locale locale,
-                                                @RequestBody GetSingleRelativeProfileRequest request) throws IOException {
+                                                @ModelAttribute GetSingleRelativeProfileRequest request) throws IOException {
         return relativeService.cancelConsultation(locale,request);
     }
 
-    @PostMapping("/get-sloats")
+    @PostMapping(path = "/get-sloats", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> getSloats(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                 Locale locale,
                                         @RequestHeader(name = "X-type", required = false) String type,
-                                        @RequestBody GetSloatsRequest request) throws IOException {
+                                        @ModelAttribute GetSloatsRequest request) throws IOException {
         return patientService.getSloats(locale,request,type);
     }
 

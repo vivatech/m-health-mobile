@@ -119,7 +119,7 @@ public class HealthTipPackageUserService {
         return healthTipPackageUserRepository.findPackageIdsByUserIdAndExpire(userId,yesNo);
     }
 
-    public Optional<HealthTipPackageUser> findByUserIdAndPackageId(Integer userId, Integer categoryId) {
+    public List<HealthTipPackageUser> findByUserIdAndPackageId(Integer userId, Integer categoryId) {
         return healthTipPackageUserRepository.findByUserIdAndPackageId(userId,categoryId);
     }
 }

@@ -18,6 +18,6 @@ public interface DoctorAvailabilityRepository extends JpaRepository<DoctorAvaila
     @Query("Select count(u.doctorSlotId) from DoctorAvailability u where u.slotId.slotId = ?1 and u.doctorId.userId = ?2")
     Long countBySlotIdAndDoctorId(Integer slotId, Integer userId);
 
-    @Query("Select count(u.doctorSlotId) from DoctorAvailability u where u.slotTypeId = ?1 and u.slotId.slotId = ?2 AND u.doctorId.userId = ?3")
-    Long countBySlotTypeIdAndSlotIdAndDoctorId(SlotType slotId, List<Integer> allocatedSlots, Integer doctorId);
+    @Query("Select count(u.doctorSlotId) from DoctorAvailability u where u.slotTypeId = ?1 and u.slotId.slotId in ?2 AND u.doctorId.userId = ?3")
+    Long countBySlotTypeIdAndSlotIdAndDoctorId(Integer slotId, List<Integer> allocatedSlots, Integer doctorId);
 }

@@ -303,9 +303,9 @@ public class PublicService {
                     responseDTO
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.BLANK_DATA_GIVEN_CODE,
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.NO_CONTENT_FOUNT,null,locale)
             ));
         }
@@ -324,17 +324,20 @@ public class PublicService {
     public ClinicInformation getClinicInformation(Integer userId) {
         ClinicInformation dto = new ClinicInformation();
         Users users = usersRepository.findById(userId).orElse(null);
-        dto.setName(users.getFirstName()+" "+users.getLastName());
-        dto.setContact_number(users.getCountryCode()+users.getContactNumber());
-        dto.setAddress(users.getHospitalAddress());
-        UserLocation location = userLocationRepository.findByUserId(userId).orElse(null);
-        if(location!=null){
-            dto.setLatitude((location.getLatitude()!=null)?location.getLatitude():null);
-            dto.setLongitude((location.getLongitude()!=null)?location.getLongitude():null);
+        if(users!=null){
+            dto.setName(users.getFirstName()+" "+users.getLastName());
+            dto.setContact_number(users.getCountryCode()+users.getContactNumber());
+            dto.setAddress(users.getHospitalAddress());
+            UserLocation location = userLocationRepository.findByUserId(userId).orElse(null);
+            if(location!=null){
+                dto.setLatitude((location.getLatitude()!=null)?location.getLatitude():null);
+                dto.setLongitude((location.getLongitude()!=null)?location.getLongitude():null);
+            }
+            String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
+            dto.setProfile_picture(photoPath);
+            return dto;
         }
-        String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
-        dto.setProfile_picture(photoPath);
-        return dto;
+        return null;
     }
 
     public ResponseEntity<?> getProfile(Locale locale, Integer userId) {
@@ -774,21 +777,24 @@ public class PublicService {
     }
 
     private NurseDto getNurseInfo(Orders orders, Orders model) {
-        Users nurse = usersRepository.findById(model.getCaseId().getAssignedTo()).orElse(null);
-        NurseDto dto = null;
-        if(nurse!=null){
-            dto = new NurseDto();
-            String photoPath="";
-            if(nurse.getProfilePicture()!=null && !nurse.getProfilePicture().isEmpty()){
-                photoPath = baseUrl+"uploaded_file/UserProfile/"+model.getId()+"/"+model.getDoctorId().getProfilePicture();
-            }else{
-                photoPath = baseUrl+defaultImage;
+        if(model.getCaseId()!=null && model.getCaseId().getAssignedTo()!=null){
+            Users nurse = usersRepository.findById(model.getCaseId().getAssignedTo()).orElse(null);
+            NurseDto dto = null;
+            if(nurse!=null){
+                dto = new NurseDto();
+                String photoPath="";
+                if(nurse.getProfilePicture()!=null && !nurse.getProfilePicture().isEmpty()){
+                    photoPath = baseUrl+"uploaded_file/UserProfile/"+model.getId()+"/"+model.getDoctorId().getProfilePicture();
+                }else{
+                    photoPath = baseUrl+defaultImage;
+                }
+                dto.setProfile_picture(photoPath);
+                dto.setName(nurse.getFirstName()+" "+nurse.getLastName());
+                dto.setContact_number(nurse.getCountryCode()+""+nurse.getContactNumber());
             }
-            dto.setProfile_picture(photoPath);
-            dto.setName(nurse.getFirstName()+" "+nurse.getLastName());
-            dto.setContact_number(nurse.getCountryCode()+""+nurse.getContactNumber());
+            return dto;
         }
-        return dto;
+        return null;
     }
 
     private String formatConsultType(String consultType) {
@@ -979,7 +985,7 @@ public class PublicService {
 
     public List<GetLabDto> getLabInfo(List<Integer> labcatIds) {
         List<GetLabDto> response = new ArrayList<>();
-        List<LabPrice> labPrices = labPriceRepository.findBySubCatIdAndUserTypeAndStatus(labcatIds,UserType.Lab,Status.A);
+        List<LabPrice> labPrices = labPriceRepository.findBySubCatIdAndUserTypeAndStatus(labcatIds,UserType.Lab,"A");
         for(LabPrice price:labPrices){
             GetLabDto temp = new GetLabDto();
             temp.setUser_id(price.getLabUser().getUserId());
@@ -992,7 +998,7 @@ public class PublicService {
     public BillInfoDto getBillInfo(Integer labId, List<Integer> reportId, String collectionMode, String currencyOption) {
         Integer paymentRate = 1;
         String currencySym = currencySymbolFdj; // Adjust this to your actual symbol
-        if (currencyOption.equalsIgnoreCase("slsh")) {
+        if (currencyOption!=null && currencyOption.equalsIgnoreCase("slsh")) {
             GlobalConfiguration configuration = globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE");
             paymentRate = Integer.parseInt(configuration.getValue());
             currencySym = currencySymbolSLSH; // Adjust this to your actual symbol
@@ -1462,7 +1468,7 @@ public class PublicService {
     }
 
     public Boolean checkDoctorAvailability(SlotMaster slotInfo, Integer doctorId, Integer numberSlotsToAllocate, List<Integer> allocatedSlots, LocalDate consultationDate) {
-        Long doctorSlotAvailableCount = doctorAvailabilityRepository.countBySlotTypeIdAndSlotIdAndDoctorId(slotInfo.getSlotType(), allocatedSlots, doctorId);
+        Long doctorSlotAvailableCount = doctorAvailabilityRepository.countBySlotTypeIdAndSlotIdAndDoctorId(slotInfo.getSlotType().getId(), allocatedSlots, doctorId);
 
         if (doctorSlotAvailableCount != Long.valueOf(numberSlotsToAllocate)) {
             return false;

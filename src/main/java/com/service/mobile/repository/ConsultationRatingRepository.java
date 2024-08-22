@@ -1,5 +1,6 @@
 package com.service.mobile.repository;
 
+import com.service.mobile.model.Consultation;
 import com.service.mobile.model.ConsultationRating;
 import com.service.mobile.model.Users;
 import org.springframework.data.domain.Page;
@@ -27,12 +28,19 @@ public interface ConsultationRatingRepository extends JpaRepository<Consultation
     @Query("SELECT cr FROM ConsultationRating cr WHERE cr.caseId = ?1")
     List<ConsultationRating> getByCaseId(Integer caseId);
 
+    @Query("SELECT cr FROM ConsultationRating cr WHERE cr.caseId = ?1 and cr.doctorId.userId = ?2")
+    List<ConsultationRating> getByCaseIdAndDoctorId(Integer caseId,Integer doctorId);
+
     @Query("SELECT cr FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1 AND cr.status = 'Approve'")
-    List<ConsultationRating> getByDoctorIdActive(Integer caseId);
+    List<ConsultationRating> getByDoctorIdActive(Integer doctorId);
 
     @Query("SELECT count(cr.id) FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1")
     Long countByDoctorIdAll(Integer doctorId);
 
     @Query("SELECT cr FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1 AND cr.status = 'Approve' order by cr.id desc")
     Page<ConsultationRating> findByDoctorIdApproveOrderIdDesc(Integer doctorId, Pageable pageable);
+
+
+    @Query("SELECT count(cr) FROM ConsultationRating cr WHERE cr.caseId = ?1 and cr.patientId.userId = ?2")
+    Long countByCaseIdAndPatientId(Integer caseId, Integer userId);
 }

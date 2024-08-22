@@ -14,12 +14,18 @@ import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -104,7 +110,7 @@ public class RelativeService {
         userRelative.setStatus("A");
         userRelative.setCreatedAt(LocalDateTime.now());
         userRelative.setUpdatedAt(LocalDateTime.now());
-
+        userRelative = userRelativeRepository.save(userRelative);
         if (request.getProfile_picture() != null && !request.getProfile_picture().isEmpty()) {
             validateFile(request.getProfile_picture());
             String fileName = saveProfilePicture(request.getProfile_picture(), userRelative.getId());
@@ -133,18 +139,25 @@ public class RelativeService {
     }
 
     private String saveProfilePicture(MultipartFile file, Byte userId) throws IOException {
-        String fileName = file.getOriginalFilename();
-        String filePath = uploadDir + "/uploaded_file/relatives/" + userId + "/";
-        File dir = new File(filePath);
-        if (!dir.exists()) {
-            dir.mkdirs();
+        try {
+            String uploadDir = baseUrl+ "/uploaded_file/relatives/" + userId + "/";
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            String filename = StringUtils.cleanPath(file.getOriginalFilename());
+            Path filePath = uploadPath.resolve(filename);
+            Files.copy(file.getInputStream(), filePath);
+            return filename;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
         }
-        file.transferTo(new File(filePath + fileName));
-        return fileName;
     }
 
     public ResponseEntity<?> updateRelativeProfile(Locale locale, CreateRelativeProfileRequest request) throws IOException {
-        UserRelative userRelative = userRelativeRepository.findById(request.getId()).orElse(null);
+        UserRelative userRelative = userRelativeRepository.findById(request.getRelative_id()).orElse(null);
         if(userRelative!=null){
             userRelative.setUserId(request.getUser_id());
             userRelative.setName(request.getName());
@@ -241,7 +254,9 @@ public class RelativeService {
         Consultation consultation = consultationRepository.findById(request.getCase_id()).orElse(null);
         if(consultation!=null){
             SlotMaster slot = consultation.getSlotId();
-            LocalDateTime consultationDateTime = LocalDateTime.parse(consultation.getConsultationDate() + "T" + slot.getSlotTime() + ":00");
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+            LocalTime localTime = LocalTime.parse(slot.getSlotTime().substring(0, 5), timeFormatter);
+            LocalDateTime consultationDateTime = LocalDateTime.of(consultation.getConsultationDate(), localTime);
             LocalDateTime now = LocalDateTime.now();
 
             long minutesDifference = ChronoUnit.MINUTES.between(now, consultationDateTime);

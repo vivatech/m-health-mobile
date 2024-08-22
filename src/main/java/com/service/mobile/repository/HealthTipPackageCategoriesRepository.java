@@ -66,17 +66,17 @@ public interface HealthTipPackageCategoriesRepository extends JpaRepository<Heal
 
     @Query("Select u from HealthTipPackageCategories u where u.healthTipCategoryMaster.status = ?1 and " +
             "u.healthTipCategoryMaster.categoryId in ?2 order by u.healthTipPackage.packagePrice ASC")
-    Page<HealthTipPackageCategories> findByStatusCategoryIdsAndPriceAndSort(Status status, String[] catIds,
+    Page<HealthTipPackageCategories> findByStatusCategoryIdsAndPriceAndSort(Status status, List<Integer> catIds,
                                                                              Pageable pageable);
 
     @Query("Select u from HealthTipPackageCategories u where u.healthTipCategoryMaster.status = ?1 and " +
             "u.healthTipCategoryMaster.categoryId in ?2 order by u.healthTipPackage.packagePrice DESC")
-    Page<HealthTipPackageCategories> findByStatusCategoryIdsAndPriceAndSortDesc(Status status, String[] catIds,
+    Page<HealthTipPackageCategories> findByStatusCategoryIdsAndPriceAndSortDesc(Status status, List<Integer> catIds,
                                                                                  Pageable pageable);
 
     @Query("Select u from HealthTipPackageCategories u where u.healthTipCategoryMaster.status = ?1 and " +
             "u.healthTipCategoryMaster.categoryId in ?2 order by u.healthTipCategoryMaster.priority")
-    Page<HealthTipPackageCategories> findByStatusCategoryIdsAndPriceAndSortPriority(Status status, String[] catIds, Pageable pageable);
+    Page<HealthTipPackageCategories> findByStatusCategoryIdsAndPriceAndSortPriority(Status status, List<Integer> catIds, Pageable pageable);
 
     @Query("Select u from HealthTipPackageCategories u where u.healthTipCategoryMaster.status = ?1 " +
             " order by u.healthTipPackage.packagePrice ASC")

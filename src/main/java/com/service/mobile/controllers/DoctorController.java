@@ -1,9 +1,11 @@
 package com.service.mobile.controllers;
 
 import com.service.mobile.dto.request.GetReviewRequest;
+import com.service.mobile.dto.request.GetSingleRelativeProfileRequest;
 import com.service.mobile.service.DoctorService;
 import com.service.mobile.service.HospitalService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,17 +27,17 @@ public class DoctorController {
         return hospitalService.getHospitalList(locale);
     }
 
-    @GetMapping("/view-profile")
+    @PostMapping(path = "/view-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> viewProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                              Locale locale,
-                                         @RequestParam(name = "doctor_id") Integer doctor_id) {
-        return doctorService.viewProfile(locale,doctor_id);
+                                         @ModelAttribute GetSingleRelativeProfileRequest request) {
+        return doctorService.viewProfile(locale,request.getDoctor_id());
     }
 
-    @GetMapping("/get-review")
+    @PostMapping(path = "/get-review", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> getReview(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                              Locale locale,
-                                         @RequestBody GetReviewRequest request) {
+                                         @ModelAttribute GetReviewRequest request) {
         return doctorService.getReview(locale,request);
     }
 }

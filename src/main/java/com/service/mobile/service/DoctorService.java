@@ -678,7 +678,8 @@ public class DoctorService {
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.PROFILE_FETCH_SUCCESSFULLY,null,locale)
+                    messageSource.getMessage(Constants.PROFILE_FETCH_SUCCESSFULLY,null,locale),
+                    response
             ));
         }else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
@@ -704,7 +705,7 @@ public class DoctorService {
                 GetReviewResponse dto = new GetReviewResponse();
 
                 dto.setComment(rating.getComment());
-                dto.setName(rating.getPatientId().getFirstName() + " "+rating.getPatientId().getLastName());
+                dto.setName((rating.getPatientId()!=null)?rating.getPatientId().getFirstName() + " "+rating.getPatientId().getLastName():null);
                 dto.setRating(rating.getRating());
                 dto.setCreated_at(rating.getCreatedAt());
                 dto.setFile_url(file);

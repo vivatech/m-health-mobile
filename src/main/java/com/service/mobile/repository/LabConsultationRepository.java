@@ -25,11 +25,20 @@ public interface LabConsultationRepository extends JpaRepository<LabConsultation
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 and u.categoryId.catId = ?3 and u.subCatId.subCatId = ?4 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCaseIdCategoryIdSubCategoryId(Integer userId, Integer caseId, Integer categoryId, Integer subcategoryId);
 
+    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.categoryId.catId = ?2 and u.subCatId.subCatId = ?3 order by u.labConsultId DESC")
+    List<LabConsultation> findByPatientIdCategoryIdSubCategoryId(Integer userId, Integer categoryId, Integer subcategoryId);
+
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 and u.categoryId.catId = ?3 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCaseIdCategoryId(Integer userId, Integer caseId, Integer categoryId);
 
+    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.categoryId.catId = ?2 order by u.labConsultId DESC")
+    List<LabConsultation> findByPatientIdCategoryId(Integer userId, Integer categoryId);
+
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 and u.subCatId.subCatId = ?3 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCaseIdSubCategoryId(Integer userId, Integer caseId, Integer subcategoryId);
+
+    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.subCatId.subCatId = ?2 order by u.labConsultId DESC")
+    List<LabConsultation> findByPatientIdSubCategoryId(Integer userId, Integer subcategoryId);
 
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCaseId(Integer userId, Integer caseId);

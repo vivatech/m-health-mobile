@@ -12,8 +12,8 @@ import lombok.Setter;
 public class BalanceResponseDTO {
     private String status;
     private String message;
-    private String countryCode;
-    private String contactNumber;
-    private Float totalMoney;
+    private String country_code;
+    private String contact_number;
+    private Float total_money;
     private String data;
 }

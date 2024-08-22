@@ -93,8 +93,8 @@ public class SiteService {
             dto.setType(banner.getType());
             dto.setType(projectBase);
             if(banner.getType().equalsIgnoreCase("video")){
-                dto.setPath(baseUrl+"/uploaded_file/videos/"+banner.getVname());
-                dto.setThumb(baseUrl+"/uploaded_file/image-gallery/"+banner.getIname());
+                dto.setPath((banner.getVname()!=null && !banner.getVname().isEmpty())?baseUrl+"/uploaded_file/videos/"+banner.getVname():video);
+                dto.setThumb((banner.getVname()!=null && !banner.getVname().isEmpty())?baseUrl+"/uploaded_file/image-gallery/"+banner.getIname():video);
             }else{
                 dto.setPath(baseUrl+"/uploaded_file/image-gallery/"+banner.getIname());
                 dto.setThumb(null);

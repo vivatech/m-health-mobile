@@ -177,10 +177,10 @@ public class SiteController {
         }
     }
 
-    @GetMapping("/nearby-doctor")
+    @GetMapping(path = "/nearby-doctor", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> nearByDoctor(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
-                                          @RequestBody NearByDoctorRequest request) {
+                                          @ModelAttribute NearByDoctorRequest request) {
         return publicService.nearByDoctor(locale,request);
     }
 
@@ -190,59 +190,59 @@ public class SiteController {
         return publicService.getAllCategoriesList(locale);
     }
 
-    @PostMapping("/list-support-tickets")
+    @PostMapping(path = "/list-support-tickets", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> listSupportTickets(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
-                                                @RequestBody ListSupportTicketsRequest request) {
+                                                @ModelAttribute ListSupportTicketsRequest request) {
         return ticketService.listSupportTickets(request,locale);
     }
 
-    @PostMapping("/create-support-ticket")
+    @PostMapping(path = "/create-support-ticket", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createSupportTicket(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                 @ModelAttribute CreateSupportTicketsRequest request) throws IOException {
         return ticketService.createSupportTicket(request,locale);
     }
 
-    @PostMapping("/view-reply-message")
+    @PostMapping(path = "/view-reply-message", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> viewReplyMessage(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
-                                                @RequestBody ViewReplyMessageRequest request) throws IOException {
+                                                @ModelAttribute ViewReplyMessageRequest request) throws IOException {
         return ticketService.viewReplyMessage(request,locale);
     }
 
-    @PostMapping("/reply-support-ticket")
+    @PostMapping(path = "/reply-support-ticket", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> replySupportTicket(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                 @ModelAttribute ReplySupportTicketRequest request) throws IOException {
         return ticketService.replySupportTicket(request,locale);
     }
 
-    @PostMapping("/change-support-ticket-status")
+    @PostMapping(path = "/change-support-ticket-status", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> changeSupportTicketStatus(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
-                                                @RequestBody ChangeSupportTicketStatusRequest request) throws IOException {
+                                                @ModelAttribute ChangeSupportTicketStatusRequest request) throws IOException {
         return ticketService.changeSupportTicketStatus(request,locale);
     }
 
-    @PostMapping("/check-on-going-consultation")
+    @PostMapping(path = "/check-on-going-consultation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> checkOnGoingConsultation(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
-                                                @RequestParam(name = "user_id")Integer user_id) throws IOException {
-        return consultationService.checkOnGoingConsultation(user_id,locale);
+                                                      @ModelAttribute ConsultationsRequest request) throws IOException {
+        return consultationService.checkOnGoingConsultation(request.getUser_id(), locale);
     }
 
-    @PostMapping("/consultations")
+    @PostMapping(path = "/consultations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> consultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                                            @RequestHeader(name = "X-type") String type,
-                                           @RequestBody ConsultationsRequest request) {
+                                           @ModelAttribute ConsultationsRequest request) {
         return consultationService.consultations(request,type,locale);
     }
 
-    @PostMapping("/search-consultations")
+    @PostMapping(path = "/search-consultations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> searchConsultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                                            @RequestHeader(name = "X-type") String type,
-                                           @RequestBody ConsultationsRequest request) {
+                                           @ModelAttribute ConsultationsRequest request) {
         return consultationService.searchConsultations(request,type,locale);
     }
 
@@ -251,9 +251,9 @@ public class SiteController {
         return siteService.appBanner(locale);
     }
 
-    @PostMapping("/get-video-attachment")
+    @PostMapping(path = "/get-video-attachment", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> getVideoAttachment(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
-                                                @RequestBody GetSloatsRequest request) {
+                                                @ModelAttribute GetSloatsRequest request) {
         return siteService.getVideoAttachment(locale,request);
     }
 }

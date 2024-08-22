@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "mh_support_ticket_msgs")
+@Table(name = "mh_users_relatives")
 public class UserRelative {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

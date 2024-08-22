@@ -217,19 +217,25 @@ public class TicketService {
                 SupportTicketMessageDTO dto = new SupportTicketMessageDTO();
 
                 SupportTicket ticket = data.getSupportTicket();
-                Users user = usersRepository.findById(data.getSupportTicketMsgsCreatedBy()).orElse(null);
-                Attachment attachment = attachmentRepository.findById(data.getAttachmentId()).orElse(null);
+                Users user = null;
+                if(data.getSupportTicketMsgsCreatedBy()!=null && data.getSupportTicketMsgsCreatedBy()!=0){
+                    user = usersRepository.findById(data.getSupportTicketMsgsCreatedBy()).orElse(null);
+                }
+                Attachment attachment = null;
+                if(data.getAttachmentId()!=null && data.getAttachmentId()!=0){
+                    attachment = attachmentRepository.findById(data.getAttachmentId()).orElse(null);
+                }
 
                 String photoPath = attachment != null ? baseUrl + "uploaded_file/Support_Ticket/" + data.getSupportTicket().getSupportTicketId() + "/" + attachment.getAttachmentName() : "";
                 String attachmentType = attachment != null ? attachment.getAttachmentType() : "";
 
                 dto.setId(data.getSupportTicketMsgsId());
-                dto.setMessage(data.getSupportTicketMsgsDetail().replaceAll("\\s+", " ").trim());
-                dto.setTicket_name(ticket.getSupportTicketTitle());
-                dto.setStatus(ticket.getSupportTicketStatus());
+                dto.setMessage((data.getSupportTicketMsgsDetail()!=null)?data.getSupportTicketMsgsDetail().replaceAll("\\s+", " ").trim():null);
+                dto.setTicket_name((ticket!=null)?ticket.getSupportTicketTitle():null);
+                dto.setStatus((ticket!=null)?ticket.getSupportTicketStatus():null);
                 dto.setAttachment(photoPath);
                 dto.setAttachment_type(attachmentType);
-                dto.setCreated_by(user.getFirstName() + " " + user.getLastName());
+                dto.setCreated_by((user!=null)?user.getFirstName() + " " + user.getLastName():null);
                 dto.setCreated_by_id(data.getSupportTicketMsgsCreatedBy());
                 dto.setCreated_date(data.getSupportTicketMsgsCreatedAt());
                 dto.setTotal_count(messages.getTotalElements());
@@ -329,6 +335,7 @@ public class TicketService {
         SupportTicket ticket = supportTicketRepository.findById(request.getSupport_ticket_id()).orElse(null);
         if(ticket!=null){
             ticket.setSupportTicketStatus(request.getStatus());
+            ticket.setSupportTicketUpdatedAt(LocalDateTime.now());
             supportTicketRepository.save(ticket);
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,

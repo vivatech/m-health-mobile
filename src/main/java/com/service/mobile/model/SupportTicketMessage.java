@@ -22,7 +22,7 @@ public class SupportTicketMessage {
     private Integer supportTicketMsgsId;
 
     @ManyToOne
-    @JoinColumn(name = "support_ticket_id", referencedColumnName = "support_ticket_id", nullable = false)
+    @JoinColumn(name = "support_ticket_id")
     private SupportTicket supportTicket;
 
     @Column(name = "support_ticket_msgs_detail", nullable = false)
