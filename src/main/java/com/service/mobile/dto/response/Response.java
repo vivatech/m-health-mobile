@@ -1,5 +1,8 @@
 package com.service.mobile.dto.response;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.service.mobile.dto.Status;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -37,7 +40,15 @@ public class Response {
         this.status = status;
         this.code = code;
         this.message = message;
-        this.data = data;
+        try{
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+            objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            String dataString = objectMapper.writeValueAsString(data);
+            this.data = dataString;
+        }catch (Exception e){
+            this.data = data;
+        }
     }
 
 }

@@ -180,9 +180,12 @@ public class PublicService {
         responseData.put("upload_id_msg", "upload_id_msg_value"); // replace with appropriate value
         responseData.put("slot_time", slotTime);
 
-        Response response = new Response();
-        response.setData(responseData);
-        response.setMessage(messageSource.getMessage(Constants.GLOBAL_VARIABLES_FETCH,null,locale));
+        Response response = new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.GLOBAL_VARIABLES_FETCH,null,locale),
+                responseData
+        );
         return ResponseEntity.ok(response);
     }
 
@@ -211,8 +214,12 @@ public class PublicService {
                     )
             );
         } else {
-            response.setData(page.getDescription());
-            response.setMessage(msg);
+            response = new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    msg,
+                    page.getDescription()
+            );
             return ResponseEntity.ok(response);
         }
     }

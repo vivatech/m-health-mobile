@@ -210,8 +210,12 @@ public class PatientService {
                         user.getEmail(), user.getContactNumber(), signalingServer.getValue(), verificationToken.getValue(),
                         turnUsername.getValue(), turnPassword.getValue()
                 );
-                res.setData(response);
-                res.setMessage(messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS,null,locale));
+                res = new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS,null,locale),
+                        response
+                );
                 return ResponseEntity.ok(res);
 
             } else {

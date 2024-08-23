@@ -63,8 +63,11 @@ public class SiteService {
             MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceType(appVersion, deviceType);
 
             if (releaseData != null) {
-                response.setData(new MobileReleaseDto(releaseData));
-                response.setMessage(messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale));
+                response = new Response(Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+                        new MobileReleaseDto(releaseData)
+                );
                 return ResponseEntity.ok(response);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(

@@ -63,9 +63,12 @@ public class SiteController {
         ));
         List<Country> countries = publicService.findAllCountry();
         if (countries.size()>0) {
-            response.setData(countries);
-            response.setMessage(messageSource.getMessage(Constants.COUNTRY_LIST_RECIVED,null,locale));
-            responseEntity = ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            response = new Response(Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.COUNTRY_LIST_RECIVED,null,locale),
+                    countries
+                    );
+            responseEntity = ResponseEntity.status(HttpStatus.OK).body(response);
         }
         return responseEntity;
     }
