@@ -40,15 +40,15 @@ public class Response {
         this.status = status;
         this.code = code;
         this.message = message;
-        try{
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.registerModule(new JavaTimeModule());
-            objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-            String dataString = objectMapper.writeValueAsString(data);
-            this.data = dataString;
-        }catch (Exception e){
+//        try{
+//            ObjectMapper objectMapper = new ObjectMapper();
+//            objectMapper.registerModule(new JavaTimeModule());
+//            objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+//            String dataString = objectMapper.writeValueAsString(data);
+//            this.data = dataString;
+//        }catch (Exception e){
             this.data = data;
-        }
+//        }
     }
 
 }
