@@ -13,7 +13,7 @@ import java.util.Locale;
 
 @RestController
 @RequestMapping("/mobile/doctor")
-public class DoctorController {
+public class DoctorControllerJson {
 
     @Autowired
     private HospitalService hospitalService;
@@ -21,23 +21,17 @@ public class DoctorController {
     @Autowired
     private DoctorService doctorService;
 
-    @GetMapping("/get-hospital-list")
-    public ResponseEntity<?> getHospitalList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
-                                             Locale locale) {
-        return hospitalService.getHospitalList(locale);
-    }
-
-    @PostMapping(path = "/view-profile", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping(path = "/view-profile", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> viewProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                              Locale locale,
-                                         @ModelAttribute GetSingleRelativeProfileRequest request) {
+                                         @RequestBody GetSingleRelativeProfileRequest request) {
         return doctorService.viewProfile(locale,request.getDoctor_id());
     }
 
-    @PostMapping(path = "/get-review", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping(path = "/get-review", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> getReview(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                              Locale locale,
-                                         @ModelAttribute GetReviewRequest request) {
+                                         @RequestBody GetReviewRequest request) {
         return doctorService.getReview(locale,request);
     }
 }

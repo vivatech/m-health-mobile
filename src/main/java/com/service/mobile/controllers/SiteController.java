@@ -48,7 +48,7 @@ public class SiteController {
     @Autowired
     private TicketService ticketService;
 
-    @PostMapping(path="/mobile-release", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path="/mobile-release", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute MobileReleaseRequest request) {
         return siteService.getMobileRelease(request,locale);
     }
@@ -87,12 +87,12 @@ public class SiteController {
         return publicService.getStaticPageContent(locale,type);
     }
 
-    @PostMapping("/activities")
+    @PostMapping(path = "/activities", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> activities(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                         Locale locale,
-                                        @RequestParam(name = "user_id",required = false) Integer user_id
+                                        @ModelAttribute UpdatePictureRequest request
     ) {
-        return publicService.activities(locale,user_id);
+        return publicService.activities(locale, request.getUser_id());
     }
 
     @GetMapping("/get-consult-type")
@@ -108,14 +108,14 @@ public class SiteController {
         return publicService.getOffers(locale);
     }
 
-    @PostMapping("/recent-orders")
+    @PostMapping(path = "/recent-orders", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> recentOrders(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                           Locale locale,
                                           @RequestHeader(name = "X-type", required = false)
                                           String type,
-                                          @RequestParam(name = "user_id",required = false) Integer user_id
+                                          @ModelAttribute UpdatePictureRequest request
     ) {
-        return orderService.recentOrders(locale,user_id,type);
+        return orderService.recentOrders(locale,request.getUser_id(),type);
     }
 
     @GetMapping("/get-state-list")
@@ -130,7 +130,7 @@ public class SiteController {
         return publicService.getCityList(locale);
     }
 
-    @PostMapping("/update-profile-picture") //in post man post method is written
+    @PostMapping(path = "/update-profile-picture", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE}) //in post man post method is written
     public ResponseEntity<?> updateProfilePicture(@ModelAttribute UpdatePictureRequest request,
         @RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
         return usersService.updateProfilePicture(request,locale);
@@ -180,7 +180,7 @@ public class SiteController {
         }
     }
 
-    @GetMapping(path = "/nearby-doctor", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @GetMapping(path = "/nearby-doctor", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> nearByDoctor(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                           @ModelAttribute NearByDoctorRequest request) {
@@ -193,56 +193,56 @@ public class SiteController {
         return publicService.getAllCategoriesList(locale);
     }
 
-    @PostMapping(path = "/list-support-tickets", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/list-support-tickets", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> listSupportTickets(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                 @ModelAttribute ListSupportTicketsRequest request) {
         return ticketService.listSupportTickets(request,locale);
     }
 
-    @PostMapping(path = "/create-support-ticket", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/create-support-ticket", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> createSupportTicket(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                 @ModelAttribute CreateSupportTicketsRequest request) throws IOException {
         return ticketService.createSupportTicket(request,locale);
     }
 
-    @PostMapping(path = "/view-reply-message", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/view-reply-message", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> viewReplyMessage(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                 @ModelAttribute ViewReplyMessageRequest request) throws IOException {
         return ticketService.viewReplyMessage(request,locale);
     }
 
-    @PostMapping(path = "/reply-support-ticket", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/reply-support-ticket", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> replySupportTicket(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                 @ModelAttribute ReplySupportTicketRequest request) throws IOException {
         return ticketService.replySupportTicket(request,locale);
     }
 
-    @PostMapping(path = "/change-support-ticket-status", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/change-support-ticket-status", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> changeSupportTicketStatus(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                 @ModelAttribute ChangeSupportTicketStatusRequest request) throws IOException {
         return ticketService.changeSupportTicketStatus(request,locale);
     }
 
-    @PostMapping(path = "/check-on-going-consultation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/check-on-going-consultation", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> checkOnGoingConsultation(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
                                                       @ModelAttribute ConsultationsRequest request) throws IOException {
         return consultationService.checkOnGoingConsultation(request.getUser_id(), locale);
     }
 
-    @PostMapping(path = "/consultations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/consultations", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> consultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                                            @RequestHeader(name = "X-type") String type,
                                            @ModelAttribute ConsultationsRequest request) {
         return consultationService.consultations(request,type,locale);
     }
 
-    @PostMapping(path = "/search-consultations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/search-consultations", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> searchConsultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                                            @RequestHeader(name = "X-type") String type,
                                            @ModelAttribute ConsultationsRequest request) {
@@ -254,7 +254,7 @@ public class SiteController {
         return siteService.appBanner(locale);
     }
 
-    @PostMapping(path = "/get-video-attachment", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/get-video-attachment", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> getVideoAttachment(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                                                 @ModelAttribute GetSloatsRequest request) {
         return siteService.getVideoAttachment(locale,request);
