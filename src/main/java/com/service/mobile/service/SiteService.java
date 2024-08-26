@@ -57,14 +57,17 @@ public class SiteService {
     public ResponseEntity<?> getMobileRelease(MobileReleaseRequest request, Locale locale) {
         Response response = new Response();
         if (request != null) {
-            DeviceType deviceType = getDeviceType(request.getDeviceType());
-            String appVersion = request.getAppVersion();
+            DeviceType deviceType = getDeviceType(request.getDevice_type());
+            String appVersion = request.getApp_version();
 
             MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceType(appVersion, deviceType);
 
             if (releaseData != null) {
-                response.setData(new MobileReleaseDto(releaseData));
-                response.setMessage(messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale));
+                response = new Response(Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+                        new MobileReleaseDto(releaseData)
+                );
                 return ResponseEntity.ok(response);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
@@ -93,8 +96,8 @@ public class SiteService {
             dto.setType(banner.getType());
             dto.setType(projectBase);
             if(banner.getType().equalsIgnoreCase("video")){
-                dto.setPath(baseUrl+"/uploaded_file/videos/"+banner.getVname());
-                dto.setThumb(baseUrl+"/uploaded_file/image-gallery/"+banner.getIname());
+                dto.setPath((banner.getVname()!=null && !banner.getVname().isEmpty())?baseUrl+"/uploaded_file/videos/"+banner.getVname():video);
+                dto.setThumb((banner.getVname()!=null && !banner.getVname().isEmpty())?baseUrl+"/uploaded_file/image-gallery/"+banner.getIname():video);
             }else{
                 dto.setPath(baseUrl+"/uploaded_file/image-gallery/"+banner.getIname());
                 dto.setThumb(null);

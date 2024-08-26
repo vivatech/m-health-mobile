@@ -9,6 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface HealthTipOrdersRepository extends JpaRepository<HealthTipOrders, Integer> {
-    @Query("Select u from HealthTipOrders u where u.patientId = ?1 and u.healthTipPackage.packageId = ?2")
-    Optional<HealthTipOrders> findByPatientIdAndHathTipPackageId(Integer userId, Integer packageId);
+    @Query("Select u from HealthTipOrders u where u.patientId.userId = ?1 and u.healthTipPackage.packageId = ?2")
+    List<HealthTipOrders> findByPatientIdAndHathTipPackageId(Integer userId, Integer packageId);
 }

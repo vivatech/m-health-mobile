@@ -194,4 +194,7 @@ public class Constants {
     public static final String RECORD_CREATED_SUCCESS = "app.record.created.success";
     public static final String ORDER_ALREADY_CREATED = "app.order.already.created";
     public static final String ORDER_CREATED_SUCCESS = "app.order.created.success";
+    public static final String PROFILE_PICTURE_EXTENSION_NOT_ALLOWED = "app.profile.picture.extension.not.allowed";
+    public static final String MAXIMIM_PROFILE_PIC_SIZE_EXCIDED = "app.maximum.profile.pic.size.excided";
+    public static final String RATING_ADDED = "app.rating.added";
 }

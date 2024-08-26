@@ -14,10 +14,13 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class HealthTipPackageHistoryRequest {
     private Integer user_id;
+    private Integer case_id;
     private Integer page;
     private String package_name;
+    private String doctor_name;
     private PackageType type;
     private LocalDate created_date;
+    private LocalDate consultation_date;
     private Integer category_id;
     private String status;
 }

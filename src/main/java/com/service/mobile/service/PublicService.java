@@ -180,9 +180,12 @@ public class PublicService {
         responseData.put("upload_id_msg", "upload_id_msg_value"); // replace with appropriate value
         responseData.put("slot_time", slotTime);
 
-        Response response = new Response();
-        response.setData(responseData);
-        response.setMessage(messageSource.getMessage(Constants.GLOBAL_VARIABLES_FETCH,null,locale));
+        Response response = new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.GLOBAL_VARIABLES_FETCH,null,locale),
+                responseData
+        );
         return ResponseEntity.ok(response);
     }
 
@@ -211,8 +214,12 @@ public class PublicService {
                     )
             );
         } else {
-            response.setData(page.getDescription());
-            response.setMessage(msg);
+            response = new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    msg,
+                    page.getDescription()
+            );
             return ResponseEntity.ok(response);
         }
     }
@@ -269,7 +276,6 @@ public class PublicService {
     }
 
     public ResponseEntity<?> getOffers(Locale locale) {
-        Response response = new Response();
         List<Coupon> coupons = couponRepository.findByStatus(1);
         if (coupons.size()>0) {
             OfferResponseDTO responseDTO = new OfferResponseDTO();
@@ -304,9 +310,9 @@ public class PublicService {
                     responseDTO
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.BLANK_DATA_GIVEN_CODE,
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.NO_CONTENT_FOUNT,null,locale)
             ));
         }
@@ -325,17 +331,20 @@ public class PublicService {
     public ClinicInformation getClinicInformation(Integer userId) {
         ClinicInformation dto = new ClinicInformation();
         Users users = usersRepository.findById(userId).orElse(null);
-        dto.setName(users.getFirstName()+" "+users.getLastName());
-        dto.setContact_number(users.getCountryCode()+users.getContactNumber());
-        dto.setAddress(users.getHospitalAddress());
-        UserLocation location = userLocationRepository.findByUserId(userId).orElse(null);
-        if(location!=null){
-            dto.setLatitude((location.getLatitude()!=null)?location.getLatitude():null);
-            dto.setLongitude((location.getLongitude()!=null)?location.getLongitude():null);
+        if(users!=null){
+            dto.setName(users.getFirstName()+" "+users.getLastName());
+            dto.setContact_number(users.getCountryCode()+users.getContactNumber());
+            dto.setAddress(users.getHospitalAddress());
+            UserLocation location = userLocationRepository.findByUserId(userId).orElse(null);
+            if(location!=null){
+                dto.setLatitude((location.getLatitude()!=null)?location.getLatitude():null);
+                dto.setLongitude((location.getLongitude()!=null)?location.getLongitude():null);
+            }
+            String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
+            dto.setProfile_picture(photoPath);
+            return dto;
         }
-        String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
-        dto.setProfile_picture(photoPath);
-        return dto;
+        return null;
     }
 
     public ResponseEntity<?> getProfile(Locale locale, Integer userId) {
@@ -509,15 +518,19 @@ public class PublicService {
 
 
     public ResponseEntity<?> getSpecialization(Locale locale) {
-        List<Specialization> specializations = specializationRepository.findAllByStatus("A");
-        if (specializations.size()>0) {
+        List<Specialization> specializations = specializationRepository.findAllByStatus(Status.A);
+        if (!specializations.isEmpty()) {
             List<SpecializationResponse> responses = new ArrayList<>();
             String photo = baseUrl+defaultImage;
             for(Specialization specialization:specializations){
                 SpecializationResponse data = new SpecializationResponse();
-                String photoPath = baseUrl+"/uploaded_file/specialisation/"+specialization.getId()+"/"+specialization.getPhoto();
+                if(specialization.getPhoto()!=null && !specialization.getPhoto().isEmpty()){
+                    String photoPath = baseUrl+"/uploaded_file/specialisation/"+specialization.getId()+"/"+specialization.getPhoto();
+                    data.setPhoto(photoPath);
+                }else{
+                    data.setPhoto(photo);
+                }
 
-                data.setPhoto(photoPath);
                 if(locale.getLanguage().equals("en")){
                     data.setName(specialization.getName());
                 }else {data.setName(specialization.getNameSl());}
@@ -546,7 +559,7 @@ public class PublicService {
         for (Map.Entry<String, String> entry : paymentOptionConfig.getCurrency().entrySet()) {
             PaymentMethodResponse.Option option = new PaymentMethodResponse.Option();
             option.setValue(entry.getKey());
-            option.setTitle(messageSource.getMessage(entry.getValue().toLowerCase(), null, locale));
+            option.setTitle(entry.getValue());
             currencyOptions.add(option);
         }
 
@@ -554,16 +567,16 @@ public class PublicService {
         for (Map.Entry<String, String> entry : paymentOptionConfig.getPaymentMethod().entrySet()) {
             PaymentMethodResponse.Option option = new PaymentMethodResponse.Option();
             option.setValue(entry.getKey());
-            option.setTitle(messageSource.getMessage(entry.getValue(), null, locale));
+            option.setTitle(entry.getValue());
             paymentMethods.add(option);
         }
+        PaymentMethodResponse response = new PaymentMethodResponse();
+        response.setCurrency_option(currencyOptions);
+        response.setData(paymentMethods);
+        response.setStatus(Constants.SUCCESS_CODE);
+        response.setMessage(messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale));
 
-        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                Constants.SUCCESS_CODE,
-                Constants.SUCCESS_CODE,
-                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
-                currencyOptions
-        ));
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     public List<PaymentMethodResponse.Option> getPaymentMethod() {
@@ -771,21 +784,24 @@ public class PublicService {
     }
 
     private NurseDto getNurseInfo(Orders orders, Orders model) {
-        Users nurse = usersRepository.findById(model.getCaseId().getAssignedTo()).orElse(null);
-        NurseDto dto = null;
-        if(nurse!=null){
-            dto = new NurseDto();
-            String photoPath="";
-            if(nurse.getProfilePicture()!=null && !nurse.getProfilePicture().isEmpty()){
-                photoPath = baseUrl+"uploaded_file/UserProfile/"+model.getId()+"/"+model.getDoctorId().getProfilePicture();
-            }else{
-                photoPath = baseUrl+defaultImage;
+        if(model.getCaseId()!=null && model.getCaseId().getAssignedTo()!=null){
+            Users nurse = usersRepository.findById(model.getCaseId().getAssignedTo()).orElse(null);
+            NurseDto dto = null;
+            if(nurse!=null){
+                dto = new NurseDto();
+                String photoPath="";
+                if(nurse.getProfilePicture()!=null && !nurse.getProfilePicture().isEmpty()){
+                    photoPath = baseUrl+"uploaded_file/UserProfile/"+model.getId()+"/"+model.getDoctorId().getProfilePicture();
+                }else{
+                    photoPath = baseUrl+defaultImage;
+                }
+                dto.setProfile_picture(photoPath);
+                dto.setName(nurse.getFirstName()+" "+nurse.getLastName());
+                dto.setContact_number(nurse.getCountryCode()+""+nurse.getContactNumber());
             }
-            dto.setProfile_picture(photoPath);
-            dto.setName(nurse.getFirstName()+" "+nurse.getLastName());
-            dto.setContact_number(nurse.getCountryCode()+""+nurse.getContactNumber());
+            return dto;
         }
-        return dto;
+        return null;
     }
 
     private String formatConsultType(String consultType) {
@@ -976,7 +992,7 @@ public class PublicService {
 
     public List<GetLabDto> getLabInfo(List<Integer> labcatIds) {
         List<GetLabDto> response = new ArrayList<>();
-        List<LabPrice> labPrices = labPriceRepository.findBySubCatIdAndUserTypeAndStatus(labcatIds,UserType.Lab,Status.A);
+        List<LabPrice> labPrices = labPriceRepository.findBySubCatIdAndUserTypeAndStatus(labcatIds,UserType.Lab,"A");
         for(LabPrice price:labPrices){
             GetLabDto temp = new GetLabDto();
             temp.setUser_id(price.getLabUser().getUserId());
@@ -989,7 +1005,7 @@ public class PublicService {
     public BillInfoDto getBillInfo(Integer labId, List<Integer> reportId, String collectionMode, String currencyOption) {
         Integer paymentRate = 1;
         String currencySym = currencySymbolFdj; // Adjust this to your actual symbol
-        if (currencyOption.equalsIgnoreCase("slsh")) {
+        if (currencyOption!=null && currencyOption.equalsIgnoreCase("slsh")) {
             GlobalConfiguration configuration = globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE");
             paymentRate = Integer.parseInt(configuration.getValue());
             currencySym = currencySymbolSLSH; // Adjust this to your actual symbol
@@ -1459,7 +1475,7 @@ public class PublicService {
     }
 
     public Boolean checkDoctorAvailability(SlotMaster slotInfo, Integer doctorId, Integer numberSlotsToAllocate, List<Integer> allocatedSlots, LocalDate consultationDate) {
-        Long doctorSlotAvailableCount = doctorAvailabilityRepository.countBySlotTypeIdAndSlotIdAndDoctorId(slotInfo.getSlotType(), allocatedSlots, doctorId);
+        Long doctorSlotAvailableCount = doctorAvailabilityRepository.countBySlotTypeIdAndSlotIdAndDoctorId(slotInfo.getSlotType().getId(), allocatedSlots, doctorId);
 
         if (doctorSlotAvailableCount != Long.valueOf(numberSlotsToAllocate)) {
             return false;

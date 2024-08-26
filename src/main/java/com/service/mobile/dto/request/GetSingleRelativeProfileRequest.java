@@ -13,6 +13,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class GetSingleRelativeProfileRequest {
     private Integer user_id;
+    private Integer doctor_id;
     private Integer case_id;
     private LocalDate newOrderDate;
     private Integer category_id;

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "mh_consultation")
+@Table(name = "mh_lab_refund_request")
 public class LabRefundRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

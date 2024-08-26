@@ -5,21 +5,25 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class ConsultationDTO {
-    private String caseId;
+    private Integer case_id;
     private String name;
-    private String consultType;
-    private String consultationType;
-    private String date;
+    private String consult_type;
+    private String consultation_type;
+    private LocalDate date;
     private String time;
     private String charges;
-    private String cancelReason;
+    private String cancel_reason;
     private String status;
-    private String profilePic;
+    private String profile_pic;
+    private String profile_picture;
+    private Integer patient_id;
     private Object nurse;
     private Object clinic;
 }

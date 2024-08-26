@@ -30,15 +30,15 @@ public class LabOrders {
     private Consultation caseId;
 
     @ManyToOne
-    @JoinColumn(name = "patient_id", referencedColumnName = "user_id", nullable = false)
+    @JoinColumn(name = "patient_id")
     private Users patientId;
 
     @ManyToOne
-    @JoinColumn(name = "doctor_id", referencedColumnName = "user_id")
+    @JoinColumn(name = "doctor_id")
     private Users doctor;
 
     @ManyToOne
-    @JoinColumn(name = "lab_id", referencedColumnName = "user_id", nullable = false)
+    @JoinColumn(name = "lab_id")
     private Users lab;
 
     @ManyToOne

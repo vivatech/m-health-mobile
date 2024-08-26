@@ -22,27 +22,27 @@ public class SupportTicket {
     @Column(name = "support_ticket_id")
     private Integer supportTicketId;
 
-    @Column(name = "support_ticket_title", nullable = false)
+    @Column(name = "support_ticket_title")
     private String supportTicketTitle;
 
-    @Column(name = "support_ticket_description", nullable = false)
+    @Column(name = "support_ticket_description")
     private String supportTicketDescription;
 
     @ManyToOne
-    @JoinColumn(name = "attachment_id", referencedColumnName = "attachment_id", nullable = false)
+    @JoinColumn(name = "attachment_id")
     private Attachment attachmentId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "support_ticket_status", nullable = false)
+    @Column(name = "support_ticket_status")
     private SupportTicketStatus supportTicketStatus = SupportTicketStatus.Open;
 
-    @Column(name = "support_ticket_created_by", nullable = false)
+    @Column(name = "support_ticket_created_by")
     private Integer supportTicketCreatedBy;
 
     @Column(name = "user_type")
     private String userType;
 
-    @Column(name = "support_ticket_created_at", nullable = false)
+    @Column(name = "support_ticket_created_at")
     private LocalDateTime supportTicketCreatedAt;
 
     @Column(name = "support_ticket_updated_at")

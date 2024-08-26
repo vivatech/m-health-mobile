@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateRelativeProfileRequest {
-    private Byte id;
+    private Byte relative_id;
     private Integer user_id;
     private String relation_with_patient;
     private String name;

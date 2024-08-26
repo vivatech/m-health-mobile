@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -17,7 +18,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class UsersService {
@@ -43,11 +46,19 @@ public class UsersService {
                 String filename = request.getProfile_picture().getOriginalFilename();
                 String ext = StringUtils.getFilenameExtension(filename);
                 if (!isAllowedExtension(request.getProfile_picture())) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Profile picture extension not allowed");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                            new Response(
+                                    Constants.NO_CONTENT_FOUNT_CODE,
+                                    Constants.NO_CONTENT_FOUNT,
+                                    messageSource.getMessage(Constants.PROFILE_PICTURE_EXTENSION_NOT_ALLOWED,null,locale)
+                            ));
                 }
 
                 if (request.getProfile_picture().getSize() > 5000000) { // 5MB
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Maximum profile picture size exceeded");
+                    Map<String,String> mpadata = new HashMap<>();
+                    mpadata.put("type","error");
+                    mpadata.put("message",messageSource.getMessage(Constants.MAXIMIM_PROFILE_PIC_SIZE_EXCIDED,null,locale));
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(mpadata);
                 }
 
                 profilePicPath = saveProfilePicture(users.getUserId(), request.getProfile_picture());
@@ -59,14 +70,15 @@ public class UsersService {
             users.setProfilePicture(profilePicPath != null ? profilePicPath : users.getProfilePicture());
             usersRepository.save(users);
 
-            String photoUrl = profilePicPath != null ?
-                    "BASE_URL/uploaded_file/UserProfile/" + request.getUser_id() + "/" + profilePicPath : "";
-
+            String photoUrl = profilePicPath != null?
+                    baseUrl+"/uploaded_file/UserProfile/" + request.getUser_id() + "/" + profilePicPath : "";
+            Map<String,String> resMap= new HashMap<>();
+            resMap.put("profile_picture",photoUrl);
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.PROFILE_PIC_UPLOAD_SUCCESS,null,locale),
-                    photoUrl
+                    resMap
             ));
 
         }else{
@@ -97,6 +109,8 @@ public class UsersService {
     }
 
     private boolean isAllowedExtension(MultipartFile profilePicture) {
-        return profilePicture.equals("gif") || profilePicture.equals("png") || profilePicture.equals("jpg");
+        String[] fileFrags = profilePicture.getOriginalFilename().split("\\.");
+        String extension = fileFrags[fileFrags.length-1];
+        return extension.equals("gif") || extension.equals("png") || extension.equals("jpg");
     }
 }
