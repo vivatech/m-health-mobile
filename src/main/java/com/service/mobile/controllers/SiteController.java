@@ -47,11 +47,14 @@ public class SiteController {
 
     @Autowired
     private TicketService ticketService;
+    @Autowired
+    private AuthService authService;
 
     @PostMapping(path="/mobile-release", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute MobileReleaseRequest request) {
         return siteService.getMobileRelease(request,locale);
     }
+
 
     @GetMapping("/get-country-list")
     public ResponseEntity<?> getCountriesList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
@@ -258,5 +261,9 @@ public class SiteController {
     public ResponseEntity<?> getVideoAttachment(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                                                 @ModelAttribute GetSloatsRequest request) {
         return siteService.getVideoAttachment(locale,request);
+    }
+    @PostMapping(path="/login", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public Object actionLogin(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute MobileReleaseRequest request) {
+        return authService.actionLogin(request,locale);
     }
 }

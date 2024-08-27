@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class MobileReleaseRequest {
-    private String app_version;
-    private String device_type;
+@Data
+public class VerifyOtpRequest {
     private String contact_number;
+    private String otp;
+    private String device_token;
+    private String is_registered;
 }
