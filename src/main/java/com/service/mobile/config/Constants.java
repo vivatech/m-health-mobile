@@ -19,7 +19,7 @@ public class Constants {
     public static final String FAIL="FAIL";
     public static final String PLEASE_TICK_THE_CHECKBOX = "Please accept terms and condition";
     public static final String USER_ALREADY_EXISTS = "User already exists";
-    public static final String USER_NOT_FOUND= "User not found";
+    public static final String USER_NOT_FOUND= "user.not.found";
 
 
     public static final String OTP_SEND_SUCCESSFUL= "OTP Sent Successfully";
@@ -37,9 +37,9 @@ public class Constants {
     public static final String OTP_SENT_MESSAGE = "OTP sent successfully";
     public static final String USER_REGISTERED = "Users registered successfully";
     public static final String FIELD_MISSING = "Fields missing";
-    public static final String OTP_EXPIRES = "OTP expired";
+    public static final String OTP_EXPIRES = "otp.expires";
     public static final String USER_LOGGED_IN = "User login";
-    public static final String INVALID_OTP = "Invalid otp";
+    public static final String INVALID_OTP = "invalid.otp";
     public static final String NO_RECORD_FOUND = "no.record.found";
     public static final String BLANK_DATA_GIVEN = "blank.data.given";
     public static final String MOBILE_USER_NOT_FOUND = "user.not.found";
@@ -198,6 +198,8 @@ public class Constants {
     public static final String MAXIMIM_PROFILE_PIC_SIZE_EXCIDED = "app.maximum.profile.pic.size.excided";
     public static final String RATING_ADDED = "app.rating.added";
     public static final String Mobile = "Mobile";
-    public static final String OTP_VERIFIED_SUCCESSFULLY = "Otp verified successfully";
+    public static final String OTP_VERIFIED_SUCCESSFULLY = "otp.verified.successfully";
     public static final String USER_PROFILE_PATH = "UserProfile/";
+    public static final String STATUS_INACTIVE = "0";
+    public static final String STATUS_ACTIVE = "1";
 }

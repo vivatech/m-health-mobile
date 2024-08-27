@@ -259,7 +259,7 @@ public class PatientControllerJson {
     }
 
     @PostMapping(path="/verify-otp", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<?> actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody VerifyOtpRequest request) {
+    public Response actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody VerifyOtpRequest request) {
         return authService.actionVerifyOtp(request,locale);
     }
 

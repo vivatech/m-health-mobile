@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Locale;
 
+import static com.service.mobile.config.Constants.STATUS_ACTIVE;
+
 @Service
 public class AuthService {
     @Value("${app.otp.expiry.minutes}")
@@ -37,12 +39,13 @@ public class AuthService {
     @Autowired
     private AuthConfig authConfig;
 
-    public ResponseEntity<?> actionLogin(MobileReleaseRequest request, Locale locale) {
+    public Response actionLogin(MobileReleaseRequest request, Locale locale) {
+        Response response;
         if(request.getContact_number() == null || request.getContact_number().isEmpty()){
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            response = new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)));
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale));
         }
         else{
             Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
@@ -54,35 +57,36 @@ public class AuthService {
                 otps.setIsFrom(Constants.Login);
                 otps.setUserId(users.getUserId());
                 otps.setExpiredAt(LocalDateTime.now().plusMinutes(expiryTime));
-                otps.setType(Constants.Mobile);
+                otps.setStatus(Constants.STATUS_INACTIVE);
+                otps.setType(Constants.PATIENT);
 
                 userOTPRepository.save(otps);
 
-                Response res = new Response();
-
-                res = new Response(
+                response = new Response(
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
                         messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS,null,locale)
                 );
-                return ResponseEntity.ok(res);
             }
-            else return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
+            else response = new Response(
                         Constants.NO_RECORD_FOUND_CODE,
                         Constants.NO_RECORD_FOUND_CODE,
-                        messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)));
+                        messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale));
         }
+        return response;
     }
 
-    public ResponseEntity<?> actionVerifyOtp(VerifyOtpRequest request, Locale locale) {
+    public Response actionVerifyOtp(VerifyOtpRequest request, Locale locale) {
+        Response responseData ;
+
         if(request.getContact_number() == null || request.getContact_number().isEmpty()
         || request.getOtp() == null || request.getOtp().isEmpty()
         || request.getIs_registered() == null || request.getIs_registered().isEmpty()
         || request.getDevice_token() == null || request.getDevice_token().isEmpty()){
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            responseData = new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)));
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale));
         }
         else{
             Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
@@ -91,6 +95,10 @@ public class AuthService {
                 if(otp != null){
                     if(LocalDateTime.now().isBefore(otp.getExpiredAt())){
                         if(encoder.matches(request.getOtp(), otp.getOtp())){
+                            //save Active state in otp table
+                            otp.setStatus(STATUS_ACTIVE);
+                            userOTPRepository.save(otp);
+
                             String token = authConfig.GenerateToken(users.getContactNumber());
                             JwtResponse response = new JwtResponse();
                             response.setAuthKey(token);
@@ -107,37 +115,38 @@ public class AuthService {
                             response.setContactNumber(users.getContactNumber());
                             response.setEmail(users.getEmail() == null || users.getEmail().isEmpty() ? null : users.getEmail());
 
-                            Response responses = new Response(
+                           responseData = new Response(
                                     Constants.SUCCESS_CODE,
                                     messageSource.getMessage(Constants.OTP_VERIFIED_SUCCESSFULLY,null,locale),
                                     Constants.SUCCESS_CODE,
                                     response
                             );
-                            return ResponseEntity.ok(responses);
-
-                        }else return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
-                                Constants.NO_RECORD_FOUND_CODE,
-                                Constants.BLANK_DATA_GIVEN_CODE,
-                                messageSource.getMessage(Constants.INVALID_OTP,null,locale)
-                        ));
+                        }
+                        else {
+                            responseData = new Response(
+                                    Constants.NO_RECORD_FOUND_CODE,
+                                    Constants.BLANK_DATA_GIVEN_CODE,
+                                    messageSource.getMessage(Constants.INVALID_OTP, null, locale)
+                            );
+                        }
                     }
-                    else return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    else responseData = new Response(
                             Constants.OTP_EXPIRES_CODE,
                             Constants.BLANK_DATA_GIVEN_CODE,
                             messageSource.getMessage(Constants.OTP_EXPIRES,null,locale)
-                    ));
+                    );
                 }
-                else return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                else responseData = new Response(
                         Constants.NO_RECORD_FOUND_CODE,
                         Constants.BLANK_DATA_GIVEN_CODE,
                         messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-                ));
-            }
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                );
+            }else responseData = new Response(
                     Constants.USER_NOT_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.USER_NOT_FOUND,null,locale)
-            ));
+            );
         }
+        return responseData;
     }
 }

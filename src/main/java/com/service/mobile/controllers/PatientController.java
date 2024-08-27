@@ -270,7 +270,7 @@ public class PatientController {
         }
     }
     @PostMapping(path="/verify-otp", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<?> actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute VerifyOtpRequest request) {
+    public Object actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute VerifyOtpRequest request) {
         return authService.actionVerifyOtp(request,locale);
     }
 }

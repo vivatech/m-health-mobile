@@ -263,7 +263,7 @@ public class SiteController {
         return siteService.getVideoAttachment(locale,request);
     }
     @PostMapping(path="/login", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<?> actionLogin(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute MobileReleaseRequest request) {
+    public Object actionLogin(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute MobileReleaseRequest request) {
         return authService.actionLogin(request,locale);
     }
 }
