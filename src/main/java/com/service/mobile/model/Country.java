@@ -15,22 +15,13 @@ public class Country {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "sortname", nullable = false)
-    private String sortname;
+    @Column(name = "sortname")
+    private String sortName;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name")
     private String name;
 
-    @Column(name = "phonecode", nullable = false)
-    private Integer phonecode;
-
-    @Column(name = "countries_name")
-    private String countriesName;
-
-    @Column(name = "phone_code")
+    @Column(name = "phonecode")
     private Integer phoneCode;
-
-    @Column(name = "sort_name")
-    private String sortName;
 }
 
