@@ -35,6 +35,8 @@ public class PatientController {
 
     @Autowired
     private RelativeService relativeService;
+    @Autowired
+    private AuthService authService;
 
     @PostMapping(path="/update-fullname", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> actionUpdateFullName(@ModelAttribute UpdateFullNameRequest request,@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
@@ -266,5 +268,9 @@ public class PatientController {
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
             ));
         }
+    }
+    @PostMapping(path="/verify-otp", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity<?> actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute VerifyOtpRequest request) {
+        return authService.actionVerifyOtp(request,locale);
     }
 }

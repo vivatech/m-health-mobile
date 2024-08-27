@@ -28,5 +28,4 @@ public class JwtResponse {
     private String dataBundleOffer;
     private String hasApp;
     private String dataBundleOfferMessage;
-
 }

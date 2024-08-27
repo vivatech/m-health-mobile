@@ -35,6 +35,8 @@ public class PatientControllerJson {
 
     @Autowired
     private RelativeService relativeService;
+    @Autowired
+    private AuthService authService;
 
     @PostMapping(path="/update-fullname", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> actionUpdateFullName(@RequestBody UpdateFullNameRequest request,@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
@@ -256,5 +258,9 @@ public class PatientControllerJson {
         return patientService.getSloats(locale,request,type);
     }
 
+    @PostMapping(path="/verify-otp", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<?> actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody VerifyOtpRequest request) {
+        return authService.actionVerifyOtp(request,locale);
+    }
 
 }

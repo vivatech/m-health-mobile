@@ -45,6 +45,8 @@ public class SiteControllerJson {
 
     @Autowired
     private TicketService ticketService;
+    @Autowired
+    private AuthService authService;
 
     @PostMapping(path="/mobile-release", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
@@ -142,5 +144,9 @@ public class SiteControllerJson {
     public ResponseEntity<?> getVideoAttachment(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                                                 @RequestBody GetSloatsRequest request) {
         return siteService.getVideoAttachment(locale,request);
+    }
+    @PostMapping(path="/login", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<?> actionLogin(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
+        return authService.actionLogin(request,locale);
     }
 }

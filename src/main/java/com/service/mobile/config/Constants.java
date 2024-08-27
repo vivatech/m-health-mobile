@@ -197,4 +197,7 @@ public class Constants {
     public static final String PROFILE_PICTURE_EXTENSION_NOT_ALLOWED = "app.profile.picture.extension.not.allowed";
     public static final String MAXIMIM_PROFILE_PIC_SIZE_EXCIDED = "app.maximum.profile.pic.size.excided";
     public static final String RATING_ADDED = "app.rating.added";
+    public static final String Mobile = "Mobile";
+    public static final String OTP_VERIFIED_SUCCESSFULLY = "Otp verified successfully";
+    public static final String USER_PROFILE_PATH = "UserProfile/";
 }
