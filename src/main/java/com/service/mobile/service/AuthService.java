@@ -5,8 +5,9 @@ import com.service.mobile.config.Constants;
 import com.service.mobile.dto.enums.YesNo;
 import com.service.mobile.dto.request.MobileReleaseRequest;
 import com.service.mobile.dto.request.VerifyOtpRequest;
-import com.service.mobile.dto.response.JwtResponse;
+import com.service.mobile.dto.response.LoginResponse;
 import com.service.mobile.dto.response.Response;
+import com.service.mobile.dto.response.VerifyOtpResponse;
 import com.service.mobile.model.UserOTP;
 import com.service.mobile.model.Users;
 import com.service.mobile.repository.UserOTPRepository;
@@ -14,15 +15,15 @@ import com.service.mobile.repository.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
-import static com.service.mobile.config.Constants.STATUS_ACTIVE;
+import static com.service.mobile.config.Constants.*;
 
 @Service
 public class AuthService {
@@ -62,10 +63,17 @@ public class AuthService {
 
                 userOTPRepository.save(otps);
 
+                LoginResponse ress = setLoginResponse();
+
+                Map<String, Object> responseData = new HashMap<>();
+                responseData.put("is_registered", YesNo.Yes.toString());
+                responseData.put("userData", ress);
+
                 response = new Response(
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS,null,locale)
+                        messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS,null,locale),
+                        responseData
                 );
             }
             else response = new Response(
@@ -73,6 +81,12 @@ public class AuthService {
                         Constants.NO_RECORD_FOUND_CODE,
                         messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale));
         }
+        return response;
+    }
+
+    private LoginResponse setLoginResponse() {
+        LoginResponse response = new LoginResponse();
+        response.setIs_registered(YesNo.Yes.toString());
         return response;
     }
 
@@ -100,20 +114,7 @@ public class AuthService {
                             userOTPRepository.save(otp);
 
                             String token = authConfig.GenerateToken(users.getContactNumber());
-                            JwtResponse response = new JwtResponse();
-                            response.setAuthKey(token);
-                            response.setIsRegistered(YesNo.Yes.toString());
-                            response.setUserId(users.getUserId());
-                            response.setUserType(Constants.PATIENT);
-                            response.setUserPhoto(users.getProfilePicture() == null || users.getProfilePicture().isEmpty() ? null : Constants.USER_PROFILE_PATH + users.getUserId() +"/"+ users.getProfilePicture());
-
-                            String firstName = users.getFirstName() == null || users.getFirstName().isEmpty() ? " " : users.getFirstName().trim();
-                            response.setFirstName(firstName);
-                            String lastName = users.getLastName() == null || users.getLastName().isEmpty() ? " " : users.getLastName().trim();
-                            response.setLastName(lastName);
-                            response.setFullName(firstName + " " + lastName);
-                            response.setContactNumber(users.getContactNumber());
-                            response.setEmail(users.getEmail() == null || users.getEmail().isEmpty() ? null : users.getEmail());
+                            VerifyOtpResponse response = saveResponse(users, token);
 
                            responseData = new Response(
                                     Constants.SUCCESS_CODE,
@@ -148,5 +149,37 @@ public class AuthService {
             );
         }
         return responseData;
+    }
+
+    private VerifyOtpResponse saveResponse(Users users, String token) {
+        VerifyOtpResponse response = new VerifyOtpResponse();
+        response.setIs_registered(YesNo.Yes.toString());
+        response.setUser_id(String.valueOf(users.getUserId()));
+        response.setAuth_key(token);
+        response.setUser_type(Constants.PATIENT);
+        response.setUser_photo(users.getProfilePicture() == null || users.getProfilePicture().isEmpty() ? null : Constants.FILE_PATH + Constants.USER_PROFILE_PATH + users.getUserId() + "/" + users.getProfilePicture());
+
+        String fName = users.getFirstName() == null || users.getFirstName().isEmpty() ? null : users.getFirstName();
+        String lName = users.getLastName() == null || users.getLastName().isEmpty() ? null : users.getLastName();
+
+        response.setFirst_name(fName);
+        response.setLast_name(lName);
+        response.setFullName(fName + (lName == null ? "" : " " + lName));
+        response.setDob(users.getDob() == null ? null : users.getDob().toString());
+        response.setResidence_address(users.getResidenceAddress() == null || !users.getResidenceAddress().isEmpty() ? null : users.getResidenceAddress());
+        response.setEmail(users.getEmail() == null || users.getEmail().isEmpty() ? null : users.getEmail());
+        response.setContact_number(users.getContactNumber());
+        response.setSignling_server(SIGNALING_SERVER);
+        response.setVerify_token(VERIFY_TOKEN);
+        response.setTurn_username(TURN_USER_NAME);
+        response.setTurn_server(TURN_SERVER);
+        response.setTurn_password(TURN_PASSWORD);
+        response.setSturn_server(S_TURN_SERVER);
+        response.setData_bundle_offer(DATA_BUNDLE_OFFER);
+        response.setData_bundle_offer_message(DATA_BUNDLE_OFFER_MESSAGE);
+        response.setHas_app(users.getHasApp());
+        response.setNew_registration_with_more_fields(NEW_REGISTRATION_WITH_MORE_FIELDS);
+
+        return response;
     }
 }
