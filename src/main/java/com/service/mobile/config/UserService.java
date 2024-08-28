@@ -92,7 +92,7 @@ public class UserService {
 
         Users user=repository.findByContactNumber(contactNumber).orElse(null);
         if(user == null) {
-            loginResponse.setIsRegistered(Constants.FALSE);
+            loginResponse.setIs_registered(Constants.FALSE);
             // responseDto.setData(loginResponse);
             responseDto.setStatus(Constants.FAIL);
             responseDto.setCode(Constants.USER_NOT_FOUND_CODE);
@@ -111,9 +111,9 @@ public class UserService {
                 responseDto.setData(registrationResponse);
             }
             else {
-                loginResponse.setIsRegistered(Constants.TRUE);
-                loginResponse.setContactNumber(user.getContactNumber());
-                loginResponse.setFullName(user.getFirstName()+" "+user.getLastName());
+                loginResponse.setIs_registered(Constants.TRUE);
+                loginResponse.setContact_number(user.getContactNumber());
+                loginResponse.setFull_name(user.getFirstName()+" "+user.getLastName());
                 responseDto.setData(loginResponse);
             }
             responseDto.setMessage(Constants.OTP_SEND_SUCCESSFUL);

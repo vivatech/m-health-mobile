@@ -1,5 +1,7 @@
 package com.service.mobile.config;
 
+import org.springframework.security.core.parameters.P;
+
 public class Constants {
 
     public static final String SUCCESS_CODE="200";
@@ -202,4 +204,14 @@ public class Constants {
     public static final String USER_PROFILE_PATH = "UserProfile/";
     public static final String STATUS_INACTIVE = "0";
     public static final String STATUS_ACTIVE = "1";
+    public static final String FILE_PATH = "http://baano.vivatechrnd.com:81/uploaded_file/";
+    public static final String SIGNALING_SERVER = "https://mhealth.vivatechrnd.com:3035/";
+    public static final String VERIFY_TOKEN = "vuQ4aV4bpQFXbf3s";
+    public static final String TURN_USER_NAME = "mhealthturn";
+    public static final String TURN_PASSWORD = "b@@n0123";
+    public static final String TURN_SERVER = "turn:mhealth.vivatechrnd.com:3478";
+    public static final String S_TURN_SERVER = "turn:mhealth.vivatechrnd.com:3478";
+    public static final String DATA_BUNDLE_OFFER = "No";
+    public static final String DATA_BUNDLE_OFFER_MESSAGE =  "";
+    public static final boolean NEW_REGISTRATION_WITH_MORE_FIELDS = true;
 }
