@@ -1,8 +1,8 @@
 package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
-import com.service.mobile.dto.Status;
 import com.service.mobile.dto.enums.DeviceType;
+import com.service.mobile.dto.enums.UserType;
 import com.service.mobile.dto.request.GetSloatsRequest;
 import com.service.mobile.dto.request.MobileReleaseRequest;
 import com.service.mobile.dto.response.AppBannerResponse;
@@ -54,13 +54,13 @@ public class SiteService {
         }
     }
 
-    public ResponseEntity<?> getMobileRelease(MobileReleaseRequest request, Locale locale) {
+    public ResponseEntity<?> getMobileRelease(MobileReleaseRequest request, Locale locale, String type) {
         Response response = new Response();
         if (request != null) {
             DeviceType deviceType = getDeviceType(request.getDevice_type());
             String appVersion = request.getApp_version();
 
-            MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceType(appVersion, deviceType);
+            MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceTypeAndType(appVersion, deviceType, UserType.valueOf(type));
 
             if (releaseData != null) {
                 response = new Response(Constants.SUCCESS_CODE,

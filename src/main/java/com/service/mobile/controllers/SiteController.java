@@ -51,10 +51,9 @@ public class SiteController {
     private AuthService authService;
 
     @PostMapping(path="/mobile-release", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute MobileReleaseRequest request) {
-        return siteService.getMobileRelease(request,locale);
+    public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale, @RequestHeader(name = "X-type", required = false) String type, @ModelAttribute MobileReleaseRequest request) {
+        return siteService.getMobileRelease(request,locale, type);
     }
-
 
     @GetMapping("/get-country-list")
     public ResponseEntity<?> getCountriesList(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {

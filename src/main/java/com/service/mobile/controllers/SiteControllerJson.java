@@ -49,8 +49,8 @@ public class SiteControllerJson {
     private AuthService authService;
 
     @PostMapping(path="/mobile-release", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
-        return siteService.getMobileRelease(request,locale);
+    public ResponseEntity<?> actionMobileRelease(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale, @RequestHeader(name = "X-type", required = false) String type, @RequestBody MobileReleaseRequest request) {
+        return siteService.getMobileRelease(request,locale, type);
     }
 
     @PostMapping(path = "/activities", consumes = {MediaType.APPLICATION_JSON_VALUE})
