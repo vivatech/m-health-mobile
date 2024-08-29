@@ -2,6 +2,7 @@ package com.service.mobile.service;
 
 import com.service.mobile.config.AuthConfig;
 import com.service.mobile.config.Constants;
+import com.service.mobile.config.Utility;
 import com.service.mobile.dto.enums.YesNo;
 import com.service.mobile.dto.request.MobileReleaseRequest;
 import com.service.mobile.dto.request.VerifyOtpRequest;
@@ -15,9 +16,11 @@ import com.service.mobile.repository.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Locale;
@@ -39,6 +42,10 @@ public class AuthService {
     private UserOTPRepository userOTPRepository;
     @Autowired
     private AuthConfig authConfig;
+    @Autowired
+    private LanguageService languageService;
+    @Autowired
+    private Utility utility;
 
     public Response actionLogin(MobileReleaseRequest request, Locale locale) {
         Response response;
@@ -51,30 +58,31 @@ public class AuthService {
         else{
             Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
             if(users != null){
-                int otp = 123456; //TODO : SMS integration
+                if(users.getIsSuspended() == 1){
+                    response = new Response(
+                            Constants.NO_RECORD_FOUND_CODE,
+                            Constants.NO_RECORD_FOUND_CODE,
+                            messageSource.getMessage(Constants.USER_SUSPENDED,null,locale));
+                }
+                else {
+                    int otp = 123456; //TODO : SMS integration
 
-                UserOTP otps = new UserOTP();
-                otps.setOtp(encoder.encode(String.valueOf(otp)));
-                otps.setIsFrom(Constants.Login);
-                otps.setUserId(users.getUserId());
-                otps.setExpiredAt(LocalDateTime.now().plusMinutes(expiryTime));
-                otps.setStatus(Constants.STATUS_INACTIVE);
-                otps.setType(Constants.PATIENT);
+                    //save otp into user otp table
+                    saveOtpIntoUserOtpTableAndUsersTable(users, otp);
 
-                userOTPRepository.save(otps);
+                    LoginResponse ress = setLoginResponse();
 
-                LoginResponse ress = setLoginResponse();
+                    Map<String, Object> responseData = new HashMap<>();
+                    responseData.put("is_registered", YesNo.Yes.toString());
+                    responseData.put("userData", ress);
 
-                Map<String, Object> responseData = new HashMap<>();
-                responseData.put("is_registered", YesNo.Yes.toString());
-                responseData.put("userData", ress);
-
-                response = new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS,null,locale),
-                        responseData
-                );
+                    response = new Response(
+                            Constants.SUCCESS_CODE,
+                            Constants.SUCCESS_CODE,
+                            messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS, null, locale),
+                            responseData
+                    );
+                }
             }
             else response = new Response(
                         Constants.NO_RECORD_FOUND_CODE,
@@ -82,6 +90,23 @@ public class AuthService {
                         messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale));
         }
         return response;
+    }
+
+    private void saveOtpIntoUserOtpTableAndUsersTable(Users users, int otp) {
+        UserOTP otps = new UserOTP();
+        otps.setOtp(utility.md5Hash(String.valueOf(otp)));
+        otps.setIsFrom(Constants.Login);
+        otps.setUserId(users.getUserId());
+        otps.setExpiredAt(LocalDateTime.now().plusMinutes(expiryTime));
+        otps.setStatus(Constants.STATUS_INACTIVE);
+        otps.setType(Constants.PATIENT);
+
+        userOTPRepository.save(otps);
+
+        //save into users table
+        users.setOtp(otp);
+        users.setOtpTime(Timestamp.valueOf(LocalDateTime.now().plusMinutes(expiryTime)));
+        usersRepository.save(users);
     }
 
     private LoginResponse setLoginResponse() {
@@ -92,38 +117,65 @@ public class AuthService {
 
     public Response actionVerifyOtp(VerifyOtpRequest request, Locale locale) {
         Response responseData ;
+        LocaleContextHolder.setLocale(locale);
 
-        if(request.getContact_number() == null || request.getContact_number().isEmpty()
-        || request.getOtp() == null || request.getOtp().isEmpty()
-        || request.getIs_registered() == null || request.getIs_registered().isEmpty()
-        || request.getDevice_token() == null || request.getDevice_token().isEmpty()){
-            responseData = new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale));
-        }
-        else{
-            Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
-            if(users != null){
-                UserOTP otp = userOTPRepository.findByUserIdAndIsFrom(users.getUserId());
-                if(otp != null){
-                    if(LocalDateTime.now().isBefore(otp.getExpiredAt())){
-                        if(encoder.matches(request.getOtp(), otp.getOtp())){
-                            //save Active state in otp table
-                            otp.setStatus(STATUS_ACTIVE);
-                            userOTPRepository.save(otp);
+        try {
+            if (request.getContact_number() == null || request.getContact_number().isEmpty()
+                    || request.getOtp() == null || request.getOtp().isEmpty()
+                    || request.getIs_registered() == null || request.getIs_registered().isEmpty()
+                    || request.getDevice_token() == null || request.getDevice_token().isEmpty()) {
+                responseData = new Response(
+                        Constants.NO_RECORD_FOUND_CODE,
+                        Constants.BLANK_DATA_GIVEN_CODE,
+                        messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale));
+            } else {
+                Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
+                if (users != null) {
+                    if (users.getIsSuspended() == 1 || users.getAttemptCounter() == 10) {
+                        responseData = new Response(
+                                Constants.OTP_EXPIRES_CODE,
+                                Constants.BLANK_DATA_GIVEN_CODE,
+                                messageSource.getMessage(Constants.USER_SUSPENDED, null, locale)
+                        );
+                    } else {
+                        UserOTP otp = userOTPRepository.findByUserIdAndIsFrom(users.getUserId());
+                        if (otp != null) {
+                            //check for expiry
+                            if (LocalDateTime.now().isAfter(otp.getExpiredAt())) {
+                                users.setAttemptCounter((short) (users.getAttemptCounter() + 1));
+                                responseData = new Response(
+                                        Constants.OTP_EXPIRES_CODE,
+                                        Constants.BLANK_DATA_GIVEN_CODE,
+                                        messageSource.getMessage(OTP_EXPIRES, null, locale) + ", " + languageService.gettingMessages(ATTEMPT_REACH, 10 - users.getAttemptCounter())
+                                );
+                            }
+                            //check otp matching
+                            else if (!utility.md5Hash(request.getOtp()).equals(otp.getOtp())) {
+                                users.setAttemptCounter((short) (users.getAttemptCounter() + 1));
+                                responseData = new Response(
+                                        Constants.OTP_EXPIRES_CODE,
+                                        Constants.BLANK_DATA_GIVEN_CODE,
+                                        messageSource.getMessage(OTP_NOT_MATCHED, null, locale) + ", " + languageService.gettingMessages(ATTEMPT_REACH, 10 - users.getAttemptCounter())
+                                );
+                            } else {
+                                //save Active state in otp table
+                                otp.setStatus(STATUS_ACTIVE);
+                                userOTPRepository.save(otp);
 
-                            String token = authConfig.GenerateToken(users.getContactNumber());
-                            VerifyOtpResponse response = saveResponse(users, token);
+                                //reset Attempt counter
+                                users.setAttemptCounter((short) 0);
 
-                           responseData = new Response(
-                                    Constants.SUCCESS_CODE,
-                                    messageSource.getMessage(Constants.OTP_VERIFIED_SUCCESSFULLY,null,locale),
-                                    Constants.SUCCESS_CODE,
-                                    response
-                            );
-                        }
-                        else {
+                                String token = authConfig.GenerateToken(users.getContactNumber());
+                                VerifyOtpResponse response = saveResponse(users, token);
+
+                                responseData = new Response(
+                                        Constants.SUCCESS_CODE,
+                                        messageSource.getMessage(Constants.OTP_VERIFIED_SUCCESSFULLY, null, locale),
+                                        Constants.SUCCESS_CODE,
+                                        response
+                                );
+                            }
+                        } else {
                             responseData = new Response(
                                     Constants.NO_RECORD_FOUND_CODE,
                                     Constants.BLANK_DATA_GIVEN_CODE,
@@ -131,21 +183,19 @@ public class AuthService {
                             );
                         }
                     }
-                    else responseData = new Response(
-                            Constants.OTP_EXPIRES_CODE,
-                            Constants.BLANK_DATA_GIVEN_CODE,
-                            messageSource.getMessage(Constants.OTP_EXPIRES,null,locale)
-                    );
-                }
-                else responseData = new Response(
-                        Constants.NO_RECORD_FOUND_CODE,
+                } else responseData = new Response(
+                        Constants.USER_NOT_FOUND_CODE,
                         Constants.BLANK_DATA_GIVEN_CODE,
-                        messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+                        messageSource.getMessage(Constants.USER_NOT_FOUND, null, locale)
                 );
-            }else responseData = new Response(
-                    Constants.USER_NOT_FOUND_CODE,
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            responseData = new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.USER_NOT_FOUND,null,locale)
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.EXCEPTION, null, locale), e.getMessage()
             );
         }
         return responseData;

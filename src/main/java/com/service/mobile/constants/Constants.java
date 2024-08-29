@@ -2,7 +2,7 @@ package com.service.mobile.constants;
 
 public class Constants {
     public static final String OTP_EXPIRES = "Otp Expires";
-    public static final String OTP_NOT_MATCHED = "Otp Not Matched";
+    public static final String OTP_NOT_MATCHED = "Otp.Not.Matched";
     public static final String OTP_SEND_SUCCESSFUL = "Otp Sent";
     public static final String USER_NOT_FOUND = "User Not Found";
     public static final String SUCCESS_MESSAGE = "success";
