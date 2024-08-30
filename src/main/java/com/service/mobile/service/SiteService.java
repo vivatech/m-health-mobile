@@ -1,8 +1,8 @@
 package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
-import com.service.mobile.dto.Status;
 import com.service.mobile.dto.enums.DeviceType;
+import com.service.mobile.dto.enums.UserType;
 import com.service.mobile.dto.request.GetSloatsRequest;
 import com.service.mobile.dto.request.MobileReleaseRequest;
 import com.service.mobile.dto.response.AppBannerResponse;
@@ -54,33 +54,38 @@ public class SiteService {
         }
     }
 
-    public ResponseEntity<?> getMobileRelease(MobileReleaseRequest request, Locale locale) {
+    public ResponseEntity<?> getMobileRelease(MobileReleaseRequest request, Locale locale, String type) {
         Response response = new Response();
-        if (request != null) {
-            DeviceType deviceType = getDeviceType(request.getDevice_type());
-            String appVersion = request.getApp_version();
-
-            MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceType(appVersion, deviceType);
-
-            if (releaseData != null) {
-                response = new Response(Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
-                        new MobileReleaseDto(releaseData)
-                );
-                return ResponseEntity.ok(response);
+        try {
+            if (request != null) {
+                MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceTypeAndType(request.getApp_version(), request.getDevice_type(), type);
+                if (releaseData != null) {
+                    response = new Response(Constants.SUCCESS_CODE,
+                            Constants.SUCCESS_CODE,
+                            messageSource.getMessage(Constants.SUCCESS_MESSAGE, null, locale),
+                            new MobileReleaseDto(releaseData)
+                    );
+                    return ResponseEntity.ok(response);
+                } else {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                            new Response(Constants.NO_RECORD_FOUND_CODE,
+                                    Constants.NO_RECORD_FOUND_CODE,
+                                    messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale)
+                            ));
+                }
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                        new Response(Constants.NO_RECORD_FOUND_CODE,
-                                Constants.NO_RECORD_FOUND_CODE,
-                                messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-                        ));
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                        Constants.NO_RECORD_FOUND_CODE,
+                        Constants.BLANK_DATA_GIVEN_CODE,
+                        messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
+                ));
             }
-        } else {
+        }catch (Exception e){
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale), e.getMessage()
             ));
         }
     }

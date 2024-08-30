@@ -214,4 +214,8 @@ public class Constants {
     public static final String DATA_BUNDLE_OFFER = "No";
     public static final String DATA_BUNDLE_OFFER_MESSAGE =  "";
     public static final boolean NEW_REGISTRATION_WITH_MORE_FIELDS = true;
+    public static final String USER_SUSPENDED = "OTP.Reach.Maximum";
+    public static final String ATTEMPT_REACH = "Attempt.Count";
+    public static final String OTP_NOT_MATCHED = "Otp.Not.Matched";
+    public static final String EXCEPTION = "Exception.Message";
 }
