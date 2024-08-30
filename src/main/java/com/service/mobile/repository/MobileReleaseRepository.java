@@ -11,6 +11,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface MobileReleaseRepository extends JpaRepository<MobileRelease,Integer> {
 
-    @Query("SELECT m FROM MobileRelease m WHERE m.appVersion = :appVersion AND m.deviceType = :deviceType AND m.userType = :type" )
-    MobileRelease findByAppVersionAndDeviceTypeAndType(@Param("appVersion") String appVersion, @Param("deviceType") DeviceType deviceType, @Param("type") UserType type);
+    @Query(value = "SELECT m.* FROM mh_mobile_release m WHERE m.app_version = ?1 AND m.device_type = ?2 AND m.user_type = ?3", nativeQuery = true)
+    MobileRelease findByAppVersionAndDeviceTypeAndType(@Param("appVersion") String appVersion, @Param("deviceType") String deviceType, @Param("type") String type);
 }
