@@ -59,8 +59,11 @@ public class LanguageService {
 
     private Properties loadProperties(String locale) {
         Properties properties = new Properties();
-
-        String propertiesFilePath = propertiesPath+ "messages" + getLocaleSuffix(locale) + ".properties";
+        String propertiesNewPath = propertiesPath;
+        if(propertiesNewPath!=null && !propertiesNewPath.equalsIgnoreCase("classpath:")){
+            propertiesNewPath = propertiesNewPath.substring(5);
+        }
+        String propertiesFilePath = propertiesNewPath+ "messages" + getLocaleSuffix(locale) + ".properties";
 
         Path path = Paths.get(propertiesFilePath);
         try (InputStream inputStream = Files.newInputStream(path)) {
