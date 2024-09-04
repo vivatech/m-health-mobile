@@ -167,8 +167,8 @@ public class AuthService {
 
                             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                     Constants.SUCCESS_CODE,
-                                    messageSource.getMessage(Constants.OTP_VERIFIED_SUCCESSFULLY, null, locale),
                                     Constants.SUCCESS_CODE,
+                                    messageSource.getMessage(Constants.OTP_VERIFIED_SUCCESSFULLY, null, locale),
                                     response
                             ));
                         }
