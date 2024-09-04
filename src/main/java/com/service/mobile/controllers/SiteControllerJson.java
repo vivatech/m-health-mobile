@@ -146,7 +146,7 @@ public class SiteControllerJson {
         return siteService.getVideoAttachment(locale,request);
     }
     @PostMapping(path="/login", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public Response actionLogin(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
+    public ResponseEntity<?> actionLogin(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
         return authService.actionLogin(request,locale);
     }
 }
