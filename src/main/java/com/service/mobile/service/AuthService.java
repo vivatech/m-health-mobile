@@ -3,6 +3,7 @@ package com.service.mobile.service;
 import com.service.mobile.config.AuthConfig;
 import com.service.mobile.config.Constants;
 import com.service.mobile.config.Utility;
+import com.service.mobile.dto.enums.UserType;
 import com.service.mobile.dto.enums.YesNo;
 import com.service.mobile.dto.request.MobileReleaseRequest;
 import com.service.mobile.dto.request.VerifyOtpRequest;
@@ -10,8 +11,10 @@ import com.service.mobile.dto.response.LoginResponse;
 import com.service.mobile.dto.response.Response;
 import com.service.mobile.dto.response.VerifyOtpErroRes;
 import com.service.mobile.dto.response.VerifyOtpResponse;
+import com.service.mobile.model.AuthKey;
 import com.service.mobile.model.UserOTP;
 import com.service.mobile.model.Users;
+import com.service.mobile.repository.AuthKeyRepository;
 import com.service.mobile.repository.UserOTPRepository;
 import com.service.mobile.repository.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,10 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 import static com.service.mobile.config.Constants.*;
 
@@ -50,6 +50,8 @@ public class AuthService {
     private LanguageService languageService;
     @Autowired
     private Utility utility;
+    @Autowired
+    private AuthKeyRepository authKeyRepository;
 
     public ResponseEntity<?> actionLogin(MobileReleaseRequest request, Locale locale) {
         if(request.getContact_number() != null && !request.getContact_number().isEmpty()){
@@ -165,6 +167,8 @@ public class AuthService {
                             String token = authConfig.GenerateToken(users.getContactNumber());
                             VerifyOtpResponse response = saveResponse(users, token);
 
+                            saveNewSession(users.getUserId(), token, request.getDevice_token(), users.getType());
+
                             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                     Constants.SUCCESS_CODE,
                                     Constants.SUCCESS_CODE,
@@ -226,5 +230,38 @@ public class AuthService {
         response.setNew_registration_with_more_fields(NEW_REGISTRATION_WITH_MORE_FIELDS);
 
         return response;
+    }
+
+    public AuthKey saveNewSession(Integer userId, String authKey, String deviceToken, UserType loginType) {
+        // Invalidate any existing session for the user and login type
+        invalidateOldSessions(userId, loginType);
+
+        // Create and save the new session
+        AuthKey newSession = new AuthKey();
+        newSession.setUserId(userId);
+        newSession.setAuthKey(authKey);
+        newSession.setDeviceToken(deviceToken); // Can be null for web sessions
+        newSession.setLoginType(loginType);
+        newSession.setCreatedDate(new Date());
+
+        return authKeyRepository.save(newSession);
+    }
+
+    public boolean isSessionValid(String username, String authKey) {
+        Users user = usersRepository.findByContactNumber(username).orElse(null);
+
+        Optional<AuthKey> session = authKeyRepository.findByUserIdAndLoginType(user.getUserId(), user.getType());
+        return session.isPresent() && session.get().getAuthKey().equals(authKey);
+    }
+
+    public boolean invalidateOldSessions(Integer userId, UserType loginType) {
+        List<AuthKey> existingSessions = authKeyRepository.findAllByUserIdAndLoginType(userId, loginType);
+
+        if (!existingSessions.isEmpty()) {
+            authKeyRepository.deleteAll(existingSessions);
+            return true;
+        }
+
+        return false;
     }
 }

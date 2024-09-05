@@ -195,7 +195,7 @@ public class PatientService {
                 authModel.setAuthKey(authKey);
                 authModel.setDeviceToken(request.getDevice_token());
                 authModel.setLoginType(user.getType());
-                authModel.setCreatedDate(LocalDateTime.now());
+                authModel.setCreatedDate(new Date());
                 authKeyRepository.save(authModel);
 
                 GlobalConfiguration signalingServer = globalConfigurationRepository.findByKey("SIGNALING_SERVER");
