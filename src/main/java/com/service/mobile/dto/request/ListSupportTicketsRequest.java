@@ -12,7 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class ListSupportTicketsRequest {
     private Integer user_id;
-    private SupportTicketStatus status=SupportTicketStatus.Open;
+    private String status;
     private String name;
     private Integer id;
     private Integer page;

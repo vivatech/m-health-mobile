@@ -47,8 +47,8 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     @Query("Select u from Consultation u where u.patientId.userId = ?1 and u.reportSuggested like ?2 and u.requestType =?3 and CONCAT(u.doctorId.firstName,' ', u.doctorId.lastName) like %?4% and u.consultationDate = ?5 order by u.caseId DESC")
     Page<Consultation> findByPatientReportSuggestedAndRequestTypeAndNameAndDate(Integer userId, String number, RequestType requestType, String name, LocalDate date, Pageable pageable);
 
-    @Query("Select u from Consultation u where u.patientId.userId = ?1 and u.slotId.slotStartTime < ?2 and u.slotId.slotStartTime > ?3 order by u.caseId DESC")
-    Optional<Consultation> findUpcomingConsultationForPatient(Integer userId, LocalTime start, LocalTime end);
+    @Query("Select u from Consultation u where u.patientId.userId = ?1 and u.requestType in ?2 AND u.slotId.slotStartTime < ?3 and u.slotId.slotStartTime > ?4 and u.consultationDate = ?5 order by u.caseId DESC")
+    Optional<Consultation> findUpcomingConsultationForPatient(Integer userId, List<RequestType> requestType, LocalTime start, LocalTime end, LocalDate localDate);
 
     @Query("Select u from Consultation u where u.patientId.userId = ?1 order by u.caseId DESC")
     Page<Consultation> findByPatientIdOrderByCaseId(Integer userId,Pageable pageable);

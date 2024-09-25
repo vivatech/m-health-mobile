@@ -86,8 +86,12 @@ public class TicketService {
                 supportTicketList.add(supportTicket);
             }
         }else{
-            if(request.getStatus()!=null){
-                Page<SupportTicket> ticketPage = supportTicketRepository.findByStatusAndNameAndUserId(request.getStatus(),request.getName(),request.getUser_id(),pageable);
+            SupportTicketStatus status = null;
+            try {
+                status = Enum.valueOf(SupportTicketStatus.class, request.getStatus());
+            } catch (Exception e) { }
+            if(status!=null){
+                Page<SupportTicket> ticketPage = supportTicketRepository.findByStatusAndNameAndUserId(status,request.getName(),request.getUser_id(),pageable);
                 supportTicketList = ticketPage.getContent();
                 total = ticketPage.getTotalElements();
             }else {
@@ -103,10 +107,20 @@ public class TicketService {
                 String photo = "";
                 String attachmentType = "";
                 try{
-                    photo = baseUrl + "uploaded_file/Support_Ticket/"+ticket.getSupportTicketId()+"/"+ticket.getAttachmentId().getAttachmentName();
+                    if(ticket.getAttachmentId()!=null && ticket.getAttachmentId()!=0){
+                        Attachment attachmentId = attachmentRepository.findById(ticket.getAttachmentId()).orElse(null);
+                        if(attachmentId!=null){
+                            photo = baseUrl + "uploaded_file/Support_Ticket/"+ticket.getSupportTicketId()+"/"+attachmentId.getAttachmentName();
+                        }
+                    }
                 }catch (Exception e){}
                 try{
-                    attachmentType = ticket.getAttachmentId().getAttachmentType();
+                    if(ticket.getAttachmentId()!=null && ticket.getAttachmentId()!=0){
+                        Attachment attachmentId = attachmentRepository.findById(ticket.getAttachmentId()).orElse(null);
+                        if(attachmentId!=null){
+                            attachmentType = attachmentId.getAttachmentType();
+                        }
+                    }
                 }catch (Exception e){}
 
                 SupportTicketsDto dto = new SupportTicketsDto();
@@ -170,16 +184,16 @@ public class TicketService {
         supportTicket.setSupportTicketStatus(SupportTicketStatus.Open);
         supportTicket.setSupportTicketCreatedAt(LocalDateTime.now());
         supportTicket.setSupportTicketCreatedBy(request.getUser_id());
-
+        Integer attachmentId = null;
         if (request.getFilename() != null && !request.getFilename().isEmpty()) {
             Attachment attachment = new Attachment();
             attachment.setAttachmentLabel(request.getFilename().getOriginalFilename());
             attachment.setAttachmentName(UUID.randomUUID().toString() + "." + ext);
             attachment.setAttachmentType(request.getAttachment_type());
             attachment.setAttachmentStatus(1);
-            attachmentRepository.save(attachment);
-
-            supportTicket.setAttachmentId(attachment);
+            attachment = attachmentRepository.save(attachment);
+            attachmentId = attachment.getAttachmentId();
+            supportTicket.setAttachmentId(attachment.getAttachmentId());
 
             String uploadsDir = path_to_uploads_dir + supportTicket.getSupportTicketId();
             Files.createDirectories(Paths.get(uploadsDir));
@@ -194,7 +208,7 @@ public class TicketService {
         SupportTicketMessage supportTicketMsg = new SupportTicketMessage();
         supportTicketMsg.setSupportTicket(supportTicket);
         supportTicketMsg.setSupportTicketMsgsDetail(request.getSupport_ticket_description());
-        supportTicketMsg.setAttachmentId(supportTicket.getAttachmentId().getAttachmentId());
+        supportTicketMsg.setAttachmentId(attachmentId);
         supportTicketMsg.setSupportTicketMsgsCreatedBy(request.getUser_id());
         supportTicketMsg.setSupportTicketMsgsCreatedAt(LocalDateTime.now());
         supportTicketMessageRepository.save(supportTicketMsg);

@@ -19,7 +19,7 @@ public interface UsersRepository extends JpaRepository<Users,Integer> {
     @Query("Select u from Users u where u.contactNumber like ?1")
     Optional<Users> findByContactNumber(String contactNumber);
 
-    @Query("Select u.city from Users u where u.type = ?1 group by u.city.id")
+    @Query("Select c from City c where c.id in (Select u.city from Users u where u.type = ?1 group by u.city)")
     List<City> getCitiesByUsertype(UserType userType);
 
     @Query("Select u from Users u where u.status like ?1 and u.type = ?2 and u.isVerified like ?3")

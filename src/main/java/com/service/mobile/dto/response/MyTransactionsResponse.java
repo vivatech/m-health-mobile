@@ -15,7 +15,7 @@ public class MyTransactionsResponse {
     private String title;
     private Integer case_id;
     private String transaction_id;
-    private String contact_number;
+    private Object contact_number;
     private String transaction_type;
     private String package_name;
     private String healthtips_package_name;

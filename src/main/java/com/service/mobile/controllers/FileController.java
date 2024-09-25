@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @Slf4j
-@RequestMapping("/patient")
+@RequestMapping("/mobile")
 public class FileController {
 
     @Autowired
