@@ -32,9 +32,8 @@ public class LabConsultation {
     @JoinColumn(name = "category_id", referencedColumnName = "cat_id", nullable = false)
     private LabCategoryMaster categoryId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sub_cat_id", referencedColumnName = "sub_cat_id", nullable = false)
-    private LabSubCategoryMaster subCatId;
+    @Column(name = "sub_cat_id")
+    private Integer subCatId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lab_consult_patient_id", referencedColumnName = "user_id", nullable = false)

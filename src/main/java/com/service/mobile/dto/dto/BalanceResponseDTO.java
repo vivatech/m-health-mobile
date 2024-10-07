@@ -15,5 +15,5 @@ public class BalanceResponseDTO {
     private String country_code;
     private String contact_number;
     private Float total_money;
-    private String data;
+    private Object data;
 }

@@ -28,9 +28,8 @@ public class SupportTicket {
     @Column(name = "support_ticket_description")
     private String supportTicketDescription;
 
-    @ManyToOne
-    @JoinColumn(name = "attachment_id")
-    private Attachment attachmentId;
+    @Column(name = "attachment_id")
+    private Integer attachmentId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "support_ticket_status")

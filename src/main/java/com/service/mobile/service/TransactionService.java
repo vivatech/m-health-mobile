@@ -196,7 +196,7 @@ public class TransactionService {
                 data.setTitle(title);
                 data.setCase_id(case_id);
                 data.setTransaction_id(wt.getTransactionId());
-                data.setContact_number((wt.getPayerMobile()!=null && !wt.getPayerMobile().isEmpty())? wt.getPayerMobile() : "-");
+                data.setContact_number((wt.getPayerMobile()!=null && !wt.getPayerMobile().isEmpty())? Long.valueOf(wt.getPayerMobile().replace("+","")) : "-");
                 data.setTransaction_type(wt.getIsDebitCredit().equalsIgnoreCase("DEBIT") ?
                                 ("+"+currencySymbolFdj + " " + currency) : ("-" + wt.getAmount() + "-" + currency)
                         );

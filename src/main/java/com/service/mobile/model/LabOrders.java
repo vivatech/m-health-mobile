@@ -41,9 +41,8 @@ public class LabOrders {
     @JoinColumn(name = "lab_id")
     private Users lab;
 
-    @ManyToOne
-    @JoinColumn(name = "report_id", referencedColumnName = "lab_report_req_id", nullable = false)
-    private LabReportRequest reportId;
+    @Column(name = "report_id")
+    private Integer reportId;
 
     @Column(name = "transaction_id")
     private String transactionId;

@@ -28,10 +28,10 @@ public class PackageData {
     private String package_price_with_video_slsh;
     private String package_price_with_video_slsh_without_currency;
     private Float total_money;
-    private Date expiry_date;
+    private String expiry_date;
     private String is_purchased;
     private String purchased_package_user_id;
-    private Double maxPackagefee;
+    private Integer maxPackagefee;
     private Long total_count;
     private String image;
     private String category_name;

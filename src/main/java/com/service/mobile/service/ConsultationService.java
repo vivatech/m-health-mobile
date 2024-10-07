@@ -6,7 +6,7 @@ import com.service.mobile.dto.dto.ClinicInformation;
 import com.service.mobile.dto.dto.HomeConsultationInformation;
 import com.service.mobile.dto.enums.SlotStatus;
 import com.service.mobile.dto.request.ConsultationsRequest;
-import com.service.mobile.dto.response.ConsultationDTO;
+import com.service.mobile.dto.enums.RequestType;
 import com.service.mobile.dto.response.ConsultationResponse;
 import com.service.mobile.dto.response.Response;
 import com.service.mobile.model.Consultation;
@@ -26,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -65,12 +66,12 @@ public class ConsultationService {
         LocalTime consultationStartTime = LocalTime.now();
         LocalTime consultationEndTime = consultationStartTime.minus(slotValue, ChronoUnit.MINUTES);
 
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-
+        LocalDate localDate = LocalDate.now();
+        List<RequestType> requestType = List.of(RequestType.Book,RequestType.Pending);
         Optional<Consultation> consultationOpt = consultationRepository.findUpcomingConsultationForPatient(
-                userId,
+                userId,requestType,
                 consultationStartTime,
-                consultationEndTime
+                consultationEndTime,localDate
         );
 
         if (!consultationOpt.isPresent()) {

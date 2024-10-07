@@ -175,7 +175,7 @@ public class PatientLabService {
                 response.setCase_id((data.getCaseId()!=null)?data.getCaseId().getCaseId():null);
                 response.setLab_orders_id((data.getLabOrdersId()!=null)?data.getLabOrdersId().getId():null);
                 response.setCategory_id((data.getCategoryId()!=null)?data.getCategoryId().getCatId():null);
-                response.setSub_cat_id((data.getSubCatId()!=null)?data.getSubCatId().getSubCatId():null);
+                response.setSub_cat_id(data.getSubCatId());
                 response.setRelative_id(null);
                 response.setLab_consult_patient_id((data.getPatient()!=null)?data.getPatient().getUserId():null);
                 response.setLab_consult_doctor_id((data.getDoctor()!=null)?data.getDoctor().getUserId():null);
@@ -183,7 +183,10 @@ public class PatientLabService {
                 response.setLab_consult_created_at(data.getLabConsultCreatedAt());
 
                 LabCategoryMaster category = data.getCategoryId();
-                LabSubCategoryMaster subCat = data.getSubCatId();
+                LabSubCategoryMaster subCat = null;
+                if(data.getSubCatId()!=null && data.getSubCatId()!=0){
+                    subCat = labSubCategoryMasterRepository.findById(data.getSubCatId()).orElse(null);
+                }
                 if(category!=null){
                     categoryDTO.setCat_id(category.getCatId());
                     categoryDTO.setCat_name(category.getCatName());
@@ -230,7 +233,7 @@ public class PatientLabService {
 
             consultation.setPatient(patient);
             consultation.setCategoryId(category);
-            consultation.setSubCatId(subCategory);
+            consultation.setSubCatId((subCategory!=null)?subCategory.getSubCatId():null);
             consultation.setLabConsultCreatedAt(LocalDateTime.now());
             labConsultationRepository.save(consultation);
 
@@ -281,13 +284,16 @@ public class PatientLabService {
             List<Integer> labcatIds = new ArrayList<>();
             List<ReportSubCatDto> categoriesDtos = new ArrayList<>();
             for(LabConsultation consultation:consultations){
-                if(consultation.getSubCatId()!=null){
-                    ReportSubCatDto temp = new ReportSubCatDto();
-                    temp.setSub_cat_id(consultation.getSubCatId().getSubCatId());
-                    temp.setSub_cat_name(consultation.getSubCatId().getSubCatName());
+                if(consultation.getSubCatId()!=null && consultation.getSubCatId()!=0){
+                    LabSubCategoryMaster subCategoryMaster = labSubCategoryMasterRepository.findById(consultation.getSubCatId()).orElse(null);
+                    if(subCategoryMaster!=null){
+                        ReportSubCatDto temp = new ReportSubCatDto();
+                        temp.setSub_cat_id(subCategoryMaster.getSubCatId());
+                        temp.setSub_cat_name(subCategoryMaster.getSubCatName());
 
-                    categoriesDtos.add(temp);
-                    labcatIds.add(consultation.getSubCatId().getSubCatId());
+                        categoriesDtos.add(temp);
+                        labcatIds.add(subCategoryMaster.getSubCatId());
+                    }
                 }
             }
             List<GetLabDto> labList = publicService.getLabInfo(labcatIds);
@@ -709,7 +715,10 @@ public class PatientLabService {
         if(!orders.isEmpty()){
             List<OrderDto> dataList = new ArrayList<>();
             for(LabOrders order:orders){
-                LabReportRequest labReportRequest = order.getReportId();
+                LabReportRequest labReportRequest = null;
+                if(order.getReportId()!=null && order.getReportId()!=0){
+                    labReportRequest = labReportRequestRepository.findById(order.getReportId()).orElse(null);
+                }
                 LabDetailDto labDetail = new LabDetailDto();
                 if(order.getLab()!=null){
                     labDetail.setId(order.getLab().getUserId());
@@ -726,7 +735,13 @@ public class PatientLabService {
                 List<String> reportListArray = new ArrayList<>();
                 List<LabConsultation> labConsultations = labConsultationRepository.findByLabOrderId(order.getId());
                 for(LabConsultation consultation:labConsultations){
-                    reportListArray.add(consultation.getSubCatId().getSubCatName());
+                    if(consultation.getSubCatId()!=null && consultation.getSubCatId()!=0){
+                        LabSubCategoryMaster subCategoryMaster =
+                                labSubCategoryMasterRepository.findById(consultation.getSubCatId()).orElse(null);
+                        if(subCategoryMaster!=null){
+                            reportListArray.add(subCategoryMaster.getSubCatName());
+                        }
+                    }
                 }
                 orderDetails.setReportList(reportListArray);
 
@@ -891,10 +906,14 @@ public class PatientLabService {
 
                 for(LabReportRequest lrr:labReportRequest){
                     LabReportRequestDto temp = new LabReportRequestDto();
+                    LabSubCategoryMaster subCategoryMaster = null;
+                    if(labc.getSubCatId()!=null && labc.getSubCatId()!=0){
+                        subCategoryMaster = labSubCategoryMasterRepository.findById(labc.getSubCatId()).orElse(null);
+                    }
                     List<LabPrice> labPriceList = labPriceRepository.findByLabIdAndCatIdAndSubCatId(
                             lrr.getLabId().getUserId(),
                             labc.getCategoryId().getCatId(),
-                            labc.getSubCatId().getSubCatId()
+                            (subCategoryMaster!=null)?subCategoryMaster.getSubCatId():null
                     );
                     LabPrice labPrice = null;
                     for(LabPrice p:labPriceList){
@@ -926,12 +945,16 @@ public class PatientLabService {
                 String userStatus = (!labReportDocs.isEmpty())?"Patient":"Lab";
 
                 LabReportsByCaseIdReportResponse dto = new LabReportsByCaseIdReportResponse();
+                LabSubCategoryMaster subCategory = null;
+                if(labc.getSubCatId()!=null && labc.getSubCatId()!=0){
+                    subCategory = labSubCategoryMasterRepository.findById(labc.getSubCatId()).orElse(null);
+                }
                 dto.setLab_consult_id(labc.getLabConsultId());
                 dto.setCase_id((labc.getCaseId()!=null)?labc.getCaseId().getCaseId():null);
                 dto.setCategory_name((labc.getCategoryId()!=null)?labc.getCategoryId().getCatName():null);
                 dto.setCategory_id((labc.getCategoryId()!=null)?labc.getCategoryId().getCatId():null);
-                dto.setSub_category_name((labc.getSubCatId()!=null)?labc.getSubCatId().getSubCatName():null);
-                dto.setSubcategory_id((labc.getSubCatId()!=null)?labc.getSubCatId().getSubCatId():null);
+                dto.setSub_category_name((subCategory!=null)?subCategory.getSubCatName():null);
+                dto.setSubcategory_id((subCategory!=null)?subCategory.getSubCatId():null);
                 dto.setDoc_prescription(labc.getDoctorPrescription());
                 dto.setRep_status(repStatus);
                 dto.setUsr_status(userStatus);

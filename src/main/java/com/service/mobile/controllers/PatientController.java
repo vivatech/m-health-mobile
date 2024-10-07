@@ -273,4 +273,9 @@ public class PatientController {
     public ResponseEntity<?> actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute VerifyOtpRequest request) {
         return authService.actionVerifyOtp(request,locale);
     }
+
+    @GetMapping(path="/transaction-type")
+    public ResponseEntity<?> getTransactionType(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestParam(name = "project_base",required = false)String project_base) {
+        return patientService.getTransactionType(project_base,locale);
+    }
 }
