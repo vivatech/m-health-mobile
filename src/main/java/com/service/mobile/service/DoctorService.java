@@ -114,7 +114,7 @@ public class DoctorService {
                 listOfDoctor = usersRepository.findByHospitalId(request.getCity_id());
             }
 
-            if (request.getCity_id() > 0 ) {
+            if (request.getCity_id()!=null && request.getCity_id() > 0 ) {
                 listOfDoctor = listOfDoctor.stream().filter(item -> item.getCity() != null && item.getCity().equals(request.getCity_id())).toList();
             }
 

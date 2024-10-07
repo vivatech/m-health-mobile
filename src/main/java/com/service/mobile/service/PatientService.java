@@ -1844,8 +1844,7 @@ public class PatientService {
 
             // Prepare PDF URL
             String pdfUrl = "";
-            if (Files.exists(Paths.get(baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf"))
-                    && currentTime.compareTo(finalTime) > 0) {
+            if (currentTime.compareTo(finalTime) > 0) {
                 pdfUrl = baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf";
             }
 

@@ -31,7 +31,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -122,6 +125,14 @@ public class TicketService {
                         }
                     }
                 }catch (Exception e){}
+                String createdDate = "";
+                if (ticket.getSupportTicketCreatedAt()!=null) {
+                    try{
+                        Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        Date date = Date.from(ticket.getSupportTicketCreatedAt().atZone(ZoneId.systemDefault()).toInstant());
+                        createdDate = formatter.format(date);
+                    }catch (Exception e){}
+                }
 
                 SupportTicketsDto dto = new SupportTicketsDto();
                 dto.setId(ticket.getSupportTicketId());
@@ -131,7 +142,7 @@ public class TicketService {
                 dto.setAttachment_type(attachmentType);
                 dto.setStatus(ticket.getSupportTicketStatus());
                 dto.setCreated_by(users.getFirstName()+" "+users.getLastName());
-                dto.setCreated_date(ticket.getSupportTicketCreatedAt());
+                dto.setCreated_date(createdDate);
                 dto.setTotal_count(total);
 
                 response.add(dto);
@@ -184,6 +195,7 @@ public class TicketService {
         supportTicket.setSupportTicketStatus(SupportTicketStatus.Open);
         supportTicket.setSupportTicketCreatedAt(LocalDateTime.now());
         supportTicket.setSupportTicketCreatedBy(request.getUser_id());
+        supportTicket = supportTicketRepository.save(supportTicket);
         Integer attachmentId = null;
         if (request.getFilename() != null && !request.getFilename().isEmpty()) {
             Attachment attachment = new Attachment();
@@ -195,7 +207,7 @@ public class TicketService {
             attachmentId = attachment.getAttachmentId();
             supportTicket.setAttachmentId(attachment.getAttachmentId());
 
-            String uploadsDir = path_to_uploads_dir + supportTicket.getSupportTicketId();
+            String uploadsDir = path_to_uploads_dir + "/Support_Ticket/"+supportTicket.getSupportTicketId();
             Files.createDirectories(Paths.get(uploadsDir));
             Files.copy(request.getFilename().getInputStream(), Paths.get(uploadsDir, attachment.getAttachmentName()));
 
@@ -203,7 +215,7 @@ public class TicketService {
             attachmentRepository.save(attachment);
         }
 
-        supportTicketRepository.save(supportTicket);
+        supportTicket = supportTicketRepository.save(supportTicket);
 
         SupportTicketMessage supportTicketMsg = new SupportTicketMessage();
         supportTicketMsg.setSupportTicket(supportTicket);
@@ -294,7 +306,7 @@ public class TicketService {
                 attachmentRepository.save(attachment);
 
                 // Save the file to disk
-                Path path = Paths.get("path_to_uploads_dir" + request.getSupport_ticket_id() + "/" + attachment.getAttachmentName());
+                Path path = Paths.get(path_to_uploads_dir + request.getSupport_ticket_id() + "/" + attachment.getAttachmentName());
                 Files.createDirectories(path.getParent());
                 Files.write(path, request.getFilename().getBytes());
             }
