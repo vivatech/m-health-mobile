@@ -1,6 +1,7 @@
 package com.service.mobile.controllers;
 
 import com.service.mobile.config.Constants;
+import com.service.mobile.dto.dto.ResendOtpRequest;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.Response;
 import com.service.mobile.service.*;
@@ -261,6 +262,24 @@ public class PatientControllerJson {
     @PostMapping(path="/verify-otp", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody VerifyOtpRequest request) {
         return authService.actionVerifyOtp(request,locale);
+    }
+
+    /*
+     resend -otp
+     */
+    @PostMapping(path= "/resend-otp", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<?> resendOTP(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                       Locale locale,
+                                       @RequestBody ResendOtpRequest request) {
+        if(request.getContact_number() != null && request.getOtp_code() != null && request.getIs_registered() != null){
+            return patientService.getResendOTP(locale,request);
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+            ));
+        }
     }
 
 }

@@ -10,6 +10,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LabCategoryDto {
-    private Integer cat_id;
+    private String  cat_id;
     private String cat_name;
 }

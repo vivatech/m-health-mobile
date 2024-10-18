@@ -34,18 +34,7 @@ public class LabService {
     private LabSubCategoryMasterRepository labSubCategoryMasterRepository;
 
     public ResponseEntity<?> getLabCategoryList(Locale locale) {
-        List<LabCategoryMaster> labCategoryMasters = publicService.getAssignedLabsCategory();
-        List<LabCategoryDto> dtoList = new ArrayList<>();
-        for(LabCategoryMaster labCategory : labCategoryMasters){
-            LabCategoryDto temp = new LabCategoryDto();
-            temp.setCat_id(labCategory.getCatId());
-            if(locale.getLanguage().equalsIgnoreCase("en")){
-                temp.setCat_name(labCategory.getCatName());
-            }else {
-                temp.setCat_name(labCategory.getCatNameSl());
-            }
-            dtoList.add(temp);
-        }
+        List<LabCategoryDto> dtoList = getLabCategoryDtos(locale);
         if(dtoList.size()>0){
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
@@ -60,6 +49,22 @@ public class LabService {
                     messageSource.getMessage(Constants.NO_LAB_CATEGORY_NOT_FOUND,null,locale)
             ));
         }
+    }
+
+    private List<LabCategoryDto> getLabCategoryDtos(Locale locale) {
+        List<LabCategoryMaster> labCategoryMasters = publicService.getAssignedLabsCategory();
+        List<LabCategoryDto> dtoList = new ArrayList<>();
+        for(LabCategoryMaster labCategory : labCategoryMasters){
+            LabCategoryDto temp = new LabCategoryDto();
+            temp.setCat_id(labCategory.getCatId().toString());
+            if(locale.getLanguage().equalsIgnoreCase("en")){
+                temp.setCat_name(labCategory.getCatName());
+            }else {
+                temp.setCat_name(labCategory.getCatNameSl());
+            }
+            dtoList.add(temp);
+        }
+        return dtoList;
     }
 
     public ResponseEntity<?> getLabSubcategoryList(Locale locale, Integer categoryId) {

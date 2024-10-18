@@ -18,7 +18,7 @@ public class HealthTipPackageHistoryResponse {
     private String category_name;
     private PackageType package_type;
     private DurationType Frequency;
-    private Float package_price;
+    private String package_price;
     private YesNo is_expire;
     private String cancel_flg;
     private LocalDateTime created_at;

@@ -1,6 +1,7 @@
 package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
+import com.service.mobile.config.Utility;
 import com.service.mobile.dto.dto.*;
 import com.service.mobile.dto.enums.*;
 import com.service.mobile.dto.request.*;
@@ -32,6 +33,7 @@ import javax.management.Query;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -50,6 +52,8 @@ import static com.service.mobile.config.Constants.SUCCESS_MESSAGE;
 @Service
 @Slf4j
 public class PatientService {
+    @Autowired
+    private UserOTPRepository userOTPRepository;
     @Autowired
     private DoctorSpecializationRepository doctorSpecializationRepository;
     @Autowired
@@ -156,6 +160,12 @@ public class PatientService {
 
     @Autowired
     private EVCPlusPaymentService evcPlusPaymentService;
+    @Value("${app.fixed.otp}")
+    private boolean OTP_FIXED;
+    @Autowired
+    private Utility utility;
+    @Value("${app.otp.expiry.minutes}")
+    private Long expiryTime;
 
     public ResponseEntity<?> actionUpdateFullname(UpdateFullNameRequest request, Locale locale) {
         if(request !=null&&request.getUser_id()!=null)
@@ -212,7 +222,7 @@ public class PatientService {
                         request.getUser_id().toString(), authKey, user.getType().toString(),
                         "", user.getFirstName() + " " + user.getLastName(), user.getFirstName(), user.getLastName(),
                         user.getEmail(), user.getContactNumber(), signalingServer.getValue(), verificationToken.getValue(),
-                        turnUsername.getValue(), turnPassword.getValue()
+                        turnUsername.getValue(), turnPassword.getValue(), user.getGender(), user.getDob().toString(), user.getResidenceAddress()
                 );
                 res = new Response(
                         Constants.SUCCESS_CODE,
@@ -1635,7 +1645,7 @@ public class PatientService {
                 temp.setCategory_name(categoryName);
                 temp.setPackage_type(data.getHealthTipPackage().getType());
                 temp.setFrequency(data.getHealthTipPackage().getHealthTipDuration().getDurationType());
-                temp.setPackage_price(data.getHealthTipPackage().getPackagePrice());
+                temp.setPackage_price("USD " + data.getHealthTipPackage().getPackagePrice().toString());
                 temp.setIs_expire(data.getIsExpire());
                 temp.setCancel_flg(cancelFlg);
                 temp.setCreated_at(data.getCreatedAt());
@@ -1888,7 +1898,46 @@ public class PatientService {
             ));
         }
     }
+    public ResponseEntity<?> getResendOTP(Locale locale, ResendOtpRequest request) {
+        Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
+        if(users != null){
+            //generate OTP
+            Random random = new Random();
+            int otp = OTP_FIXED ? 123456 : random.nextInt(900000) + 100000;
+            log.info("OTP : {}", otp);
 
+            //save otp into user otp table
+            saveOtpIntoUserOtpTableAndUsersTable(users, otp);
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.OTP_SEND_SUCCESSFUL,null,locale)
+            ));
+        }
+        else{
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
+            ));
+        }
+    }
+    private void saveOtpIntoUserOtpTableAndUsersTable(Users users, int otp) {
+        UserOTP otps = new UserOTP();
+        otps.setOtp(utility.md5Hash(String.valueOf(otp)));
+        otps.setIsFrom(Constants.Login);
+        otps.setUserId(users.getUserId());
+        otps.setExpiredAt(LocalDateTime.now().plusMinutes(expiryTime));
+        otps.setStatus(Constants.STATUS_INACTIVE);
+        otps.setType(Constants.PATIENT);
+
+        userOTPRepository.save(otps);
+
+        //save into users table
+        users.setOtp(otp);
+        users.setOtpTime(Timestamp.valueOf(LocalDateTime.now().plusMinutes(expiryTime)));
+        usersRepository.save(users);
+    }
     public ResponseEntity<?> getTransactionType(String projectBase, Locale locale) {
         List<KeyValueDto> response = new ArrayList<>();
         if(projectBase!=null && projectBase.equalsIgnoreCase("baano")){
