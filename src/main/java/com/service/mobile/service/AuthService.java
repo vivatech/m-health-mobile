@@ -3,6 +3,7 @@ package com.service.mobile.service;
 import com.service.mobile.config.AuthConfig;
 import com.service.mobile.config.Constants;
 import com.service.mobile.config.Utility;
+import com.service.mobile.dto.LogoutRequest;
 import com.service.mobile.dto.enums.YesNo;
 import com.service.mobile.dto.request.MobileReleaseRequest;
 import com.service.mobile.dto.request.VerifyOtpRequest;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -25,13 +27,18 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 
 import static com.service.mobile.config.Constants.*;
+import static com.service.mobile.constants.Constants.Status_IN_ACTIVE;
 
 @Service
 public class AuthService {
     @Value("${app.otp.expiry.minutes}")
     private Long expiryTime;
+    @Value("${app.fixed.otp}")
+    private boolean OTP_FIXED;
+
     @Autowired
     private UsersRepository usersRepository;
     @Autowired
@@ -64,8 +71,15 @@ public class AuthService {
                             Constants.NO_RECORD_FOUND_CODE,
                             messageSource.getMessage(Constants.USER_SUSPENDED,null,locale));
                 }
+                else if(users.getStatus().equalsIgnoreCase(Status_IN_ACTIVE)){
+                    response = new Response(
+                            Constants.NO_RECORD_FOUND_CODE,
+                            Constants.NO_RECORD_FOUND_CODE,
+                            messageSource.getMessage(Constants.USER_IN_ACTIVE,null,locale));
+                }
                 else {
-                    int otp = 123456; //TODO : SMS integration
+                    Random random = new Random();
+                    int otp = OTP_FIXED ? 123456 : random.nextInt(900000) + 100000;
 
                     //save otp into user otp table
                     saveOtpIntoUserOtpTableAndUsersTable(users, otp);
@@ -231,5 +245,10 @@ public class AuthService {
         response.setNew_registration_with_more_fields(NEW_REGISTRATION_WITH_MORE_FIELDS);
 
         return response;
+    }
+
+    public ResponseEntity<?> logout(Locale locale, LogoutRequest request) {
+        //TODO : X-Authorization
+        return null;
     }
 }

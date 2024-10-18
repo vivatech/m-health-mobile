@@ -1,7 +1,9 @@
 package com.service.mobile.controllers;
 
 import com.service.mobile.config.Constants;
+import com.service.mobile.dto.LogoutRequest;
 import com.service.mobile.dto.dto.DoctorRattingDTO;
+import com.service.mobile.dto.dto.ResendOtpRequest;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.NearByDoctorResponse;
 import com.service.mobile.dto.response.Response;
@@ -264,5 +266,22 @@ public class SiteController {
     @PostMapping(path="/login", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public Object actionLogin(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute MobileReleaseRequest request) {
         return authService.actionLogin(request,locale);
+    }
+    /*
+     logout api
+     */
+    @PostMapping(path= "/logout", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity<?> resendOTP(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                       Locale locale,
+                                       @ModelAttribute LogoutRequest request) {
+        if(request.getUser_id()!= null){
+            return authService.logout(locale,request);
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+            ));
+        }
     }
 }

@@ -22,8 +22,11 @@ public class UpdateFullnameResponse {
     private String verify_token;
     private String turn_username;
     private String turn_password;
+    private String gender;
+    private String dob;
+    private String residence_address;
 
-    public UpdateFullnameResponse(String userId, String authKey, String userType, String userPhoto, String fullName, String firstName, String lastName, String email, String contactNumber, String signalingServer, String verifyToken, String turnUsername, String turnPassword) {
+    public UpdateFullnameResponse(String userId, String authKey, String userType, String userPhoto, String fullName, String firstName, String lastName, String email, String contactNumber, String signalingServer, String verifyToken, String turnUsername, String turnPassword, String gender, String dob, String residence_address) {
         this.user_id = userId;
         this.auth_key = authKey;
         this.user_type = userType;
@@ -37,5 +40,8 @@ public class UpdateFullnameResponse {
         this.verify_token = verifyToken;
         this.turn_username = turnUsername;
         this.turn_password = turnPassword;
+        this.gender = gender;
+        this.dob = dob;
+        this.residence_address = residence_address;
     }
 }

@@ -218,4 +218,5 @@ public class Constants {
     public static final String ATTEMPT_REACH = "Attempt.Count";
     public static final String OTP_NOT_MATCHED = "Otp.Not.Matched";
     public static final String EXCEPTION = "Exception.Message";
+    public static final String USER_IN_ACTIVE = "User is In-active";
 }
