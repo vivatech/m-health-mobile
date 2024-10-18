@@ -267,7 +267,7 @@ public class PatientControllerJson {
     /*
      resend -otp
      */
-    @PostMapping(path= "/resend-otp", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping(path= "/resend-otp", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> resendOTP(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale,
                                        @RequestBody ResendOtpRequest request) {

@@ -74,10 +74,10 @@ public class AuthService {
                             messageSource.getMessage(USER_SUSPENDED, null, locale)));
                 }
                 else if(users.getStatus().equalsIgnoreCase(Status_IN_ACTIVE)){
-                    response = new Response(
-                            Constants.NO_RECORD_FOUND_CODE,
-                            Constants.NO_RECORD_FOUND_CODE,
-                            messageSource.getMessage(Constants.USER_IN_ACTIVE,null,locale));
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                            Constants.BLANK_DATA_GIVEN_CODE,
+                            Constants.BLANK_DATA_GIVEN_CODE,
+                            messageSource.getMessage(USER_IN_ACTIVE, null, locale)));
                 }
                 else {
                     Random random = new Random();

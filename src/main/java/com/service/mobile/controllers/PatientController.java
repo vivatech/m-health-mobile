@@ -281,17 +281,19 @@ public class PatientController {
     public ResponseEntity<?> resendOTP(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                         Locale locale,
                                         @ModelAttribute ResendOtpRequest request) {
-        if(request.getContact_number() != null && request.getOtp_code() != null && request.getIs_registered() != null){
-            return patientService.getResendOTP(locale,request);
-        }else{
+        if (request.getContact_number() != null && request.getOtp_code() != null && request.getIs_registered() != null) {
+            return patientService.getResendOTP(locale, request);
+        } else {
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
             ));
         }
+    }
     @GetMapping(path="/transaction-type")
-    public ResponseEntity<?> getTransactionType(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestParam(name = "project_base",required = false)String project_base) {
+    public ResponseEntity<?> getTransactionType(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
+            @RequestParam(name = "project_base",required = false)String project_base) {
         return patientService.getTransactionType(project_base,locale);
     }
 }
