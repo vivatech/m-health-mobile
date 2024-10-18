@@ -71,6 +71,10 @@ public class DoctorService {
     private SlotMasterRepository slotMasterRepository;
     @Autowired
     private GlobalConfigurationRepository globalConfigurationRepository;
+    @Autowired
+    private StateRepository stateRepository;
+    @Autowired
+    private CityRepository cityRepository;
 
 
     public ResponseEntity<?> getDoctorCityList(Locale locale) {
@@ -110,8 +114,8 @@ public class DoctorService {
                 listOfDoctor = usersRepository.findByHospitalId(request.getCity_id());
             }
 
-            if (request.getCity_id() > 0 ) {
-                listOfDoctor = listOfDoctor.stream().filter(item -> item.getCity().getId() != null && item.getCity().getId().equals(request.getCity_id())).toList();
+            if (request.getCity_id()!=null && request.getCity_id() > 0 ) {
+                listOfDoctor = listOfDoctor.stream().filter(item -> item.getCity() != null && item.getCity().equals(request.getCity_id())).toList();
             }
 
             if (request.getConsult_type()!=null && request.getConsult_type().equalsIgnoreCase(Constants.VIDEO)) {
@@ -654,15 +658,23 @@ public class DoctorService {
             dto.setEmail(doctor.getEmail());
             dto.setContact_number(doctor.getContactNumber());
             dto.setPhoto(photo);
+            State state = null;
+            if(doctor.getState()!=null && doctor.getState()!=0){
+                state = stateRepository.findById(doctor.getState()).orElse(null);
+            }
+            City city = null;
+            if(doctor.getCity()!=null && doctor.getCity()!=0){
+                city = cityRepository.findById(doctor.getCity()).orElse(null);
+            }
             dto.setCountry(
                     (doctor.getCountry()!=null)
                             ?doctor.getCountry().getName():"");
             dto.setState(
-                    (doctor.getState()!=null)
-                            ?doctor.getState().getName():"");
+                    (state!=null)
+                            ?state.getName():"");
             dto.setCity(
-                    (doctor.getCity()!=null)
-                            ?doctor.getCity().getName():"");
+                    (city!=null)
+                            ?city.getName():"");
             dto.setHospital_address(doctor.getHospitalAddress());
             dto.setResidence_address(doctor.getResidenceAddress());
             dto.setProfessional_identification_number(doctor.getProfessionalIdentificationNumber());

@@ -11,7 +11,7 @@ public interface LabConsultationRepository extends JpaRepository<LabConsultation
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.labOrdersId is null and u.caseId is null")
     List<LabConsultation> findByPatientIdANdLabOrderIsNullAndCaseIsNull(Integer userId);
 
-    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.categoryId.catId= ?2 and u.subCatId.subCatId = ?3 and u.labOrdersId is null and u.caseId is null")
+    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.categoryId.catId= ?2 and u.subCatId = ?3 and u.labOrdersId is null and u.caseId is null")
     List<LabConsultation> findByPatientIdCategoryIdSubCategoryIdLabOrderAndCaseNull(Integer userId, Integer categoryId, Integer subCatId);
 
     @Query("Select u from LabConsultation u where u.caseId.caseId = ?1 order by u.labOrdersId.id")
@@ -22,10 +22,10 @@ public interface LabConsultationRepository extends JpaRepository<LabConsultation
     @Query("Select u from LabConsultation u where  u.labOrdersId.id = ?1")
     List<LabConsultation> findByLabOrderId(Integer id);
 
-    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 and u.categoryId.catId = ?3 and u.subCatId.subCatId = ?4 order by u.labConsultId DESC")
+    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 and u.categoryId.catId = ?3 and u.subCatId = ?4 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCaseIdCategoryIdSubCategoryId(Integer userId, Integer caseId, Integer categoryId, Integer subcategoryId);
 
-    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.categoryId.catId = ?2 and u.subCatId.subCatId = ?3 order by u.labConsultId DESC")
+    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.categoryId.catId = ?2 and u.subCatId = ?3 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCategoryIdSubCategoryId(Integer userId, Integer categoryId, Integer subcategoryId);
 
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 and u.categoryId.catId = ?3 order by u.labConsultId DESC")
@@ -34,21 +34,21 @@ public interface LabConsultationRepository extends JpaRepository<LabConsultation
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.categoryId.catId = ?2 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCategoryId(Integer userId, Integer categoryId);
 
-    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 and u.subCatId.subCatId = ?3 order by u.labConsultId DESC")
+    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 and u.subCatId = ?3 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCaseIdSubCategoryId(Integer userId, Integer caseId, Integer subcategoryId);
 
-    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.subCatId.subCatId = ?2 order by u.labConsultId DESC")
+    @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.subCatId = ?2 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdSubCategoryId(Integer userId, Integer subcategoryId);
 
     @Query("Select u from LabConsultation u where u.patient.userId = ?1 and u.caseId.caseId = ?2 order by u.labConsultId DESC")
     List<LabConsultation> findByPatientIdCaseId(Integer userId, Integer caseId);
 
-    @Query("Select u from LabConsultation u where u.subCatId.subCatId in ?1 and u.caseId.caseId = ?2 and labOrdersId IS NOT NULL")
+    @Query("Select u from LabConsultation u where u.subCatId in ?1 and u.caseId.caseId = ?2 and labOrdersId IS NOT NULL")
     List<LabConsultation> findBySubCategoryIdCaseIdLadIdNotNull(List<Integer> subCatId,Integer caseId);
 
-    @Query("Select u from LabConsultation u where u.subCatId.subCatId in ?1 and u.caseId.caseId = ?2")
+    @Query("Select u from LabConsultation u where u.subCatId in ?1 and u.caseId.caseId = ?2")
     List<LabConsultation> findBySubCategoryIdCaseId(Integer subCatId,Integer caseId);
 
-    @Query("Select u from LabConsultation u where u.subCatId.subCatId in ?1 and u.caseId.caseId IS NULL AND u.labOrdersId IS NULL AND u.patient.userId = ?2 ")
+    @Query("Select u from LabConsultation u where u.subCatId in ?1 and u.caseId.caseId IS NULL AND u.labOrdersId IS NULL AND u.patient.userId = ?2 ")
     List<LabConsultation> findBySubCategoryIdCaseIdNullLabOrderNullPatientId(Integer i, Integer userId);
 }

@@ -176,11 +176,9 @@ public class Users {
     @JoinColumn(name = "country_id", nullable = false)
     private Country country;
 
-    @ManyToOne
-    @JoinColumn(name = "state_id", nullable = false)
-    private State state;
+    @Column(name = "state_id")
+    private Integer state;
 
-    @ManyToOne
-    @JoinColumn(name = "city_id", nullable = false)
-    private City city;
+    @Column(name = "city_id")
+    private Integer city;
 }

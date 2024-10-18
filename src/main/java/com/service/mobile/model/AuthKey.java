@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "mh_authkey")
@@ -33,6 +34,7 @@ public class AuthKey {
     private UserType loginType;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate;
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date createdDate;
 }
 

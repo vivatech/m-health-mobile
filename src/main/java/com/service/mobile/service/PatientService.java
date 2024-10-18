@@ -34,6 +34,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
+import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -44,6 +46,8 @@ import java.util.*;
 import java.security.SecureRandom;
 import java.util.Locale;
 import java.util.stream.Collectors;
+
+import static com.service.mobile.config.Constants.SUCCESS_MESSAGE;
 
 @Service
 @Slf4j
@@ -205,7 +209,7 @@ public class PatientService {
                 authModel.setAuthKey(authKey);
                 authModel.setDeviceToken(request.getDevice_token());
                 authModel.setLoginType(user.getType());
-                authModel.setCreatedDate(LocalDateTime.now());
+                authModel.setCreatedDate(new Date());
                 authKeyRepository.save(authModel);
 
                 GlobalConfiguration signalingServer = globalConfigurationRepository.findByKey("SIGNALING_SERVER");
@@ -277,8 +281,8 @@ public class PatientService {
             if (!packageData.isEmpty()) {
                 response = new Response(
                         Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_FOUND,null,locale),
                         Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_FOUND,null,locale),
                         packageData
                 );
             } else {
@@ -756,6 +760,7 @@ public class PatientService {
                 } else {
                     packageExpiredDate = DateUtils.addMonths(new Date(), duration.getDurationValue());
                 }
+                Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
                 HealthTipCategoryMaster cat = val.getHealthTipCategoryMaster();
                 HealthTipPackageCategories packageCat = val;
@@ -799,10 +804,10 @@ public class PatientService {
                 tempData.setPackage_price_with_video_slsh("SLSH " + String.format("%.2f", priceWithVideo * paymentRate));
                 tempData.setPackage_price_with_video_slsh_without_currency(String.format("%.2f", priceWithVideo * paymentRate));
                 tempData.setTotal_money(totalMoney);
-                tempData.setExpiry_date(packageExpiredDate);
+                tempData.setExpiry_date(formatter.format(packageExpiredDate));
                 tempData.setIs_purchased(isPurchased);
                 tempData.setPurchased_package_user_id(isPurchased.equalsIgnoreCase("Yes") ? healthTipPackageUser.get(0).getId().toString() : "");
-                tempData.setMaxPackagefee(maxFee);
+                tempData.setMaxPackagefee((int)Math.round(maxFee));
                 tempData.setTotal_count(total);
                 tempData.setImage(image);
                 tempData.setCategory_name(categoryName);
@@ -835,7 +840,8 @@ public class PatientService {
             dto.setCountry_code(users.getCountryCode());
             dto.setContact_number(users.getContactNumber());
             dto.setTotal_money(users.getTotalMoney());
-            dto.setData(currencySymbolFdj);
+            String[] data = {currencySymbolFdj};
+            dto.setData(data);
             return ResponseEntity.status(HttpStatus.OK).body(dto);
         }else{
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
@@ -1848,8 +1854,7 @@ public class PatientService {
 
             // Prepare PDF URL
             String pdfUrl = "";
-            if (Files.exists(Paths.get(baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf"))
-                    && currentTime.compareTo(finalTime) > 0) {
+            if (currentTime.compareTo(finalTime) > 0) {
                 pdfUrl = baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf";
             }
 
@@ -1893,7 +1898,6 @@ public class PatientService {
             ));
         }
     }
-
     public ResponseEntity<?> getResendOTP(Locale locale, ResendOtpRequest request) {
         Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
         if(users != null){
@@ -1933,5 +1937,33 @@ public class PatientService {
         users.setOtp(otp);
         users.setOtpTime(Timestamp.valueOf(LocalDateTime.now().plusMinutes(expiryTime)));
         usersRepository.save(users);
+    }
+    public ResponseEntity<?> getTransactionType(String projectBase, Locale locale) {
+        List<KeyValueDto> response = new ArrayList<>();
+        if(projectBase!=null && projectBase.equalsIgnoreCase("baano")){
+            List<String> sample = List.of("consultation","lab","healthtip");
+            for(String s:sample){
+                try {
+                    response.add(new KeyValueDto(
+                            messageSource.getMessage("app."+s, null, locale),
+                            s));
+                }catch (Exception e){ log.error(" while fetching language file ERROR:{}",e.getMessage());}
+            }
+        }else{
+            List<String> sample = List.of("consultation","nurse_on_demand","lab","healthtip");
+            for(String s:sample){
+                try {
+                    response.add(new KeyValueDto(
+                            messageSource.getMessage("app."+s, null, locale),
+                            s));
+                }catch (Exception e){ log.error(" while fetching language file ERROR:{}",e.getMessage());}
+            }
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(SUCCESS_MESSAGE, null, locale),
+                response
+        ));
     }
 }

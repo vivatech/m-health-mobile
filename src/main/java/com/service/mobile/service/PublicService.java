@@ -353,8 +353,16 @@ public class PublicService {
             if(users!=null){
                 String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
                 String countryName = (users.getCountry()!=null)?users.getCountry().getName():"";
-                String stateName = (users.getState()!=null)?users.getState().getName():"";
-                String cityName = (users.getCity()!=null)?users.getCity().getName():"";
+                State state = null;
+                if(users.getState()!=null && users.getState()!=0){
+                    state = stateRepository.findById(users.getState()).orElse(null);
+                }
+                City city = null;
+                if(users.getCity()!=null && users.getCity()!=0){
+                    city = cityRepository.findById(users.getCity()).orElse(null);
+                }
+                String stateName = (state!=null)?state.getName():"";
+                String cityName = (city!=null)?city.getName():"";
 
                 ProfileDto profile = new ProfileDto();
                 profile.setFirst_name(users.getFirstName());
@@ -470,8 +478,8 @@ public class PublicService {
                 user.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
                 City city = cityRepository.findById(request.getCity_id()).orElse(null);
                 if(city != null) {
-                    user.setCity(city);
-                    user.setState(city.getState());
+                    user.setCity(city.getId());
+                    user.setState(city.getState().getId());
                     user.setCountry(city.getState().getCountry());
 //                    user.setCountryCode(String.valueOf(city.getState().getCountry().getPhoneCode()));
                 }

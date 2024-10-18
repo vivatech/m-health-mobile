@@ -271,10 +271,9 @@ public class PatientController {
         }
     }
     @PostMapping(path="/verify-otp", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public Object actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute VerifyOtpRequest request) {
+    public ResponseEntity<?> actionVerifyOtp(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@ModelAttribute VerifyOtpRequest request) {
         return authService.actionVerifyOtp(request,locale);
     }
-
     /*
      resend -otp
      */
@@ -291,5 +290,8 @@ public class PatientController {
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
             ));
         }
+    @GetMapping(path="/transaction-type")
+    public ResponseEntity<?> getTransactionType(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestParam(name = "project_base",required = false)String project_base) {
+        return patientService.getTransactionType(project_base,locale);
     }
 }

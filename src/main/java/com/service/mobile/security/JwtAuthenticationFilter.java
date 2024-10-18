@@ -1,6 +1,7 @@
 package com.service.mobile.security;
 
 import com.service.mobile.config.AuthConfig;
+import com.service.mobile.service.AuthService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
@@ -40,6 +41,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserDetailsService userDetailsService;
+
+    @Autowired
+    private AuthService authService;
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -90,7 +95,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             //fetch user detail from username
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
             Boolean validateToken = this.jwtHelper.validateToken(token);
-            if (validateToken) {
+            boolean isValidSession = authService.isSessionValid(username, token);
+            if (validateToken && isValidSession) {
 
                 //set the authentication
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

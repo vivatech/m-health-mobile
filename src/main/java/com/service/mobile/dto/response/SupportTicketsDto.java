@@ -20,6 +20,6 @@ public class SupportTicketsDto {
     private String attachment_type;
     private SupportTicketStatus status;
     private String created_by;
-    private LocalDateTime created_date;
+    private String created_date;
     private Long total_count;
 }
