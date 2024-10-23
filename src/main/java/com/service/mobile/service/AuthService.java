@@ -3,6 +3,7 @@ package com.service.mobile.service;
 import com.service.mobile.config.AuthConfig;
 import com.service.mobile.config.Constants;
 import com.service.mobile.config.Utility;
+import com.service.mobile.dto.LogoutRequest;
 import com.service.mobile.dto.enums.UserType;
 import com.service.mobile.dto.enums.YesNo;
 import com.service.mobile.dto.request.MobileReleaseRequest;
@@ -28,14 +29,23 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
+
 import java.util.*;
 
 import static com.service.mobile.config.Constants.*;
+import static com.service.mobile.constants.Constants.Status_IN_ACTIVE;
 
 @Service
 public class AuthService {
     @Value("${app.otp.expiry.minutes}")
     private Long expiryTime;
+    @Value("${app.fixed.otp}")
+    private boolean OTP_FIXED;
+
     @Autowired
     private UsersRepository usersRepository;
     @Autowired
@@ -63,8 +73,15 @@ public class AuthService {
                             Constants.BLANK_DATA_GIVEN_CODE,
                             messageSource.getMessage(USER_SUSPENDED, null, locale)));
                 }
+                else if(users.getStatus().equalsIgnoreCase(Status_IN_ACTIVE)){
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                            Constants.BLANK_DATA_GIVEN_CODE,
+                            Constants.BLANK_DATA_GIVEN_CODE,
+                            messageSource.getMessage(USER_IN_ACTIVE, null, locale)));
+                }
                 else {
-                    int otp = 123456; //TODO : SMS integration
+                    Random random = new Random();
+                    int otp = OTP_FIXED ? 123456 : random.nextInt(900000) + 100000;
 
                     //save otp into user otp table
                     saveOtpIntoUserOtpTableAndUsersTable(users, otp);
@@ -231,7 +248,10 @@ public class AuthService {
 
         return response;
     }
-
+    public ResponseEntity<?> logout(Locale locale, LogoutRequest request) {
+        //TODO : X-Authorization
+        return null;
+    }
     public AuthKey saveNewSession(Integer userId, String authKey, String deviceToken, UserType loginType) {
         // Invalidate any existing session for the user and login type
         invalidateOldSessions(userId, loginType);

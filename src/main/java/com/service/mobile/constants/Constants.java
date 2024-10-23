@@ -138,4 +138,5 @@ public class Constants {
     public static final String Payment_Type_PAID = "Paid";
     public static final String Payment_Type_FREE = "Free";
     public static final String Payment_Failed = "Payment Failed";
+    public static final String Status_IN_ACTIVE = "I";
 }
