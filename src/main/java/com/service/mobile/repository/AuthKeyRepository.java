@@ -18,4 +18,6 @@ public interface AuthKeyRepository extends JpaRepository<AuthKey,Integer> {
 
     @Query("SELECT a FROM AuthKey a WHERE a.userId = :userId AND a.loginType = :loginType")
     List<AuthKey> findAllByUserIdAndLoginType(@Param("userId") Integer userId, @Param("loginType") UserType loginType);
+
+    AuthKey findByUserIdAndLoginTypeAndAuthKey(Integer userId, UserType userType, String key);
 }

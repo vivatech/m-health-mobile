@@ -248,9 +248,33 @@ public class AuthService {
 
         return response;
     }
-    public ResponseEntity<?> logout(Locale locale, LogoutRequest request) {
-        //TODO : X-Authorization
-        return null;
+    public ResponseEntity<?> actionLogout(Locale locale, LogoutRequest request, String authKey, String type) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (request.getUser_id() != null && !request.getUser_id().isEmpty()
+                && authKey != null && !authKey.isEmpty()
+                && type != null && !type.isEmpty()) {
+
+            AuthKey key = authKeyRepository.findByUserIdAndLoginTypeAndAuthKey(Integer.valueOf(request.getUser_id()), UserType.valueOf(type), authKey);
+            if (key != null) {
+                authKeyRepository.delete(key);
+
+                response.put("status", SUCCESS_CODE);
+                response.put("message", "user_logged_success");
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("status", NO_CONTENT_FOUNT_CODE);
+                response.put("message", "unauth_user");
+                response.put("data", new HashMap<>());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+        }
+        else {
+            response.put("status", BLANK_DATA_GIVEN_CODE);
+            response.put("message", BLANK_DATA_GIVEN);
+            response.put("data", new HashMap<>());
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+        }
     }
     public AuthKey saveNewSession(Integer userId, String authKey, String deviceToken, UserType loginType) {
         // Invalidate any existing session for the user and login type

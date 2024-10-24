@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -403,10 +404,10 @@ public class PublicService {
     }
 
     public ResponseEntity<?> getStateList(Locale locale) {
-        List<State> states = stateRepository.findAllByNameAsc();
-        if (states.size()>0) {
+        List<State> states = stateRepository.findAllWithCountry();
+        if (!states.isEmpty()) {
             List<StateResponse> data = new ArrayList<>();
-            for(State t:states){
+            for(State t : states){
                 data.add(new StateResponse(t.getId(),t.getName(),(t.getCountry()!=null)?t.getCountry().getId():null));
             }
 

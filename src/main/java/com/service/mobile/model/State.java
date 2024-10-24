@@ -22,7 +22,7 @@ public class State {
     @Column(name = "abbreviation_code")
     private String abbreviationCode;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "country_id", nullable = false)
     private Country country;
 }

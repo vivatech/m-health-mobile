@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface StateRepository extends JpaRepository<State, Integer> {
-    @Query("Select u from State u order by u.name asc")
-    List<State> findAllByNameAsc();
+
+    @Query("SELECT s FROM State s WHERE s.country IS NOT NULL")
+    List<State> findAllWithCountry();
 }

@@ -1,11 +1,10 @@
 package com.service.mobile.controllers;
 
 import com.service.mobile.config.Constants;
-import com.service.mobile.dto.dto.DoctorRattingDTO;
+import com.service.mobile.dto.LogoutRequest;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.Response;
 import com.service.mobile.dto.response.ViewReplyMessageRequest;
-import com.service.mobile.model.Country;
 import com.service.mobile.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -15,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Locale;
 
 @RestController
@@ -148,5 +146,23 @@ public class SiteControllerJson {
     @PostMapping(path="/login", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> actionLogin(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,@RequestBody MobileReleaseRequest request) {
         return authService.actionLogin(request,locale);
+    }
+    /*
+     logout api
+     */
+    @PostMapping(path= "/logout", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<?> resendOTP(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
+                                       Locale locale, @RequestHeader(value = "X-authorization", required = false) String authKey,
+                                       @RequestHeader(value = "X-type", required = false) String type,
+                                       @RequestBody LogoutRequest request) {
+        if(request.getUser_id()!= null){
+            return authService.actionLogout(locale,request,authKey,type);
+        }else{
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+            ));
+        }
     }
 }
