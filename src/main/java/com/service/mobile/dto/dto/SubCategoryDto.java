@@ -10,7 +10,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SubCategoryDto {
-    private Integer cat_id;
+    private String  cat_id;
     private String cat_name;
     private String cat_name_sl;
     private String sub_cat_name_sl;

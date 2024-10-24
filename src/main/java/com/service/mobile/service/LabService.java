@@ -73,18 +73,11 @@ public class LabService {
         List<SubCategoryDto> list = new ArrayList<>();
         for(LabSubCategoryMaster subCat :subCategoryList){
             SubCategoryDto dto = new SubCategoryDto();
-            dto.setCat_id(categoryId);
-            if(locale.getLanguage().equalsIgnoreCase("en")){
-                dto.setCat_name(labCategoryMasters.getCatName());
-            }else{
-                String catName = (labCategoryMasters.getCatNameSl()!=null &&
-                        !labCategoryMasters.getCatNameSl().isEmpty())? labCategoryMasters.getCatNameSl() : labCategoryMasters.getCatName();
+            dto.setCat_id(categoryId.toString());
+            assert labCategoryMasters != null;
+            dto.setCat_name(labCategoryMasters.getCatName());
+            dto.setSub_cat_name(subCat.getSubCatName());
 
-                String suBatName = (subCat.getSubCatNameSl()!=null &&
-                        !subCat.getSubCatNameSl().isEmpty())? subCat.getSubCatNameSl() : subCat.getSubCatName();
-                dto.setSub_cat_name(suBatName);
-                dto.setCat_name(catName);
-            }
             list.add(dto);
         }
         if(!list.isEmpty()){
