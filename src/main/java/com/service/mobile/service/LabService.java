@@ -69,29 +69,37 @@ public class LabService {
 
     public ResponseEntity<?> getLabSubcategoryList(Locale locale, Integer categoryId) {
         LabCategoryMaster labCategoryMasters = labCategoryMasterRepository.findById(categoryId).orElse(null);
-        List<LabSubCategoryMaster> subCategoryList = labSubCategoryMasterRepository.findByCategoryId(categoryId, CategoryStatus.Active);
-        List<SubCategoryDto> list = new ArrayList<>();
-        for(LabSubCategoryMaster subCat :subCategoryList){
-            SubCategoryDto dto = new SubCategoryDto();
-            dto.setCat_id(categoryId.toString());
-            assert labCategoryMasters != null;
-            dto.setCat_name(labCategoryMasters.getCatName());
-            dto.setSub_cat_name(subCat.getSubCatName());
+        if (labCategoryMasters != null) {
+            List<LabSubCategoryMaster> subCategoryList = labSubCategoryMasterRepository.findByCategoryId(categoryId, CategoryStatus.Active);
+            if (!subCategoryList.isEmpty()) {
+                List<SubCategoryDto> list = new ArrayList<>();
+                for (LabSubCategoryMaster subCat : subCategoryList) {
+                    SubCategoryDto dto = new SubCategoryDto();
+                    dto.setCat_id(categoryId.toString());
+                    dto.setCat_name(labCategoryMasters.getCatName());
+                    dto.setSub_cat_name(subCat.getSubCatName());
 
-            list.add(dto);
+                    list.add(dto);
+                }
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.LAB_SUB_CATEGORY_RETRIEVED, null, locale),
+                        list
+                ));
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.NO_LAB_SUB_CATEGORY_NOT_FOUND, null, locale)
+                ));
+            }
         }
-        if(!list.isEmpty()){
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.LAB_SUB_CATEGORY_RETRIEVED,null,locale),
-                    list
-            ));
-        }else {
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.NO_LAB_SUB_CATEGORY_NOT_FOUND,null,locale)
+        else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    Constants.BLANK_DATA_GIVEN,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
             ));
         }
     }
