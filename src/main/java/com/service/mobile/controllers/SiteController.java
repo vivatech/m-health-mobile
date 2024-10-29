@@ -268,7 +268,7 @@ public class SiteController {
     /*
      logout api
      */
-    @PostMapping(path= "/logout", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping(path= "/log-out", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> resendOTP(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale, @RequestHeader(value = "X-authorization", required = false) String authKey,
                                        @RequestHeader(value = "X-type", required = false) String type,

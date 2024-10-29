@@ -150,7 +150,7 @@ public class SiteControllerJson {
     /*
      logout api
      */
-    @PostMapping(path= "/logout", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    @PostMapping(path= "/log-out", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> resendOTP(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale, @RequestHeader(value = "X-authorization", required = false) String authKey,
                                        @RequestHeader(value = "X-type", required = false) String type,
