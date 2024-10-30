@@ -179,6 +179,8 @@ public class DoctorService {
                         }
                         docResponse.setLanguages(knownLang);
                     }
+                } else {
+                    docResponse.setLanguages(new ArrayList<>());
                 }
 
                 Users user = usersRepository.findById(val.getHospitalId()).orElse(null);
