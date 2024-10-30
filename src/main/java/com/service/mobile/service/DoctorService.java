@@ -194,7 +194,7 @@ public class DoctorService {
                     for(DoctorSpecialization item : doctorSpecializationList) {
                         specialities.add(item.getSpecializationId().getName());
                     }
-                    String specialitiesString = String.join(", ", specialities);
+                    String specialitiesString = String.join(",", specialities);
                     docResponse.setSpeciality(specialitiesString);
                 }
 
