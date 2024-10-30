@@ -22,7 +22,7 @@ public class SearchDocResponse {
     private int hospital_id;
     private String hospital_name;
     private String speciality;
-    private List<String> language;
+    private List<String> languages;
     private ConsultationFees consultation_fees;
     private boolean isAvailableToday = false;
     private Integer total_count;

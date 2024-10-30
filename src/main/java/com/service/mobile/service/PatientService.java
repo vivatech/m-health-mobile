@@ -1858,6 +1858,13 @@ public class PatientService {
                 pdfUrl = baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf";
             }
 
+            String recConsultationType;
+            if (consultation.getConsultationType().equals(ConsultationType.Paid)) {
+                recConsultationType = messageSource.getMessage(Constants.PAID_MSG,null,locale);
+            } else {
+                recConsultationType = messageSource.getMessage(Constants.FREE_MSG,null,locale);
+            }
+
             // Prepare Response Data
             OrderData tempData = new OrderData();
             tempData.setId(order.getId());
@@ -1866,11 +1873,15 @@ public class PatientService {
             tempData.setPhoto(photoPath);
             tempData.setTransaction_id(transactionIdString);
             tempData.setConsultation_date(consultation.getConsultationDate());
+            tempData.setReport_suggested(consultation.getReportSuggested());
             tempData.setConsultation_type(consultation.getConsultType());
+            tempData.setRec_consultation_type(recConsultationType);
+            tempData.setAdded_type(String.valueOf(consultation.getAddedType()));
             tempData.setSlot_time(slotData != null ? slotData.getSlotTime() : "");
             tempData.setSpecialization(specializationString);
             tempData.setPackage_name(order.getPackageId() != null ? order.getPackageId().getPackageName() : "");
             tempData.setDoctor_name(order.getDoctorId().getFirstName() + " " + order.getDoctorId().getLastName());
+            tempData.setCreated_at(consultation.getCreatedAt().toString());
             tempData.setRating(rating != null ? rating.getRating() : 0.0F);
             tempData.setReview(rating != null ? rating.getComment() : "");
             tempData.setIs_rating(isRatingAllowed ? 1 : 0);

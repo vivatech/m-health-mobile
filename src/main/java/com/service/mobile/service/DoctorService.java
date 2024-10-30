@@ -19,7 +19,6 @@ import com.service.mobile.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -172,13 +171,13 @@ public class DoctorService {
                     String[] lang = val.getLanguageFluency().split(",");
                     List<String> knownLang = new ArrayList<>();
                     int langCount = lang.length;
-                    if (langCount == 0) docResponse.setLanguage(new ArrayList<>());
+                    if (langCount == 0) docResponse.setLanguages(new ArrayList<>());
                     else {
                         while (langCount-- > 0) {
                             Optional<Language> langName = languageRepository.findById(Integer.parseInt(lang[langCount]));
                             knownLang.add(langName.get().getName());
                         }
-                        docResponse.setLanguage(knownLang);
+                        docResponse.setLanguages(knownLang);
                     }
                 }
 
@@ -410,7 +409,7 @@ public class DoctorService {
             Language language = languageRepository.findById(request.getLanguage_fluency()).orElse(null);
             if(language != null) {
                 for(SearchDocResponse response : responses){
-                    for(String value : response.getLanguage()){
+                    for(String value : response.getLanguages()){
                         if(value.equalsIgnoreCase(language.getName())) languageList.add(response);
                     }
                 }

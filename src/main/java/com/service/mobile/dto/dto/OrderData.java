@@ -19,11 +19,15 @@ public class OrderData {
     private String photo;
     private String transaction_id;
     private LocalDate consultation_date;
+    private String report_suggested;
     private String consultation_type;
+    private String rec_consultation_type;
+    private String added_type;
     private String slot_time;
     private String specialization;
     private String package_name;
     private String doctor_name;
+    private String created_at;
     private Float rating;
     private String review;
     private Integer is_rating;
