@@ -21,7 +21,7 @@ public class SearchDocResponse {
     private int review;
     private int hospital_id;
     private String hospital_name;
-    private List<String> speciality;
+    private String speciality;
     private List<String> language;
     private ConsultationFees consultation_fees;
     private boolean isAvailableToday = false;

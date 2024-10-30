@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface StateRepository extends JpaRepository<State, Integer> {
 
-    @Query("SELECT s FROM State s WHERE s.country IS NOT NULL")
-    List<State> findAllWithCountry();
+    @Query("SELECT s FROM State s JOIN FETCH s.country c WHERE c.id IS NOT NULL")
+    List<State> findStatesWithExistingCountry();
 }

@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ConsultationFees {
-    private Float visit;
-    private Float call;
+    private String visit;
+    private String call;
 }

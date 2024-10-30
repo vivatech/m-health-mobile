@@ -404,7 +404,7 @@ public class PublicService {
     }
 
     public ResponseEntity<?> getStateList(Locale locale) {
-        List<State> states = stateRepository.findAllWithCountry();
+        List<State> states = stateRepository.findStatesWithExistingCountry();
         if (!states.isEmpty()) {
             List<StateResponse> data = new ArrayList<>();
             for(State t : states){

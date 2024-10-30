@@ -145,12 +145,12 @@ public class DoctorService {
                         else callCharge = ch.getConsultationFees();
                     }
                 }
-                fees.setVisit(visitCharge);
-                fees.setCall(callCharge);
+                fees.setVisit(visitCharge > 0 ? "$" + visitCharge : "Free");
+                fees.setCall(callCharge > 0 ? "$" + callCharge : "Free");
                 docResponse.setConsultation_fees(fees);
 
                 docResponse.setAbout_me(val.getAboutMe());
-                docResponse.setExperience(val.getExperience() + Constants.EXPERIENCE);
+                docResponse.setExperience(val.getExperience() + " " + Constants.EXPERIENCE);
                 String imagePath = MvcUriComponentsBuilder
                         .fromMethodName(FileController.class, "serveFiles", val.getProfilePicture()).build().toUri().toString();
                 docResponse.setProfile_picture(imagePath);
@@ -194,7 +194,8 @@ public class DoctorService {
                     for(DoctorSpecialization item : doctorSpecializationList) {
                         specialities.add(item.getSpecializationId().getName());
                     }
-                    docResponse.setSpeciality(specialities);
+                    String specialitiesString = String.join(", ", specialities);
+                    docResponse.setSpeciality(specialitiesString);
                 }
 
                 List<DoctorAvailability> set = getAvailabilityByDay(LocalDate.now(), val);
@@ -281,25 +282,27 @@ public class DoctorService {
                 }
             }
 
-            Page<SearchDocResponse> paginationResponse = TransformDto.paginate(responses, request.getPage(), request.getPageSize());
-            responseMap.put("doctorList", paginationResponse.getContent());
-            responseMap.put("totalCount", responses.size());
+            // Set total Count for each record
+            Integer totalCount = responses.size();
+            responses.forEach(doc -> doc.setTotal_count(totalCount));
 
-            if(responseMap.size()>0){
+            Page<SearchDocResponse> paginationResponse = TransformDto.paginate(responses, request.getPage(), request.getPageSize());
+
+            if(!paginationResponse.getContent().isEmpty()){
                 String msg = messageSource.getMessage(Constants.FOUND_COUNT_DOCTOR,null,locale);
-                msg = msg.replace("{{count}}",String.valueOf(responses.size()));
+                msg = msg.replace("{{count}}", "{" + responses.size() + "}");
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
                         msg,
-                        responseMap
+                        paginationResponse.getContent()
                 ));
             }else{
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.NO_RECORD_FOUND_CODE,
                         Constants.NO_RECORD_FOUND_CODE,
                         messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale),
-                        responseMap
+                        paginationResponse.getContent()
                 ));
             }
         } else {
