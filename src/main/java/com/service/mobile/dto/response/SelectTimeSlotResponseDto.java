@@ -8,13 +8,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.Map;
 
 @Setter
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
 public class SelectTimeSlotResponseDto {
-    private ProfileDto userdata;
-    private List<ConsultDetailSummaryDto> summary;
+    private Map<String, Object> userdata;
+    private ConsultDetailSummaryDto summary;
     private List<PaymentMethodResponse.Option> payment_method;
 }

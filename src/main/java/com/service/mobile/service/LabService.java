@@ -76,6 +76,7 @@ public class LabService {
                 for (LabSubCategoryMaster subCat : subCategoryList) {
                     SubCategoryDto dto = new SubCategoryDto();
                     dto.setCat_id(categoryId.toString());
+                    dto.setSub_cat_id(subCat.getSubCatId());
                     dto.setCat_name(labCategoryMasters.getCatName());
                     dto.setSub_cat_name(subCat.getSubCatName());
 

@@ -15,7 +15,7 @@ import java.util.List;
 public class AddLabRequestDto {
     private Integer user_id;
     private Integer case_id;
-    private Integer lab_id;
+    private String  lab_id;
     private List<Integer> sub_cat_id;
     private LocalDate report_date;
     private String report_time_slot;

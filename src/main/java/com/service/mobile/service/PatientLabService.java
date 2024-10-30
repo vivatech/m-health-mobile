@@ -18,7 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -397,11 +396,11 @@ public class PatientLabService {
             BillInfoDto dto = publicService.getBillInfo(request.getLab_id(),request.getReport_id(),request.getCollection_mode(),request.getCurrency_option());
             List<ReportDto> report = new ArrayList<>();
             int i = 0;
-            for (Map.Entry<Integer, String> entry : dto.getReportName().entrySet()) {
+            for (Map.Entry<Integer, String> entry : dto.getReportNameKeyList().entrySet()) {
                 report.add(new ReportDto(entry.getKey(), entry.getValue()));
                 i++;
             }
-            dto.setReportNameDto(report);
+            dto.setReportName(report);
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
@@ -414,9 +413,7 @@ public class PatientLabService {
     public ResponseEntity<?> selectTimeSlot(BillInfoRequest request, Locale locale) {
         Integer userId = request.getUser_id();
         Integer caseId = request.getCase_id();
-        ConsultDetailSummaryDto summary = getConsultDetailSummary(caseId);
-        List<ConsultDetailSummaryDto> summaryDtos = new ArrayList<>();
-        summaryDtos.add(summary);
+        ConsultDetailSummaryDto summary = getConsultDetailSummary(caseId) == null ? new ConsultDetailSummaryDto() : getConsultDetailSummary(caseId);
 
         Users userdata = usersRepository.findById(userId).orElse(null);
 
@@ -433,15 +430,14 @@ public class PatientLabService {
         List<PaymentMethodResponse.Option> getPaymentMethod = publicService.getPaymentMethod();
         paymentMethod.addAll(getPaymentMethod);
 
-        ProfileDto userData = new ProfileDto();
-        userData.setAddress(userdata.getResidenceAddress());
-        userData.setContact_number(userdata.getContactNumber());
-        userData.setCountry_code(userdata.getCountryCode());
-
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("address", userdata.getResidenceAddress());
+        userData.put("contact_number", userdata.getContactNumber());
+        userData.put("country_code", userdata.getCountryCode());
 
         SelectTimeSlotResponseDto responseData = new SelectTimeSlotResponseDto();
         responseData.setUserdata(userData);
-        responseData.setSummary(summaryDtos);
+        responseData.setSummary(summary);
         responseData.setPayment_method(paymentMethod);
 
         return ResponseEntity.status(HttpStatus.OK).body(new Response(
@@ -485,7 +481,7 @@ public class PatientLabService {
         Integer caseId = data.getCase_id();
         List<Integer> subCatId = data.getSub_cat_id();
         Consultation consultDetail = consultationRepository.findById(data.getCase_id()).orElse(null);
-        Users labUser = usersRepository.findById(data.getLab_id()).orElse(null);
+        Users labUser = usersRepository.findById(Integer.valueOf(data.getLab_id())).orElse(null);
         Users patient = usersRepository.findById(data.getUser_id()).orElse(null);
 
         // Check only for doctor prescribed request
@@ -502,9 +498,9 @@ public class PatientLabService {
             labOrder.setAddress(data.getAddress());
             labOrder.setSampleCollectionMode(data.getSample_collection_mode());
 
-            BillInfoDto billData = publicService.getBillInfo(data.getLab_id(), subCatId, data.getSample_collection_mode(),"");
+            BillInfoDto billData = publicService.getBillInfo(Integer.valueOf(data.getLab_id()), subCatId, data.getSample_collection_mode(),"");
 
-            Float finalConsultationFees = billData.getTotal();
+            float finalConsultationFees = billData.getTotal();
             Float currencyAmount = 0F;
             if ("slsh".equalsIgnoreCase(currencyOption)) {
                 currencyAmount = getSlshAmount(finalConsultationFees);
@@ -552,9 +548,9 @@ public class PatientLabService {
             labOrder.setPatientId(patient);
             labOrder.setDoctor(consultDetail != null ? consultDetail.getDoctorId() : null);
             labOrder.setLab(labUser);
-            labOrder.setReportCharge(billData.getReportCharge());
-            labOrder.setExtraCharges(billData.getExtraCharges());
-            labOrder.setAmount(billData.getTotal());
+            labOrder.setReportCharge(billData.getReportCharge().floatValue());
+            labOrder.setExtraCharges(billData.getExtraCharges().floatValue());
+            labOrder.setAmount(billData.getTotal().floatValue());
             labOrder.setPaymentStatus(data.getPayment_method().toString().equalsIgnoreCase("Pay_Home")? OrderStatus.Pending : OrderStatus.Completed);
             labOrder.setTransactionId(!"Pay_Home".equals(data.getPayment_method()) ? transactionId : null);
             labOrder.setReportDate(data.getReport_date());
