@@ -1059,7 +1059,7 @@ public class PatientService {
                         messageSource.getMessage(Constants.HEALTH_TIP_CANCELLED,null,locale)
                 ));
             }else {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
                         Constants.UNAUTHORIZED_CODE,
                         Constants.UNAUTHORIZED_CODE,
                         messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED,null,locale)
