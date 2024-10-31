@@ -1003,10 +1003,14 @@ public class PublicService {
         List<GetLabDto> response = new ArrayList<>();
         List<LabPrice> labPrices = labPriceRepository.findBySubCatIdAndUserTypeAndStatus(labcatIds,UserType.Lab,"A");
         for(LabPrice price:labPrices){
-            GetLabDto temp = new GetLabDto();
-            temp.setUser_id(price.getLabUser().getUserId());
-            temp.setClinic_name(price.getLabUser().getClinicName());
-            response.add(temp);
+            int lab_id = price.getLabUser().getUserId();
+            Users labUser = usersRepository.findById(lab_id).orElse(null);
+            if(labUser != null){
+                GetLabDto temp = new GetLabDto();
+                temp.setUser_id(lab_id);
+                temp.setClinic_name(labUser.getClinicName());
+                response.add(temp);
+            }
         }
         return response;
     }
@@ -1021,10 +1025,12 @@ public class PublicService {
         }
 
         Users lab = usersRepository.findById(labId).orElse(new Users());
+        List<LabDetailDto> labDetailList = new ArrayList<>();
         LabDetailDto labDetail = new LabDetailDto(labId, lab.getClinicName(), lab.getHospitalAddress());
+        labDetailList.add(labDetail);
 
         String labVisitOnly = "";
-        Float diagnosisCost = 0.0f;
+        float diagnosisCost = 0.0f;
         Boolean isHomeVisit = true;
         String onlyLabVisitMsg = null;
         String onlyLabVisitMsgApi = null;
@@ -1053,7 +1059,7 @@ public class PublicService {
             }
         }
 
-        Float collectionCharge = 0.0f;
+        float collectionCharge = 0.0f;
         if ("Home_Visit".equalsIgnoreCase(collectionMode)) {
             collectionCharge = 50.0f * paymentRate;
         } else if ("Lab_Visit".equalsIgnoreCase(collectionMode)) {
@@ -1062,11 +1068,11 @@ public class PublicService {
             collectionCharge = (onlyLabVisitMsg != null) ? 0.0f : 50.0f * paymentRate;
         }
 
-        Float totalPrice = diagnosisCost + collectionCharge;
+        float totalPrice = diagnosisCost + collectionCharge;
 
         BillInfoDto response = new BillInfoDto(
                 lab.getClinicName(),
-                labDetail,
+                labDetailList,
                 labVisitOnly,
                 isHomeVisit,
                 onlyLabVisitMsg,
@@ -1076,9 +1082,9 @@ public class PublicService {
                 currencySym + " " + String.format("%.2f", totalPrice),
                 reportName,
                 null,
-                diagnosisCost,
-                collectionCharge,
-                totalPrice
+                (int) diagnosisCost,
+                (int) collectionCharge,
+                (int) totalPrice
         );
 
         return response;

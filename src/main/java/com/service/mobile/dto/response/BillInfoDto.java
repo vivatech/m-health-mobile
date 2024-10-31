@@ -16,7 +16,7 @@ import java.util.Map;
 @NoArgsConstructor
 public class BillInfoDto {
     private String labName;
-    private LabDetailDto labDetail;
+    private List<LabDetailDto> labDetail;
     private String labVisitOnly;
     private Boolean isHomeVisit;
     private String only_lab_visit_msg;
@@ -24,9 +24,9 @@ public class BillInfoDto {
     private String diagnosisCost;
     private String collectionCharge;
     private String totalPrice;
-    private Map<Integer, String> reportName;
-    private List<ReportDto> reportNameDto;
-    private Float reportCharge;
-    private Float extraCharges;
-    private Float total;
+    private Map<Integer, String> reportNameKeyList;
+    private List<ReportDto> reportName;
+    private Integer reportCharge;
+    private Integer extraCharges;
+    private Integer total;
 }
