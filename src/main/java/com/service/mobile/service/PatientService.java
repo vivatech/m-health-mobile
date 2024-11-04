@@ -1042,37 +1042,54 @@ public class PatientService {
 
     public ResponseEntity<?> cancelHealthTipPackage(Locale locale, CancelHealthTipPackageRequest request) {
         HealthTipPackage healthTipPackages = null;
-        if(request.getPackage_id()!=null && request.getPackage_id()!=0){
-            healthTipPackages = healthTipPackageRepository.findById(request.getPackage_id()).orElse(null);
-        }
-        if(healthTipPackages!=null){
-            HealthTipPackageUser packageUser = healthTipPackageUserService.getByIdAndExpiery(request.getPurchased_package_user_id(),YesNo.No);
-            if(packageUser!=null){
-                packageUser.setExpiredAt(LocalDateTime.now());
-                packageUser.setIsCancel(YesNo.Yes);
-                packageUser.setIsExpire(YesNo.Yes);
-
-                healthTipPackageUserService.save(packageUser);
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.HEALTH_TIP_CANCELLED,null,locale)
-                ));
-            }else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                        Constants.UNAUTHORIZED_CODE,
-                        Constants.UNAUTHORIZED_CODE,
-                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED,null,locale)
-                ));
-            }
-        }else {
+        if (request.getUser_id() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.UNAUTHORIZED_CODE,
+                    Constants.UNAUTHORIZED_CODE,
+                    messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
+            ));
+        } else if (request.getPackage_id() == null) {
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
             ));
-        }
+        } else if (request.getPurchased_package_user_id() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.UNAUTHORIZED_CODE,
+                    Constants.UNAUTHORIZED_CODE,
+                    messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED, null, locale)
+            ));
+        } else {
+            healthTipPackages = healthTipPackageRepository.findById(request.getPackage_id()).orElse(null);
+            if (healthTipPackages != null) {
+                HealthTipPackageUser packageUser = healthTipPackageUserService.getByIdAndExpiery(request.getPurchased_package_user_id(), YesNo.No);
+                if (packageUser != null) {
+                    packageUser.setExpiredAt(LocalDateTime.now());
+                    packageUser.setIsCancel(YesNo.Yes);
+                    packageUser.setIsExpire(YesNo.Yes);
 
+                    healthTipPackageUserService.save(packageUser);
+                    return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                            Constants.SUCCESS_CODE,
+                            Constants.SUCCESS_CODE,
+                            messageSource.getMessage(Constants.HEALTH_TIP_CANCELLED, null, locale)
+                    ));
+                } else {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                            Constants.UNAUTHORIZED_CODE,
+                            Constants.UNAUTHORIZED_CODE,
+                            messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED, null, locale)
+                    ));
+                }
+            } else {
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                        Constants.NO_RECORD_FOUND_CODE,
+                        Constants.BLANK_DATA_GIVEN_CODE,
+                        messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
+                ));
+            }
+        }
     }
 
     public ResponseEntity<?> getHealthTipsList(Locale locale, HealthTipsListRequest request) {
@@ -1910,6 +1927,13 @@ public class PatientService {
         }
     }
     public ResponseEntity<?> getResendOTP(Locale locale, ResendOtpRequest request) {
+        if(request.getContact_number()==null || request.getContact_number().isEmpty()){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.UNAUTHORIZED_CODE,
+                    Constants.UNAUTHORIZED_MSG,
+                    messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
+            ));
+        }
         Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
         if(users != null){
             //generate OTP

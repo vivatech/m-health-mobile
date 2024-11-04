@@ -1,11 +1,15 @@
 package com.service.mobile.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.service.mobile.config.Constants;
 import com.service.mobile.dto.dto.AddLabRequestDto;
 import com.service.mobile.dto.dto.LabRequestDto;
 import com.service.mobile.dto.request.*;
+import com.service.mobile.dto.response.Response;
 import com.service.mobile.service.PatientLabService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +23,8 @@ public class PatientLabControllerJson {
 
     @Autowired
     private PatientLabService patientLabService;
+    @Autowired
+    private MessageSource messageSource;
 
 
     @PostMapping(path="/lab-requests", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -35,7 +41,7 @@ public class PatientLabControllerJson {
     @PostMapping(path="/add-report", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> addReports(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
                             @RequestBody AddReportRequest request) {
-        return patientLabService.addReports(request,locale);
+        return patientLabService.addReports(request, locale);
     }
 
     @PostMapping(path = "/delete-added-report", consumes = {MediaType.APPLICATION_JSON_VALUE})

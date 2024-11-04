@@ -10,5 +10,4 @@ import lombok.NoArgsConstructor;
 public class ResendOtpRequest {
     private String contact_number;
     private String is_registered;
-    private String otp_code;
 }

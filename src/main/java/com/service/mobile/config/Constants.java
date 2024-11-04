@@ -219,4 +219,6 @@ public class Constants {
     public static final String OTP_NOT_MATCHED = "Otp.Not.Matched";
     public static final String EXCEPTION = "Exception.Message";
     public static final String USER_IN_ACTIVE = "User is In-active";
+    public static final String CATEGORY_CANNOT_BLANK = "app.category.not.blank";
+    public static final String SUB_CATEGORY_CANNOT_BLANK = "app.subcategory.not.blank";
 }

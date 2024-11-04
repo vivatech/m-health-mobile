@@ -222,31 +222,54 @@ public class PatientLabService {
     }
 
     public ResponseEntity<?> addReports(AddReportRequest request, Locale locale) {
-        List<LabConsultation> consultations = labConsultationRepository.findByPatientIdCategoryIdSubCategoryIdLabOrderAndCaseNull(
-                request.getUser_id(),request.getCategory_id(),request.getSub_cat_id());
-        if(consultations.isEmpty()){
-            LabConsultation consultation = new LabConsultation();
-            Users patient = usersRepository.findById(request.getUser_id()).orElse(null);
-            LabCategoryMaster category = labCategoryMasterRepository.findById(request.getCategory_id()).orElse(null);
-            LabSubCategoryMaster subCategory = labSubCategoryMasterRepository.findById(request.getSub_cat_id()).orElse(null);
 
-            consultation.setPatient(patient);
-            consultation.setCategoryId(category);
-            consultation.setSubCatId((subCategory!=null)?subCategory.getSubCatId():null);
-            consultation.setLabConsultCreatedAt(LocalDateTime.now());
-            labConsultationRepository.save(consultation);
+        if (request.getCategory_id() == null){
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.CATEGORY_CANNOT_BLANK, null, locale)
+            ));
+        }else if(request.getSub_cat_id() == null){
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.SUB_CATEGORY_CANNOT_BLANK, null, locale)
+            ));
+        }
+        else if (request.getUser_id() == null) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                    Constants.NO_RECORD_FOUND_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
+            ));
+        }
+        else {
+            List<LabConsultation> consultations = labConsultationRepository.findByPatientIdCategoryIdSubCategoryIdLabOrderAndCaseNull(
+                    request.getUser_id(), request.getCategory_id(), request.getSub_cat_id());
+            if (consultations.isEmpty()) {
+                LabConsultation consultation = new LabConsultation();
+                Users patient = usersRepository.findById(request.getUser_id()).orElse(null);
+                LabCategoryMaster category = labCategoryMasterRepository.findById(request.getCategory_id()).orElse(null);
+                LabSubCategoryMaster subCategory = labSubCategoryMasterRepository.findById(request.getSub_cat_id()).orElse(null);
 
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.RECORD_CREATED_SUCCESS,null,locale)
-            ));
-        }else{
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                    Constants.NO_CONTENT_FOUNT_CODE,
-                    Constants.NO_CONTENT_FOUNT_CODE,
-                    messageSource.getMessage(Constants.RECORD_ALREADY_EXISTS,null,locale)
-            ));
+                consultation.setPatient(patient);
+                consultation.setCategoryId(category);
+                consultation.setSubCatId((subCategory != null) ? subCategory.getSubCatId() : null);
+                consultation.setLabConsultCreatedAt(LocalDateTime.now());
+                labConsultationRepository.save(consultation);
+
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.RECORD_CREATED_SUCCESS, null, locale)
+                ));
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        messageSource.getMessage(Constants.RECORD_ALREADY_EXISTS, null, locale)
+                ));
+            }
         }
     }
 
@@ -277,51 +300,60 @@ public class PatientLabService {
     }
 
     public ResponseEntity<?> selectLab(SelectLabRequest request, Locale locale) {
-        SelectLabResponse data = new SelectLabResponse();
-        List<LabConsultation> consultations = searchLabReportsForPatient(request);
-        if(!consultations.isEmpty()){
-            List<Integer> labcatIds = new ArrayList<>();
-            List<ReportSubCatDto> categoriesDtos = new ArrayList<>();
-            for(LabConsultation consultation:consultations){
-                if(consultation.getSubCatId()!=null && consultation.getSubCatId()!=0){
-                    LabSubCategoryMaster subCategoryMaster = labSubCategoryMasterRepository.findById(consultation.getSubCatId()).orElse(null);
-                    if(subCategoryMaster!=null){
-                        ReportSubCatDto temp = new ReportSubCatDto();
-                        temp.setSub_cat_id(subCategoryMaster.getSubCatId());
-                        temp.setSub_cat_name(subCategoryMaster.getSubCatName());
+        if(request.getUser_id() == null){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.UNAUTHORIZED_CODE,
+                    Constants.UNAUTHORIZED_CODE,
+                    messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
+            ));
+        }
+        else {
+            SelectLabResponse data = new SelectLabResponse();
+            List<LabConsultation> consultations = searchLabReportsForPatient(request);
+            if (!consultations.isEmpty()) {
+                List<Integer> labcatIds = new ArrayList<>();
+                List<ReportSubCatDto> categoriesDtos = new ArrayList<>();
+                for (LabConsultation consultation : consultations) {
+                    if (consultation.getSubCatId() != null && consultation.getSubCatId() != 0) {
+                        LabSubCategoryMaster subCategoryMaster = labSubCategoryMasterRepository.findById(consultation.getSubCatId()).orElse(null);
+                        if (subCategoryMaster != null) {
+                            ReportSubCatDto temp = new ReportSubCatDto();
+                            temp.setSub_cat_id(subCategoryMaster.getSubCatId());
+                            temp.setSub_cat_name(subCategoryMaster.getSubCatName());
 
-                        categoriesDtos.add(temp);
-                        labcatIds.add(subCategoryMaster.getSubCatId());
+                            categoriesDtos.add(temp);
+                            labcatIds.add(subCategoryMaster.getSubCatId());
+                        }
                     }
                 }
+                List<GetLabDto> labList = publicService.getLabInfo(labcatIds);
+                List<LabsDto> labs = new ArrayList<>();
+                for (GetLabDto labDto : labList) {
+                    LabsDto temp = new LabsDto();
+                    temp.setId(labDto.getUser_id());
+                    temp.setName(labDto.getClinic_name());
+                    labs.add(temp);
+                }
+
+                ConsultDetailSummaryDto summary = consultDetailSummary(request.getCase_id(), request.getUser_id());
+
+                data.setReports(categoriesDtos);
+                data.setLabs(labs);
+                data.setSummary(summary);
+
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.LAB_FOUND_SUCCESSFULLY, null, locale),
+                        data
+                ));
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale)
+                ));
             }
-            List<GetLabDto> labList = publicService.getLabInfo(labcatIds);
-            List<LabsDto> labs = new ArrayList<>();
-            for(GetLabDto labDto:labList){
-                LabsDto temp = new LabsDto();
-                temp.setId(labDto.getUser_id());
-                temp.setName(labDto.getClinic_name());
-                labs.add(temp);
-            }
-
-            ConsultDetailSummaryDto summary =consultDetailSummary(request.getCase_id(),request.getUser_id());
-
-            data.setReports(categoriesDtos);
-            data.setLabs(labs);
-            data.setSummary(summary);
-
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.LAB_FOUND_SUCCESSFULLY,null,locale),
-                    data
-            ));
-        }else{
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-            ));
         }
     }
 
