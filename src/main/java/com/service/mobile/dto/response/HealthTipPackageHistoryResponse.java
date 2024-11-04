@@ -1,5 +1,6 @@
 package com.service.mobile.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.service.mobile.dto.enums.DurationType;
 import com.service.mobile.dto.enums.PackageType;
 import com.service.mobile.dto.enums.YesNo;
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 public class HealthTipPackageHistoryResponse {
     private String category_name;
     private PackageType package_type;
+    @JsonProperty("Frequency")
     private DurationType Frequency;
     private String package_price;
     private YesNo is_expire;
