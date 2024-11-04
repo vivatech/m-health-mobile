@@ -271,7 +271,7 @@ public class PatientControllerJson {
     public ResponseEntity<?> resendOTP(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                        Locale locale,
                                        @RequestBody ResendOtpRequest request) {
-        if(request.getContact_number() != null && request.getOtp_code() != null && request.getIs_registered() != null){
+        if(request.getContact_number() != null && request.getIs_registered() != null){
             return patientService.getResendOTP(locale,request);
         }else{
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
