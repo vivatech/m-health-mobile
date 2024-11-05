@@ -2,6 +2,7 @@ package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.controllers.FileController;
+import com.service.mobile.dto.availabiltyDoctorDto.DoctorAvailabilityRequest;
 import com.service.mobile.dto.dto.CommentsDto;
 import com.service.mobile.dto.dto.ConsultationFees;
 import com.service.mobile.dto.dto.SearchDocResponse;
@@ -437,23 +438,27 @@ public class DoctorService {
     }
 
 
-    public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, DoctorAvailabilityListLatestRequest request) {
-        Users slot_type_id = usersRepository.findById(request.getDoctor_id()).orElse(null);
+    public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, DoctorAvailabilityRequest request) {
+        //new-order-date
+        LocalDate newOrderDate = LocalDate.parse("2020-09-29");
+        Users slot_type_id = usersRepository.findById(Integer.parseInt(request.getDoctor_id())).orElse(null);
         String dayName = request.getDate().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH).toLowerCase();
         List<SlotMaster> slotListing = slotMasterRepository.findBySlotTypeIdAndSlotDay(slot_type_id.getSlotTypeId(),dayName);
 
 
         List<Consultation> constantsList = consultationRepository.findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
-                RequestType.Book,request.getNew_order_date(), request.getUser_id(),request.getDoctor_id(), ConsultationType.Paid,request.getDate()
+                RequestType.Book,newOrderDate, Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()), ConsultationType.Paid,request.getDate()
         );
         Consultation last_consult_data = (constantsList.isEmpty())?null:constantsList.get(0);
 
         ConsultationType consultation_type = ConsultationType.Paid;
-        if(request.getConsult_type() == FeeType.VIDEO){
-            request.setConsult_type(FeeType.CALL);
+
+        FeeType type = FeeType.visit;
+        if(request.getConsult_type().equalsIgnoreCase("video")){
+            type = FeeType.call;
         }
 
-        List<Charges> doctorchargesList = chargesRepository.findByUserIdAndConsultantType(request.getDoctor_id(),request.getConsult_type());
+        List<Charges> doctorchargesList = chargesRepository.findByUserIdAndConsultantType(Integer.parseInt(request.getDoctor_id()),type);
         Charges doctorcharges = (doctorchargesList.isEmpty())?null:doctorchargesList.get(0);
 
         String rem_cnt_msg = "";
@@ -467,7 +472,7 @@ public class DoctorService {
             LocalDateTime sconsultant_date = last_consult_data.getConsultationDate().atTime(time_array);
 
             Long free_consult_cnt = consultationRepository.countByPatientIdAndDoctorIdCreatedAtAndConstaitionTypeConsultTypeAndConstationDate(
-                    request.getUser_id(),request.getDoctor_id(),request.getNew_order_date(),
+                    Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()),newOrderDate,
                     ConsultationType.Free,last_consult_data.getConsultType(),sconsultant_date
                     );
             Long rem_cnt = Long.valueOf(free_cnt.getValue()) - free_consult_cnt;
@@ -483,13 +488,13 @@ public class DoctorService {
 
 
         for (SlotMaster slot : slotListing) {
-            Long available_count = doctorAvailabilityRepository.countBySlotIdAndDoctorId(slot.getSlotId(),request.getDoctor_id());
+            Long available_count = doctorAvailabilityRepository.countBySlotIdAndDoctorId(slot.getSlotId(), Integer.parseInt(request.getDoctor_id()));
 
             Long check_consultant_count = consultationRepository.countBySlotIdAndDoctorIdConsultationDate(
-                    slot.getSlotId(),request.getDoctor_id(),  request.getDate());
+                    slot.getSlotId(),Integer.parseInt(request.getDoctor_id()),  request.getDate());
 
             List<Consultation> consultantInfoList = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(
-                    request.getDoctor_id(), slot.getSlotId(),request.getDate(), RequestType.Cancel);
+                    Integer.parseInt(request.getDoctor_id()), slot.getSlotId(),request.getDate(), RequestType.Cancel);
 
             Consultation consultantInfo = (consultantInfoList.isEmpty())?null:constantsList.get(0);
 
@@ -642,21 +647,21 @@ public class DoctorService {
             }
 
             Map<String, Float> chargesMap = new HashMap<>();
-
+            ViewProfileResponse dto = new ViewProfileResponse();
             if (charges != null && !charges.isEmpty()) {
                 for (Charges charge : charges) {
-                    String commissionKey = charge.getFeeType() + "_commission";
-                    String finalConsFeeKey = charge.getFeeType() + "_final_consultation_fees";
-                    String feesKey = charge.getFeeType() + "_consultation_fees";
-
-                    chargesMap.put(commissionKey, charge.getCommission());
-                    chargesMap.put(finalConsFeeKey, charge.getFinalConsultationFees());
-                    chargesMap.put(feesKey, charge.getConsultationFees());
+                    if(charge.getFeeType().name().equalsIgnoreCase("call")){
+                        dto.setCall_commission(charge.getCommission());
+                        dto.setCall_consultation_fees(charge.getConsultationFees());
+                        dto.setCall_final_consultation_fees(charge.getFinalConsultationFees());
+                    }else if(charge.getFeeType().name().equalsIgnoreCase("visit")){
+                        dto.setVisit_commission(charge.getCommission());
+                        dto.setVisit_consultation_fees(charge.getConsultationFees());
+                        dto.setVisit_final_consultation_fees(charge.getFinalConsultationFees());
+                    }
                 }
             }
 
-            List<Object> response = new ArrayList<>();
-            ViewProfileResponse dto = new ViewProfileResponse();
             dto.setFirst_name(doctor.getFirstName());
             dto.setLast_name(doctor.getLastName());
             dto.setEmail(doctor.getEmail());
@@ -689,13 +694,11 @@ public class DoctorService {
             dto.setReview(commentsDtos);
             dto.setGender(doctor.getGender());
 
-            response.add(dto);
-            response.add(chargesMap);
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.PROFILE_FETCH_SUCCESSFULLY,null,locale),
-                    response
+                    dto
             ));
         }else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
