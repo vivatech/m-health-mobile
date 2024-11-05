@@ -26,6 +26,8 @@ public class ViewProfileResponse {
     private String residence_address;
     private String professional_identification_number;
     private Double rating;
+    private String spcialization;
+    private Float experience;
     private String extra_activities;
     private String about_me;
     private String language;

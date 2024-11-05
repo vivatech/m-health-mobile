@@ -413,13 +413,13 @@ public class PatientLabService {
 
     public ResponseEntity<?> getBillInfo(BillInfoRequest request, Locale locale) {
         if(request.getLab_id()==null){
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.LAB_ID_REQUIRED,null,locale)
             ));
         }else if(request.getReport_id().isEmpty()){
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.REPORT_ID_REQUIRED,null,locale)

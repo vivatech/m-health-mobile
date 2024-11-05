@@ -611,7 +611,7 @@ public class DoctorService {
                     specsFinalString = messageSource.getMessage(Constants.GENRAL_PRACTITIONER,null,locale);
             }else{
                 for(DoctorSpecialization docSpec :specialization){
-                    specsFinalString = specsFinalString+ docSpec.getSpecializationId().getName()+",";
+                    specsFinalString = specsFinalString + docSpec.getSpecializationId().getName()+",";
                 }
             }
             String[] languageIds  = doctor.getLanguageFluency().split(",");
@@ -690,6 +690,8 @@ public class DoctorService {
             dto.setLanguage(languageName);
             dto.setReview(commentsDtos);
             dto.setGender(doctor.getGender());
+            dto.setExperience(doctor.getExperience());
+            dto.setSpcialization(specsFinalString);
 
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
