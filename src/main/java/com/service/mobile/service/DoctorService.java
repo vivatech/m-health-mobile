@@ -570,12 +570,9 @@ public class DoctorService {
         response.put("data", slotArray);
 
 
-        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                Constants.SUCCESS_CODE,
-                Constants.SUCCESS_CODE,
-                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+        return ResponseEntity.status(HttpStatus.OK).body(
                 response
-        ));
+        );
     }
 
 
