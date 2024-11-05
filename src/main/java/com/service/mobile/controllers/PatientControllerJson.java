@@ -1,6 +1,7 @@
 package com.service.mobile.controllers;
 
 import com.service.mobile.config.Constants;
+import com.service.mobile.dto.availabiltyDoctorDto.DoctorAvailabilityRequest;
 import com.service.mobile.dto.dto.ResendOtpRequest;
 import com.service.mobile.dto.request.*;
 import com.service.mobile.dto.response.Response;
@@ -81,7 +82,7 @@ public class PatientControllerJson {
 
     @PostMapping(path = "/doctor-availability-list-latest", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> doctorAvailabilityListLatest(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
-                                       Locale locale, @RequestBody DoctorAvailabilityListLatestRequest request) {
+                                       Locale locale, @RequestBody DoctorAvailabilityRequest request) {
         return doctorService.doctorAvailabilityListLatest(locale,request);
     }
 

@@ -65,7 +65,7 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     @Query("Select count(u.caseId) from Consultation u where u.requestType in ?1 and u.slotId.slotId in ?2 and u.doctorId.userId = ?3 and u.consultationDate = ?4")
     Long countByRequestTypeAndSlotIdAndDoctorIdAndConsultationDate(List<RequestType> list, List<Integer> allocatedSlots, Integer doctorId, LocalDate consultationDate);
 
-    @Query("Select u from Consultation u where u.requestType = ?1 and u.createdAt = ?2 and u.patientId.userId = ?3 and" +
+    @Query("Select u from Consultation u where u.requestType = ?1 and u.createdAt = DATE(?2) and u.patientId.userId = ?3 and" +
             " u.doctorId.userId = ?4 and u.consultationType = ?5 and u.consultationDate = ?6 order by u.consultationDate DESC, u.createdAt DESC")
     List<Consultation> findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
             RequestType requestType,LocalDate newOrderDate, Integer patient, Integer doctor

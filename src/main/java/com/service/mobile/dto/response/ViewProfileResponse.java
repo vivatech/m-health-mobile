@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.Map;
 
 @Setter
 @Getter
@@ -30,4 +31,10 @@ public class ViewProfileResponse {
     private String language;
     private List<CommentsDto> review;
     private String gender;
+    private Float call_commission;
+    private Float call_consultation_fees;
+    private Float call_final_consultation_fees;
+    private Float visit_commission;
+    private Float visit_consultation_fees;
+    private Float visit_final_consultation_fees;
 }
