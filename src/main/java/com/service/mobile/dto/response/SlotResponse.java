@@ -10,15 +10,15 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SlotResponse {
-    private Integer slotId;
-    private String slotDay;
-    private String slotTime;
-    private String userId;
-    private Integer caseId;
-    private String slotStatus;
-    private Boolean isCancel;
-    private String actualStatus;
-    private String consultationType;
-    private String consultType;
+    private Integer slot_id;
+    private String slot_day;
+    private String slot_time;
+    private String user_id;
+    private Integer case_id;
+    private String slot_status;
+    private Boolean is_cancel;
+    private String actual_status;
+    private String consultation_type;
+    private String consult_type;
     private String displayTime;
 }
