@@ -509,7 +509,7 @@ public class DoctorService {
 
             Integer timeLimit = Integer.parseInt(globalConfigurationRepository.findByKey("CANCEL_CONSULT_PATIENT").getValue());
 
-            Boolean isCancel = (timeLimit <= diff) && (consultantInfo != null && consultantInfo.getRequestType() == RequestType.Book && consultantDateTime.isAfter(currentDateTime));
+            Integer isCancel = (timeLimit <= diff) && (consultantInfo != null && consultantInfo.getRequestType() == RequestType.Book && consultantDateTime.isAfter(currentDateTime)) ? 1 : 0;
 
             if (check_consultant_count > 0 || currentDateTime.isAfter(consultantDateTime)) {
                 available_count = 0L;

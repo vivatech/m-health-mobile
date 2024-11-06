@@ -16,7 +16,7 @@ public class SlotResponse {
     private String user_id;
     private Integer case_id;
     private String slot_status;
-    private Boolean is_cancel;
+    private Integer is_cancel;
     private String actual_status;
     private String consultation_type;
     private String consult_type;
