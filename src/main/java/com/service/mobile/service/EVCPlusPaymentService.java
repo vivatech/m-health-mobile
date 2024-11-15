@@ -48,19 +48,7 @@ public class EVCPlusPaymentService {
     @Value("${waafi.currency.code}")
     private String currencyCode;
 
-    @Autowired
-    private LanguageService languageService;
-
-    @Autowired
-    private SDFSMSService sdfsmsService;
-
-    public OrderPaymentResponse processPayment(String serviceName, String ref_transaction_id,String reference_number,
-                                              double totalAmount, String contactNumber,
-                                              Users patient, String currencyOptions, String serviceType, Locale locale) throws JsonProcessingException {
-
-        if(locale != null && locale.getLanguage().equalsIgnoreCase("en")) {
-            LocaleContextHolder.setDefaultLocale(Locale.ENGLISH);
-        }
+    public Map<String, Object> processPayment(String serviceName, Map<String, Object> transactionDetail, double totalAmount, String contactNumber, String patientId, String currencyOptions, String serviceType) throws JsonProcessingException {
 
         Map<String, Object> apiParams = new HashMap<>();
         apiParams.put("schemaVersion", "1.0");
@@ -74,11 +62,11 @@ public class EVCPlusPaymentService {
             serviceParams.put("merchantUid", merchantUid);
             serviceParams.put("apiUserId", userId);
             serviceParams.put("apiKey", apiKey);
-            serviceParams.put("userReferenceId", ref_transaction_id);
-            serviceParams.put("transactionId", ref_transaction_id);
+            serviceParams.put("userReferenceId", transactionDetail.get("ref_transaction_id"));
+            serviceParams.put("transactionId", transactionDetail.get("ref_transaction_id"));
             serviceParams.put("amount", totalAmount);
-            serviceParams.put("description", "Refunded from " + projectName + " for case id : " + reference_number);
-            serviceParams.put("referenceId", reference_number);
+            serviceParams.put("description", "Refunded from " + projectName + " for case id : " + transactionDetail.getOrDefault("reference_number", ""));
+            serviceParams.put("referenceId", transactionDetail.get("reference_number"));
 
             apiParams.put("serviceParams", serviceParams);
         } else {
@@ -92,7 +80,7 @@ public class EVCPlusPaymentService {
                     "invoiceId", Instant.now().getEpochSecond(),
                     "amount", totalAmount,
                     "description", "Payment from " + projectName,
-                    "referenceId", patient.getUserId(),
+                    "referenceId", patientId,
                     "currency", currencyOptions
             ));
 
@@ -116,7 +104,7 @@ public class EVCPlusPaymentService {
                 countryCode + contactNumber,
                 apiParams,
                 objectMapper.writeValueAsString(response),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneId.systemDefault()).format(Instant.now())
+                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(Instant.now())
         ));
 
 
@@ -132,29 +120,26 @@ public class EVCPlusPaymentService {
                 if ("API_REFUND".equals(serviceName)) {
                     // Notification will not be sent
                 } else if (!"NOD".equals(serviceType)) {
-                    String message = languageService.gettingMessages("SYSTEM_PAYMENT_FAILED", patient.getFirstName()+ " "+patient.getLastName(),totalAmount);
-                    sdfsmsService.sendOTPSMS(contactNumber,message);
+                    // TODO: Notification will sent
                     // HelperComponent.sendPaymentNotification(patientId, totalAmount, "SYSTEM_PAYMENT_SUCCESS", currencyOptions);
                 }
-                return new OrderPaymentResponse( 200,"",customResponse);
+                return Map.of("data", customResponse, "status", 200);
             }
             else {
                 if(!"API_REFUND".equals(serviceName)){
-                    String message = languageService.gettingMessages("SYSTEM_PAYMENT_FAILED", patient.getFirstName()+ " "+patient.getLastName(),totalAmount);
-                    sdfsmsService.sendOTPSMS(contactNumber,message);
+                    // TODO: Notification will sent
                     // sendPaymentNotification(patientId, totalAmount, "SYSTEM_PAYMENT_FAILED", currencyOptions);
                 }
                 String errorMessage = getErrorMessage(response);
-                return  new OrderPaymentResponse( 100,errorMessage,null);
+                return Map.of("message", errorMessage, "status", 100);
             }
 
         } else {
             if(!"API_REFUND".equals(serviceName)){
-                String message = languageService.gettingMessages("SYSTEM_PAYMENT_FAILED", patient.getFirstName()+ " "+patient.getLastName(),totalAmount);
-                sdfsmsService.sendOTPSMS(contactNumber,message);
+                // TODO: Notification will sent
                 // sendPaymentNotification(patientId, totalAmount, "SYSTEM_PAYMENT_FAILED", currencyOptions);
             }
-            return  new OrderPaymentResponse( 100,"Payment failed",null);
+            return Map.of("message", "Payment failed", "status", 100);
         }
     }
 
