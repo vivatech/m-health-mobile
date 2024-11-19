@@ -372,8 +372,7 @@ public class PatientService {
                     Constants.UNAUTHORIZED_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
             ));
-        }
-        else {
+        } else {
             if (request.getDoctor_id() != null && request.getSlot_id() != null
                     && request.getDate() != null && request.getTime_slot() != null
                     && request.getPayment_method() != null && !request.getPayment_method().isEmpty()
@@ -383,8 +382,8 @@ public class PatientService {
                 Consultation patient = publicService.checkClientBooking(request.getSlot_id(), request.getDate(), request.getUser_id());
                 Users doctor = usersRepository.findById(request.getDoctor_id()).orElse(null);
                 SlotMaster slotMaster = slotMasterRepository.findById(request.getSlot_id()).orElse(null);
-                if (consultation != null) {
-                    if (patient != null) {
+                if (consultation == null){
+                    if (patient == null) {
                         LocalDate currentDate = LocalDate.now();
 
                         List<Consultation> consultations = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(request.getDoctor_id(), request.getSlot_id(), RequestType.Book, request.getDate());
@@ -416,7 +415,7 @@ public class PatientService {
                             float finalAmount = 0.00f;
                             FeeType type = (request.getConsult_type().equalsIgnoreCase("video")) ? FeeType.call : FeeType.visit;
 
-                            Charges charges = chargesRepository.findByUserIdAndFeeType(doctor, type);
+                            Charges charges = chargesRepository.findCharges(doctor.getUserId(), type);
                             if (charges != null) {
                                 finalAmount = charges.getFinalConsultationFees();
                             }
@@ -442,15 +441,15 @@ public class PatientService {
                             response.setAddedType(AddedType.Patient);
                             response.setAddedBy(request.getUser_id());
                             response.setCreatedAt(LocalDateTime.now());
-
-                            //save into Orders table
+                            response.setConsultStatus(ConsultStatus.pending);
+                            response.setReportSuggested("1");
+                            consultationRepository.save(response);
                             Orders orders = saveIntoOrdersTable(users, doctor, request, response, finalAmount, coupon, charges);
 
                             if ("visit_home".equals(request.getConsult_type()) && request.getAllocated_nurse() != null) {
                                 consultation.setAssignedTo(request.getAllocated_nurse());
+                                consultationRepository.save(response);
                             }
-
-                            consultationRepository.save(response);
 
                             //local [somalian payment]
                             String transactionType = "";
@@ -458,14 +457,19 @@ public class PatientService {
                                 transactionType = "paid_against_video";
                             else transactionType = "paid_against_clinic_visit";
 
-                            WalletTransaction transaction = saveWalletTransaction(request, patient, orders, transactionType, "consultation", finalAmount);
+                            WalletTransaction transaction = saveWalletTransaction(request, response, orders, transactionType, "consultation", finalAmount);
 
-                            createConsultationTransaction(orders, consultation, request, "consultation", transaction);
+                            createConsultationTransaction(orders, response, request, "consultation", transaction);
 
+                            Object datas = null;
+                            Map<String, Object> data = new HashMap<>();
+                            data.put("order_id",orders.getId());
+                            datas = data;
                             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                     SUCCESS_MESSAGE,
                                     Constants.SUCCESS_CODE,
-                                    messageSource.getMessage(Constants.SUCCESS, null, locale)
+                                    messageSource.getMessage(Constants.PAYMENT_SUCCESS, null, locale),
+                                    datas
                             ));
                         }
                     } else {
@@ -482,28 +486,15 @@ public class PatientService {
                             messageSource.getMessage(Constants.SLOT_NOT_AVAILABLE, null, locale)
                     ));
                 }
-            } else if (request.getPackage_id() != null) {
-                HealthTipPackage healthTipPackage = healthTipPackageRepository.findById(request.getPackage_id()).orElse(null);
-                LocalDateTime expire = null;
-                List<PackageUser> packageUser = packageUserRepository.findByUserIdAndPackageId(request.getUser_id(), request.getPackage_id());
-                expire = (packageUser.size() > 0) ? packageUser.get(0).getExpiredAt() : null;
-
-                Float finalAmount = 0.00f;
-
-                Coupon coupon = null;
-                if(request.getCoupon_code() != null && !request.getCoupon_code().isEmpty()){
-                    coupon = couponRepository.findByNameStatusAndCategory(request.getCoupon_code(), "HEALTHTIP", 1);
-                    if(coupon != null){
-//                        finalAmount = paymentCalculation()
-                    }
-                }
-
-//                HealthTipOrders healthTipOrders = saveHealthTipOrder(users, healthTipPackage, request, coupon, dateTime, lang, finalAmount);
-
             }
-
+            else {
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                        Constants.NO_CONTENT_FOUNT,
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        messageSource.getMessage(Constants.NO_CONTENT_FOUNT, null, locale)
+                ));
+            }
         }
-        return null;
     }
 
     private void createConsultationTransaction(Orders orders, Consultation consultation, BookDoctorRequest request, String serviceType, WalletTransaction transaction) throws JsonProcessingException {
@@ -1088,6 +1079,7 @@ public class PatientService {
                     order.setCurrency(currencyOption);
                     order.setStatus(OrderStatus.Completed);
                     order.setCoupon(coupon);
+                    order.setCreatedAt(LocalDateTime.now());
                     healthTipOrdersRepository.save(order);
 
                     // Handle Coupon Usage
@@ -1166,13 +1158,14 @@ public class PatientService {
                     userPackage.setExpiredAt(expiredAt);
                     userPackage.setCreatedAt(LocalDateTime.now());
                     userPackage.setIsExpire(YesNo.No);
+                    userPackage.setIsCancel(YesNo.No);
                     userPackage.setIsVideo(request.getType().equals("video") ? YesNo.Yes : YesNo.No);
                     healthTipPackageUserRepository.save(userPackage);
 
                     publicService.sendHealthTipsMsg(model, "HEALTHTIPS_SUPSCRIPTION_CONFIRMATION", "PATIENT");
 
                     return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                            Constants.SUCCESS_CODE,
+                            SUCCESS_MESSAGE,
                             Constants.SUCCESS_CODE,
                             messageSource.getMessage(Constants.HTIP_CAT_SUBSCRIBED,null,locale)
                     ));

@@ -1,5 +1,6 @@
 package com.service.mobile.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.availabiltyDoctorDto.DoctorAvailabilityRequest;
 import com.service.mobile.dto.dto.ResendOtpRequest;
@@ -90,7 +91,7 @@ public class PatientController {
     public ResponseEntity<?> bookDoctor(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                          Locale locale,
                                          @ModelAttribute BookDoctorRequest request
-    ) {
+    ) throws JsonProcessingException {
         return patientService.bookDoctor(locale,request);
     }
 

@@ -21,6 +21,6 @@ public interface ChargesRepository extends JpaRepository<Charges,Integer> {
     @Query("Select u from Charges u where u.userId = ?1 and u.feeType = ?2")
     List<Charges> findByUserIdAndConsultantType(Integer doctorId, FeeType consultType);
 
-    @Query(value = "SELECT * FROM mh_charges WHERE user_id = ?1 AND fee_type = ?2 ORDER BY charge_id DESC LIMIT 1", nativeQuery = true)
-    Charges findByUserIdAndFeeType(Users doctor, FeeType type);
+    @Query(value = "Select u from Charges u where u.userId = ?1 and u.feeType = ?2")
+    Charges findCharges(Integer doctor, FeeType type);
 }
