@@ -32,34 +32,34 @@ public class LabSubCategoryMaster {
     @Column(name = "sub_cat_name_sl")
     private String subCatNameSl;
 
-    @Column(name = "image")
-    private String image;
+//    @Column(name = "image")
+//    private String image;
 
-    @Column(name = "alt_text")
-    private String altText;
+//    @Column(name = "alt_text")
+//    private String altText;
 
-    @Column(name = "description")
-    private String description;
+//    @Column(name = "description")
+//    private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "sub_cat_status", nullable = false)
     private CategoryStatus subCatStatus = CategoryStatus.Active;
+//
+//    @Column(name = "what_test_is")
+//    private String whatTestIs;
 
-    @Column(name = "what_test_is")
-    private String whatTestIs;
+//    @Column(name = "test_prepration")
+//    private String testPreparation;
+//
+//    @Column(name = "understand_result")
+//    private String understandResult;
+//
+//    @Column(name = "expect_deliver")
+//    private String expectDeliver;
 
-    @Column(name = "test_prepration")
-    private String testPreparation;
-
-    @Column(name = "understand_result")
-    private String understandResult;
-
-    @Column(name = "expect_deliver")
-    private String expectDeliver;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "is_featured", nullable = false)
-    private YesNo isFeatured = YesNo.No;
+//    @Enumerated(EnumType.STRING)
+//    @Column(name = "is_featured", nullable = false)
+//    private YesNo isFeatured = YesNo.No;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "is_home_consultant_available", nullable = false)

@@ -545,29 +545,24 @@ public class PatientLabService {
             if (!"Pay_Home".equals(data.getPayment_method())) {
                 Users user = patient;
                 String refId = generateDateTime();
-                OrderPaymentResponse payment = eVCPlusPaymentService.processPayment(
-                        "API_PURCHASE",refId,labOrder.getId().toString()
-                        ,amount,data.getPayer_mobile()
-                        ,patient,currencyOption,"paid_against_lab_report",locale);
+                WalletTransaction userTransaction = getWalletTransaction(data, finalConsultationFees, user);
 
-                if (payment != null && payment.getStatus() == 100) {
+                Map<String, Object> transactionDetail = new HashMap<>();
+                transactionDetail.put("ref_transaction_id", userTransaction.getTransactionId());
+                transactionDetail.put("reference_number", userTransaction.getReferenceNumber());
+
+                Map<String, Object> payment = eVCPlusPaymentService.processPayment(
+                        "API_PURCHASE",transactionDetail
+                        ,amount,data.getPayer_mobile()
+                        ,patient.getUserId().toString(),currencyOption,"paid_against_lab_report");
+
+                if (payment != null && !payment.get("status").equals(200)) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                             Constants.NO_CONTENT_FOUNT_CODE,
                             Constants.NO_CONTENT_FOUNT_CODE,
-                            payment.getMessage()
+                            "Failed"
                     ));
                 } else {
-
-                    WalletTransaction userTransaction = new WalletTransaction();
-                    userTransaction.setOrderId(null);
-                    userTransaction.setAmount(finalConsultationFees);
-                    userTransaction.setServiceType("load_wallet_balance");
-                    userTransaction.setTransactionType("wallet_balance_load");
-                    userTransaction.setTransactionStatus("Completed");
-                    userTransaction.setIsDebitCredit("CREDIT");
-                    userTransaction.setPatientId(user);
-                    userTransaction.setPayerMobile(data.getPayer_mobile());
-                    userTransaction.setPaymentNumber(data.getPayer_mobile());
 
                     Integer userTrans = publicService.createTransaction(userTransaction,UserType.Patient,null,null);
                     publicService.addUserWalletBalance(userTrans,patient,UserType.Patient,"CREDIT",finalConsultationFees);
@@ -612,6 +607,20 @@ public class PatientLabService {
                     messageSource.getMessage(Constants.ORDER_ALREADY_CREATED,null,locale)
             ));
         }
+    }
+
+    private WalletTransaction getWalletTransaction(AddLabRequestDto data, float finalConsultationFees, Users user) {
+        WalletTransaction userTransaction = new WalletTransaction();
+        userTransaction.setOrderId(null);
+        userTransaction.setAmount(finalConsultationFees);
+        userTransaction.setServiceType("load_wallet_balance");
+        userTransaction.setTransactionType("wallet_balance_load");
+        userTransaction.setTransactionStatus("Pending");
+        userTransaction.setIsDebitCredit("CREDIT");
+        userTransaction.setPatientId(user);
+        userTransaction.setPayerMobile(data.getPayer_mobile());
+        userTransaction.setPaymentNumber(data.getPayer_mobile());
+        return userTransaction;
     }
 
     private void sendNotifications(LabOrders labOrder, String sampleCollectionMode, boolean b) {

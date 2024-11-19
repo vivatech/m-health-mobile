@@ -221,4 +221,5 @@ public class Constants {
     public static final String USER_IN_ACTIVE = "User is In-active";
     public static final String CATEGORY_CANNOT_BLANK = "app.category.not.blank";
     public static final String SUB_CATEGORY_CANNOT_BLANK = "app.subcategory.not.blank";
+    public static final String PAYMENT_SUCCESS = "app.payment.success";
 }

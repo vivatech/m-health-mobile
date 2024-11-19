@@ -1,5 +1,6 @@
 package com.service.mobile.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.service.mobile.config.Constants;
 import com.service.mobile.config.Utility;
 import com.service.mobile.dto.dto.*;
@@ -166,6 +167,10 @@ public class PatientService {
     private Utility utility;
     @Value("${app.otp.expiry.minutes}")
     private Long expiryTime;
+    @Autowired
+    private ChargesRepository chargesRepository;
+    @Value("${app.transaction.mode}")
+    private Integer transactionMode;
 
     public ResponseEntity<?> actionUpdateFullname(UpdateFullNameRequest request, Locale locale) {
         if(request !=null&&request.getUser_id()!=null)
@@ -359,113 +364,253 @@ public class PatientService {
         ));
     }
 
-    public ResponseEntity<?> bookDoctor(Locale locale, BookDoctorRequest request) {
-        LocalDateTime consultantDateTime = getConsultantDateTime(request.getDate(), request.getTime_slot());
-        Consultation consultation = publicService.checkRealTimeBooking(request.getSlot_id(),request.getDate(),request.getDoctor_id());
-        Consultation patient = publicService.checkClientBooking(request.getSlot_id(),request.getDate(),request.getUser_id());
-
+    public ResponseEntity<?> bookDoctor(Locale locale, BookDoctorRequest request) throws JsonProcessingException {
         Users users = usersRepository.findById(request.getUser_id()).orElse(null);
-        Users doctor = usersRepository.findById(request.getDoctor_id()).orElse(null);
-        HealthTipPackage healthTipPackage = healthTipPackageRepository.findById(request.getPackage_id()).orElse(null);
-        SlotMaster slotMaster = slotMasterRepository.findById(request.getSlot_id()).orElse(null);
-        if(request.getPayment_method()!=null && !request.getPayment_method().isEmpty()){
-            if(consultation!=null){
-                if(patient!=null){
-                    LocalDateTime expire = null;
-                    List<PackageUser> packageUser = packageUserRepository.findByUserIdAndPackageId(request.getUser_id(),request.getPackage_id());
-                    expire = (packageUser.size()>0)?packageUser.get(0).getExpiredAt():null;
-                    LocalDate currentDate = LocalDate.now();
+        if (users == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.UNAUTHORIZED_MSG,
+                    Constants.UNAUTHORIZED_CODE,
+                    messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
+            ));
+        } else {
+            if (request.getDoctor_id() != null && request.getSlot_id() != null
+                    && request.getDate() != null && request.getTime_slot() != null
+                    && request.getPayment_method() != null && !request.getPayment_method().isEmpty()
+                    && request.getConsult_type() != null && !request.getConsult_type().isEmpty()) {
 
-                    List<Consultation> consultations = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(request.getDoctor_id(),request.getSlot_id(), RequestType.Book,request.getDate());
-                    if(currentDate.isAfter(request.getDate()) || currentDate.isEqual(request.getDate())){
-                        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                                Constants.NO_CONTENT_FOUNT_CODE,
-                                Constants.NO_CONTENT_FOUNT_CODE,
-                                messageSource.getMessage(Constants.CANNOT_BOOK_APPOINTMENT,null,locale)
-                                ));
-                    }else if(expire!=null && consultantDateTime.isAfter(expire)){
-                        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                                Constants.NO_CONTENT_FOUNT_CODE,
-                                Constants.NO_CONTENT_FOUNT_CODE,
-                                messageSource.getMessage(Constants.CANNOT_BOOK_APPOINTMENT,null,locale)
-                                ));
-                    }else if(consultations.size()>0){
-                        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                                Constants.NO_CONTENT_FOUNT_CODE,
-                                Constants.NO_CONTENT_FOUNT_CODE,
-                                messageSource.getMessage(Constants.SORRY_DOCTOR_ALREADY_BOOKED,null,locale)
-                                ));
-                    }else{
-                        List<DoctorAvailability> nurses = new ArrayList<>();
-                        if(request.getConsult_type().equalsIgnoreCase("visit_home")){
-                            nurses = publicService.nursesAssign(request.getSlot_id());
-                        }
-                        if(nurses.size()<=0 && request.getConsult_type().equalsIgnoreCase("visit_home")){
+                Consultation consultation = publicService.checkRealTimeBooking(request.getSlot_id(), request.getDate(), request.getDoctor_id());
+                Consultation patient = publicService.checkClientBooking(request.getSlot_id(), request.getDate(), request.getUser_id());
+                Users doctor = usersRepository.findById(request.getDoctor_id()).orElse(null);
+                SlotMaster slotMaster = slotMasterRepository.findById(request.getSlot_id()).orElse(null);
+                if (consultation == null){
+                    if (patient == null) {
+                        LocalDate currentDate = LocalDate.now();
+
+                        List<Consultation> consultations = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(request.getDoctor_id(), request.getSlot_id(), RequestType.Book, request.getDate());
+                        if (currentDate.isAfter(request.getDate()) || currentDate.isEqual(request.getDate())) {
                             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                     Constants.NO_CONTENT_FOUNT_CODE,
                                     Constants.NO_CONTENT_FOUNT_CODE,
-                                    messageSource.getMessage(Constants.NURSE_ARE_BUSY,null,locale)
+                                    messageSource.getMessage(Constants.CANNOT_BOOK_APPOINTMENT, null, locale)
+                            ));
+                        } else if (consultations.size() > 0) {
+                            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                                    Constants.NO_CONTENT_FOUNT_CODE,
+                                    Constants.NO_CONTENT_FOUNT_CODE,
+                                    messageSource.getMessage(Constants.SORRY_DOCTOR_ALREADY_BOOKED, null, locale)
+                            ));
+                        } else {
+                            List<DoctorAvailability> nurses = new ArrayList<>();
+                            if (request.getConsult_type().equalsIgnoreCase("visit_home")) {
+                                nurses = publicService.nursesAssign(request.getSlot_id());
+                            }
+                            if (nurses.size() <= 0 && request.getConsult_type().equalsIgnoreCase("visit_home")) {
+                                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                                        Constants.NO_CONTENT_FOUNT_CODE,
+                                        Constants.NO_CONTENT_FOUNT_CODE,
+                                        messageSource.getMessage(Constants.NURSE_ARE_BUSY, null, locale)
+                                ));
+                            }
+
+                            float finalAmount = 0.00f;
+                            FeeType type = (request.getConsult_type().equalsIgnoreCase("video")) ? FeeType.call : FeeType.visit;
+
+                            Charges charges = chargesRepository.findCharges(doctor.getUserId(), type);
+                            if (charges != null) {
+                                finalAmount = charges.getFinalConsultationFees();
+                            }
+
+                            Coupon coupon = null;
+                            if (request.getCoupon_code() != null && !request.getCoupon_code().isEmpty()) {
+                                coupon = couponRepository.findByNameStatusAndCategory(request.getCoupon_code(), "CONSULTATION", 1);
+                                if (coupon != null) {
+                                    finalAmount = paymentCalculation(coupon, finalAmount);
+                                }
+                            }
+
+                            Consultation response = new Consultation();
+                            response.setPatientId(users);
+                            response.setDoctorId(doctor);
+                            response.setConsultationDate(request.getDate());
+                            response.setConsultType(request.getConsult_type());
+                            response.setSlotId(slotMaster);
+                            response.setMessage(request.getMessage());
+                            response.setRequestType(RequestType.Inprocess);
+                            response.setConsultationType(request.getConsultation_type());
+                            response.setPaymentMethod(request.getPayment_method());
+                            response.setAddedType(AddedType.Patient);
+                            response.setAddedBy(request.getUser_id());
+                            response.setCreatedAt(LocalDateTime.now());
+                            response.setConsultStatus(ConsultStatus.pending);
+                            response.setReportSuggested("1");
+                            consultationRepository.save(response);
+                            Orders orders = saveIntoOrdersTable(users, doctor, request, response, finalAmount, coupon, charges);
+
+                            if ("visit_home".equals(request.getConsult_type()) && request.getAllocated_nurse() != null) {
+                                consultation.setAssignedTo(request.getAllocated_nurse());
+                                consultationRepository.save(response);
+                            }
+
+                            //local [somalian payment]
+                            String transactionType = "";
+                            if (request.getConsult_type().equalsIgnoreCase("video"))
+                                transactionType = "paid_against_video";
+                            else transactionType = "paid_against_clinic_visit";
+
+                            WalletTransaction transaction = saveWalletTransaction(request, response, orders, transactionType, "consultation", finalAmount);
+
+                            createConsultationTransaction(orders, response, request, "consultation", transaction);
+
+                            Object datas = null;
+                            Map<String, Object> data = new HashMap<>();
+                            data.put("order_id",orders.getId());
+                            datas = data;
+                            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                                    SUCCESS_MESSAGE,
+                                    Constants.SUCCESS_CODE,
+                                    messageSource.getMessage(Constants.PAYMENT_SUCCESS, null, locale),
+                                    datas
                             ));
                         }
-
-                        Consultation response = new Consultation();
-                        consultation.setPatientId(users);
-                        consultation.setDoctorId(doctor);
-                        consultation.setConsultationDate(request.getDate());
-
-                        consultation.setPackageId(healthTipPackage);
-                        consultation.setConsultType(request.getConsult_type());
-                        consultation.setSlotId(slotMaster);
-                        consultation.setMessage(request.getMessage());
-                        consultation.setRequestType(RequestType.Inprocess);
-                        consultation.setConsultationType(request.getConsultation_type());
-                        consultation.setPaymentMethod(request.getPayment_method());
-                        consultation.setAddedType(AddedType.Patient);
-                        consultation.setAddedBy(request.getUser_id());
-                        consultation.setCreatedAt(LocalDateTime.now());
-
-                        if ("visit_home".equals(request.getConsult_type())) {
-                            consultation.setAssignedTo(request.getAllocated_nurse());
-                        }
-
-                        consultationRepository.save(consultation);
-                        //NOTE-TODO write this functionality
-//                        evcPlusPaymentService.processPayment()
-                        /*
-                        * $data = $this->actionPayment($consul_model->case_id,$data['user_id'],$currency_option,$coupon_code,$payment_number);
-                            $response = json_decode($data);
-
-                            if($response->status!=200){
-                                $consul_model->request_type = "Failed";
-                                $this->HelperComponent()->sendAgentNotificationMsg($consul_model,'AGENT_NOTIFICATION_FOR_FAILED_CONSULTATION');
-                                Yii::$app->db->createCommand()->delete('mh_consultation', ['case_id' => $consul_model->case_id])->execute();
-                            }
-                        * */
-                        return null;
+                    } else {
+                        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                                Constants.NO_CONTENT_FOUNT_CODE,
+                                Constants.NO_CONTENT_FOUNT_CODE,
+                                messageSource.getMessage(Constants.SAME_SLOT_BOOKED, null, locale)
+                        ));
                     }
-                }else{
+                } else {
                     return ResponseEntity.status(HttpStatus.OK).body(new Response(
                             Constants.NO_CONTENT_FOUNT_CODE,
                             Constants.NO_CONTENT_FOUNT_CODE,
-                            messageSource.getMessage(Constants.SAME_SLOT_BOOKED,null,locale)
+                            messageSource.getMessage(Constants.SLOT_NOT_AVAILABLE, null, locale)
                     ));
                 }
-            }else{
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        messageSource.getMessage(Constants.SLOT_NOT_AVAILABLE,null,locale)
-                        ));
             }
-        }else{
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.NO_CONTENT_FOUNT_CODE,
-                    Constants.NO_CONTENT_FOUNT_CODE,
-                    messageSource.getMessage(Constants.SELECT_PAYMENT_METHOD,null,locale)
-            ));
+            else {
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                        Constants.NO_CONTENT_FOUNT,
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        messageSource.getMessage(Constants.NO_CONTENT_FOUNT, null, locale)
+                ));
+            }
+        }
+    }
+
+    private void createConsultationTransaction(Orders orders, Consultation consultation, BookDoctorRequest request, String serviceType, WalletTransaction transaction) throws JsonProcessingException {
+        Map<String, Object> transactionDetail = new HashMap<>();
+        transactionDetail.put("ref_transaction_id", transaction.getTransactionId());
+        transactionDetail.put("reference_number", transaction.getReferenceNumber());
+
+        if(transactionMode != null && transactionMode == 1){
+            transaction.setTransactionId(generateDateTime());
+            transaction.setTransactionStatus("Completed");
+            orders.setStatus(OrderStatus.Completed);
+            consultation.setRequestType(RequestType.Book);
+            consultation.setPaymentMethod(request.getPayment_method());
+        }
+        else if(transactionMode!=null && transactionMode==2){
+            transaction.setTransactionId(generateDateTime());
+            transaction.setTransactionStatus("Cancel");
+            orders.setStatus(OrderStatus.Cancelled);
+            consultation.setRequestType(RequestType.Cancel);
+            consultation.setCancelMessage("Payment FAILED");
+            consultation.setPaymentMethod(request.getPayment_method());
+        }
+        else {
+            //todo : manage the transactions based on the request.getPaymentMethod()
+            Map<String, Object> payment = evcPlusPaymentService.processPayment("API_PURCHASE", transactionDetail, orders.getAmount(), transaction.getPayerMobile(), consultation.getPatientId().getUserId().toString(), "USD", serviceType);
+            if(payment.get("status").equals(200)){
+                transaction.setTransactionId(generateDateTime());
+                transaction.setTransactionStatus("Completed");
+                orders.setStatus(OrderStatus.Completed);
+                consultation.setRequestType(RequestType.Book);
+                consultation.setPaymentMethod(request.getPayment_method());
+            }
+            else{
+                transaction.setTransactionId(generateDateTime());
+                transaction.setTransactionStatus("Cancel");
+                orders.setStatus(OrderStatus.Cancelled);
+                consultation.setRequestType(RequestType.Cancel);
+                consultation.setCancelMessage("Payment FAILED");
+                consultation.setPaymentMethod(request.getPayment_method());
+            }
+        }
+        ordersRepository.save(orders);
+        consultationRepository.save(consultation);
+        walletTransactionRepository.save(transaction);
+    }
+
+    private WalletTransaction saveWalletTransaction(BookDoctorRequest request, Consultation patient, Orders orders, String transactionType, String serviceType, float finalAmount) {
+        WalletTransaction transaction = new WalletTransaction();
+        transaction.setPaymentMethod(request.getPayment_method());
+        transaction.setPatientId(patient.getPatientId());
+        transaction.setOrderId(orders.getId());
+        transaction.setPaymentGatewayType(request.getPayment_method());
+        transaction.setTransactionDate(LocalDateTime.now());
+        transaction.setTransactionType(transactionType);
+        transaction.setAmount(orders.getAmount());
+        transaction.setIsDebitCredit("debit");
+        transaction.setPayeeId(1); // payee is super admin and his id is 1
+        transaction.setPayerId(patient.getPatientId().getUserId());
+        transaction.setReferenceNumber(patient.getPatientId().getUserId().toString());  //this is same as payer no
+
+        Users adminContactNumber = usersRepository.findById(1).orElse(null);
+        transaction.setPayeeMobile(adminContactNumber.getContactNumber());
+        transaction.setPayerMobile(request.getPayment_number() == null || request.getPayment_number().isEmpty() ? patient.getPatientId().getContactNumber() : request.getPayment_number());
+
+        transaction.setCreatedAt(LocalDateTime.now());
+        transaction.setUpdatedAt(LocalDateTime.now());
+        transaction.setRefTransactionId(orders.getId().toString());
+        transaction.setPaymentNumber(request.getPayment_number() == null || request.getPayment_number().isEmpty() ? null : request.getPayment_number());
+
+        //        todo : need to implement mh_wallet
+        transaction.setCurrentBalance(0.0F); // by-default
+        transaction.setPreviousBalance(0.0f); // by-default
+        transaction.setServiceType(serviceType); //Service_Type_Lab_Report
+        transaction.setTransactionId(generateDateTime());
+        transaction.setTransactionStatus("Pending");
+
+        return transaction;
+    }
+    String generateDateTime() {
+        return new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + (int) (Math.random() * 1000);
+    }
+
+    private float paymentCalculation(Coupon coupon, float amount) {
+        float discountAmount = amount;
+        if(coupon != null && discountAmount > 0.0f){
+            if(coupon.getType().equals(OfferType.FREE)) discountAmount = coupon.getDiscountAmount();
+            else if(coupon.getDiscountType().equals(DiscountType.PERCENTAGE)){
+                discountAmount = (coupon.getDiscountAmount() * discountAmount) /100;
+            }
+            else {
+                if(coupon.getDiscountAmount() > discountAmount) discountAmount = 0.0f;
+                else discountAmount = discountAmount - coupon.getDiscountAmount();
+            }
+        }
+        return discountAmount;
+    }
+
+    private Orders saveIntoOrdersTable(Users patient, Users doctor, BookDoctorRequest request, Consultation consultation, Float finalAmount, Coupon coupon, Charges charges) {
+        Orders order = new Orders();
+        if(charges != null) {
+            order.setCommissionType(charges.getCommissionType());
+            order.setCommission(charges.getCommission());
+            order.setDoctorAmount(charges.getConsultationFees());
         }
 
+        order.setCaseId(consultation);
+        order.setPatientId(patient);
+        order.setDoctorId(doctor);
+        order.setAmount(finalAmount);
+        order.setCouponId(coupon);
+        order.setCurrency(request.getCurrency_option());
 
+        order.setCreatedAt(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setStatus(OrderStatus.Inprogress);
+        return ordersRepository.save(order);
     }
 
     private LocalDateTime getConsultantDateTime(LocalDate date, String timeSlot) {
@@ -934,6 +1079,7 @@ public class PatientService {
                     order.setCurrency(currencyOption);
                     order.setStatus(OrderStatus.Completed);
                     order.setCoupon(coupon);
+                    order.setCreatedAt(LocalDateTime.now());
                     healthTipOrdersRepository.save(order);
 
                     // Handle Coupon Usage
@@ -1012,13 +1158,14 @@ public class PatientService {
                     userPackage.setExpiredAt(expiredAt);
                     userPackage.setCreatedAt(LocalDateTime.now());
                     userPackage.setIsExpire(YesNo.No);
+                    userPackage.setIsCancel(YesNo.No);
                     userPackage.setIsVideo(request.getType().equals("video") ? YesNo.Yes : YesNo.No);
                     healthTipPackageUserRepository.save(userPackage);
 
                     publicService.sendHealthTipsMsg(model, "HEALTHTIPS_SUPSCRIPTION_CONFIRMATION", "PATIENT");
 
                     return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                            Constants.SUCCESS_CODE,
+                            SUCCESS_MESSAGE,
                             Constants.SUCCESS_CODE,
                             messageSource.getMessage(Constants.HTIP_CAT_SUBSCRIBED,null,locale)
                     ));
@@ -1039,6 +1186,7 @@ public class PatientService {
             ));
         }
     }
+
 
     public ResponseEntity<?> cancelHealthTipPackage(Locale locale, CancelHealthTipPackageRequest request) {
         HealthTipPackage healthTipPackages = null;
