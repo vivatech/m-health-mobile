@@ -1187,6 +1187,7 @@ public class PatientService {
         }
     }
 
+
     public ResponseEntity<?> cancelHealthTipPackage(Locale locale, CancelHealthTipPackageRequest request) {
         HealthTipPackage healthTipPackages = null;
         if (request.getUser_id() == null) {
