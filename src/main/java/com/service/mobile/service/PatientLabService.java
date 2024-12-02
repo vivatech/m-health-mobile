@@ -756,12 +756,10 @@ public class PatientLabService {
                 if(order.getReportId()!=null && order.getReportId()!=0){
                     labReportRequest = labReportRequestRepository.findById(order.getReportId()).orElse(null);
                 }
-                LabDetailDto labDetail = new LabDetailDto();
-                if(order.getLab()!=null){
-                    labDetail.setId(order.getLab().getUserId());
-                    labDetail.setName(order.getLab().getClinicName());
-                    labDetail.setAddress(order.getLab().getHospitalAddress());
-                }
+                Map<String, Object> labDetail = new HashMap<>();
+                labDetail.put("id", order.getLab().getUserId());
+                labDetail.put("name", order.getLab().getClinicName());
+                labDetail.put("address", order.getLab().getHospitalAddress());
 
                 // Order Details
                 OrderDetailsDto orderDetails = new OrderDetailsDto();

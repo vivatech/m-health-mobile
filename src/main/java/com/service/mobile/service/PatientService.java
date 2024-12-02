@@ -171,6 +171,8 @@ public class PatientService {
     private ChargesRepository chargesRepository;
     @Value("${app.transaction.mode}")
     private Integer transactionMode;
+    @Value("${app.ZoneId}")
+    private String zoneId;
 
     public ResponseEntity<?> actionUpdateFullname(UpdateFullNameRequest request, Locale locale) {
         if(request !=null&&request.getUser_id()!=null)
@@ -378,16 +380,21 @@ public class PatientService {
                     && request.getPayment_method() != null && !request.getPayment_method().isEmpty()
                     && request.getConsult_type() != null && !request.getConsult_type().isEmpty()) {
 
+                //Check weather doctor already consult with any other patient with given slots and time
                 Consultation consultation = publicService.checkRealTimeBooking(request.getSlot_id(), request.getDate(), request.getDoctor_id());
+                //Check weather patient already consult with any other doctor with given slots and time
                 Consultation patient = publicService.checkClientBooking(request.getSlot_id(), request.getDate(), request.getUser_id());
                 Users doctor = usersRepository.findById(request.getDoctor_id()).orElse(null);
                 SlotMaster slotMaster = slotMasterRepository.findById(request.getSlot_id()).orElse(null);
                 if (consultation == null){
                     if (patient == null) {
                         LocalDate currentDate = LocalDate.now();
+                        ZoneId somaliaZoneId = ZoneId.of(zoneId);
+                        LocalTime currentTime = LocalTime.now(somaliaZoneId);
 
                         List<Consultation> consultations = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(request.getDoctor_id(), request.getSlot_id(), RequestType.Book, request.getDate());
-                        if (currentDate.isAfter(request.getDate()) || currentDate.isEqual(request.getDate())) {
+                        if (currentDate.isAfter(request.getDate()) ||
+                                (currentDate.isEqual(request.getDate()) && currentTime.isAfter(slotMaster.getSlotStartTime()))) {
                             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                     Constants.NO_CONTENT_FOUNT_CODE,
                                     Constants.NO_CONTENT_FOUNT_CODE,
@@ -442,7 +449,7 @@ public class PatientService {
                             response.setAddedBy(request.getUser_id());
                             response.setCreatedAt(LocalDateTime.now());
                             response.setConsultStatus(ConsultStatus.pending);
-                            response.setReportSuggested("1");
+                            response.setReportSuggested("0");
                             consultationRepository.save(response);
                             Orders orders = saveIntoOrdersTable(users, doctor, request, response, finalAmount, coupon, charges);
 
@@ -1006,7 +1013,7 @@ public class PatientService {
         HealthTipPackage packageModel = healthTipPackageRepository.findById(request.getPackage_id()).orElse(null);
         if(packageModel!=null){
             Float packagePrice = (request.getType().equalsIgnoreCase("video")?
-                    packageModel.getPackagePriceVideo():packageModel.getPackagePrice());
+                    (packageModel.getPackagePriceVideo() == null ? 0.0f :packageModel.getPackagePriceVideo()):packageModel.getPackagePrice());
 
             if(packageModel.getType()==PackageType.Paid &&
                     (packagePrice==null || (packagePrice!=null && packagePrice<=0.0f))){

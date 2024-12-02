@@ -1026,7 +1026,7 @@ public class PublicService {
 
         Users lab = usersRepository.findById(labId).orElse(new Users());
         List<LabDetailDto> labDetailList = new ArrayList<>();
-        LabDetailDto labDetail = new LabDetailDto(labId, lab.getClinicName(), lab.getHospitalAddress());
+        LabDetailDto labDetail = new LabDetailDto(String.valueOf(labId), lab.getClinicName(), lab.getHospitalAddress());
         labDetailList.add(labDetail);
 
         String labVisitOnly = "";

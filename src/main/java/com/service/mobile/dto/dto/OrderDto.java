@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Setter
 @Getter
@@ -18,7 +19,7 @@ public class OrderDto {
     private String sample_collection_mode;
     private OrderStatus status;
     private Integer case_id;
-    private LabDetailDto labDetail;
+    private Map<String, Object> labDetail;
     private OrderDetailsDto orderDetails;
     private String lab_name;
     private String doc_prescription;
