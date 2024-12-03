@@ -151,7 +151,7 @@ public class PatientControllerJson {
     @PostMapping(path = "/healthtip-package-booking", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> healthTipPackageBooking(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                              @RequestBody HealthTipPackageBookingRequest request) {
+                                              @RequestBody HealthTipPackageBookingRequest request) throws JsonProcessingException {
         return patientService.healthTipPackageBooking(locale,request);
     }
 

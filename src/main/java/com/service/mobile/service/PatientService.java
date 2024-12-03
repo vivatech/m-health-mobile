@@ -1004,7 +1004,7 @@ public class PatientService {
         }
     }
 
-    public ResponseEntity<?> healthTipPackageBooking(Locale locale, HealthTipPackageBookingRequest request) {
+    public ResponseEntity<?> healthTipPackageBooking(Locale locale, HealthTipPackageBookingRequest request) throws JsonProcessingException {
         Users model = usersRepository.findById(request.getUser_id()).orElse(new Users());
         Coupon coupon = null;
         String currencyOption = (request.getCurrency_option()!=null && !request.getCurrency_option().isEmpty())?
@@ -1067,123 +1067,72 @@ public class PatientService {
                 String paymentNumber = (request.getPayment_number()!=null && !request.getPayment_number().isEmpty())?
                         request.getPayment_number():model.getContactNumber();
                 OrderPaymentResponse payment = null;
-                if(amount!=null && amount>0){
-                    paymentMethod = request.getPayment_method();
-                    if((paymentMethod.equalsIgnoreCase("waafi") ||
-                            paymentMethod.equalsIgnoreCase("zaad") ||
-                            paymentMethod.equalsIgnoreCase("evc"))){
-                        payment = publicService.orderPayment(request.getUser_id(),
-                                amount,0,currencyOption,"evc",new ArrayList<>(),paymentNumber);
-                    }
-                }
 
-                if((amount!=null && amount<=0) || (payment!=null && payment.getStatus()==200)){
-                    HealthTipOrders order = new HealthTipOrders();
-                    order.setPatientId(model);
-                    order.setHealthTipPackage(packageModel);
-                    order.setAmount(packagePrice);
-                    order.setCurrencyAmount(amount);
-                    order.setCurrency(currencyOption);
-                    order.setStatus(OrderStatus.Completed);
-                    order.setCoupon(coupon);
-                    order.setCreatedAt(LocalDateTime.now());
-                    healthTipOrdersRepository.save(order);
-
-                    // Handle Coupon Usage
-                    if (couponCodeId != null && couponCodeId !=0) {
-                        UsersUsedCouponCode usedCoupon = new UsersUsedCouponCode();
-                        usedCoupon.setUserId(request.getUser_id());
-                        usedCoupon.setCouponId(couponCodeId);
-                        usedCoupon.setCreatedAt(LocalDateTime.now());
-                        usersUsedCouponCodeRepository.save(usedCoupon);
-
-                        // Increment coupon usage (assuming Coupon entity and repository are defined)
-                        Coupon couponUsed = couponRepository.findById(couponCodeId).orElseThrow();
-                        couponUsed.setNumberOfUsed(couponUsed.getNumberOfUsed() + 1);
-                        couponRepository.save(couponUsed);
-                    }
+                if(amount!=null && amount>=0){
+                    //Health tip order entry
+                    HealthTipOrders order = savingHealthtipOrder(model, packageModel, packagePrice, amount, currencyOption, coupon);
 
                     // Wallet Transaction
                     Integer patientId = request.getUser_id();
-                    if (finalConsultationFees!=null && finalConsultationFees != 0) {
-                        // TODO get this from payment response(payment.getData()) dto
-                        String transactionId = (String)payment.getData().get("transaction_id");
-                        Users payerMobile = usersRepository.findById(SystemUserId).orElse(null);
-                        WalletTransaction userWalletBalance = publicService.getWalletBalance(patientId);
-                        WalletTransaction sysWalletBalance = publicService.getWalletBalance(SystemUserId);
+                    //wallet transaction entry
+                    WalletTransaction transaction = saveIntoWalletTransactionForHealthtip(request, patientId, order);
+                    //payment through evcplus system
+                    boolean paymentResponse = createHealthtipPayment(order, transaction);
+                    if(paymentResponse){
+                        // Add/Update User Package Details
+                        HealthTipPackageUser userPackage = new HealthTipPackageUser();
+                        userPackage.setHealthTipPackage(packageModel);
+                        userPackage.setUser(model);
+                        LocalDateTime now = LocalDateTime.now();
+                        LocalDateTime expiredAt = LocalDateTime.now();
 
-                        WalletTransaction userTransaction = new WalletTransaction();
-                        userTransaction.setOrderId(order.getId());
-                        userTransaction.setAmount(finalConsultationFees);
-                        userTransaction.setTransactionType("wallet_balance_load");
-                        userTransaction.setTransactionStatus("Completed");
-                        userTransaction.setServiceType("healthtip");
-                        userTransaction.setIsDebitCredit("CREDIT");
-                        userTransaction.setPatientId(model);
-                        userTransaction.setPayerMobile(payerMobile.getContactNumber());
-                        userTransaction.setPaymentNumber(paymentNumber);
-                        userTransaction =walletTransactionRepository.save(userTransaction);
+                        if (packageModel.getHealthTipDuration().getDurationType() == DurationType.Daily) {
+                            expiredAt = now.plus(packageModel.getHealthTipDuration().getDurationValue(), ChronoUnit.DAYS);
+                        } else {
+                            expiredAt = now.plus(packageModel.getHealthTipDuration().getDurationValue() * 30L, ChronoUnit.DAYS);
+                        }
+                        userPackage.setExpiredAt(expiredAt);
+                        userPackage.setCreatedAt(LocalDateTime.now());
+                        userPackage.setIsExpire(YesNo.No);
+                        userPackage.setIsCancel(YesNo.No);
+                        userPackage.setIsVideo(request.getType().equals("video") ? YesNo.Yes : YesNo.No);
+                        healthTipPackageUserRepository.save(userPackage);
 
-                        publicService.createTransaction(userTransaction,UserType.PATIENT,transactionId,null);
+                        // Handle Coupon Usage
+                        if (couponCodeId != null && couponCodeId !=0) {
+                            UsersUsedCouponCode usedCoupon = new UsersUsedCouponCode();
+                            usedCoupon.setUserId(request.getUser_id());
+                            usedCoupon.setCouponId(couponCodeId);
+                            usedCoupon.setCreatedAt(LocalDateTime.now());
+                            usersUsedCouponCodeRepository.save(usedCoupon);
 
-                        // Add transaction to user wallet balance
-                        walletService.addUserWalletBalance(userTransaction, payerMobile, "PATIENT", "DEBIT", finalConsultationFees);
-                        publicService.updateSystemUserWallet(finalConsultationFees,null);
+                            // Increment coupon usage (assuming Coupon entity and repository are defined)
+                            Coupon couponUsed = couponRepository.findById(couponCodeId).orElseThrow();
+                            couponUsed.setNumberOfUsed(couponUsed.getNumberOfUsed() + 1);
+                            couponRepository.save(couponUsed);
+                        }
 
-                        // Update patient total money after payment
-                        model.setTotalMoney(model.getTotalMoney() - packagePrice);
-                        usersRepository.save(model);
+                        publicService.sendHealthTipsMsg(model, "HEALTHTIPS_SUPSCRIPTION_CONFIRMATION", "PATIENT");
 
-                        WalletTransaction systemTransaction = new WalletTransaction();
-                        systemTransaction.setOrderId(order.getId());
-                        systemTransaction.setAmount(finalConsultationFees);
-                        systemTransaction.setTransactionType("system_credit_healthtips_subscription");
-                        systemTransaction.setTransactionStatus("Completed");
-                        systemTransaction.setServiceType("healthtip");
-                        systemTransaction.setIsDebitCredit("CREDIT");
-                        systemTransaction.setPatientId(model);
-                        systemTransaction.setPayerMobile(payerMobile.getContactNumber());
-                        systemTransaction.setPaymentNumber(paymentNumber);
-                        walletTransactionRepository.save(systemTransaction);
-
-                        walletService.addUserWalletBalance(systemTransaction, payerMobile, "SYSTEM", "CREDIT", finalConsultationFees);
-                        publicService.updateSystemUserWallet(finalConsultationFees,null);
+                        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                                Constants.SUCCESS_CODE,
+                                Constants.SUCCESS_CODE,
+                                messageSource.getMessage(Constants.HTIP_CAT_SUBSCRIBED,null,locale)
+                        ));
+                    }else{
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                                Constants.NO_CONTENT_FOUNT_CODE,
+                                Constants.NO_CONTENT_FOUNT_CODE,
+                                "Payment failed"
+                        ));
                     }
-
-                    // Add/Update User Package Details
-                    HealthTipPackageUser userPackage = new HealthTipPackageUser();
-                    userPackage.setHealthTipPackage(packageModel);
-                    userPackage.setUser(model);
-                    LocalDateTime now = LocalDateTime.now();
-                    LocalDateTime expiredAt = LocalDateTime.now();
-
-                    if (packageModel.getHealthTipDuration().getDurationType() == DurationType.Daily) {
-                        expiredAt = now.plus(packageModel.getHealthTipDuration().getDurationValue(), ChronoUnit.DAYS);
-                    } else {
-                        expiredAt = now.plus(packageModel.getHealthTipDuration().getDurationValue() * 30L, ChronoUnit.DAYS);
-                    }
-                    userPackage.setExpiredAt(expiredAt);
-                    userPackage.setCreatedAt(LocalDateTime.now());
-                    userPackage.setIsExpire(YesNo.No);
-                    userPackage.setIsCancel(YesNo.No);
-                    userPackage.setIsVideo(request.getType().equals("video") ? YesNo.Yes : YesNo.No);
-                    healthTipPackageUserRepository.save(userPackage);
-
-                    publicService.sendHealthTipsMsg(model, "HEALTHTIPS_SUPSCRIPTION_CONFIRMATION", "PATIENT");
-
-                    return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                            Constants.SUCCESS_CODE,
-                            Constants.SUCCESS_CODE,
-                            messageSource.getMessage(Constants.HTIP_CAT_SUBSCRIBED,null,locale)
-                    ));
                 }else{
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                             Constants.NO_CONTENT_FOUNT_CODE,
                             Constants.NO_CONTENT_FOUNT_CODE,
-                            (payment!=null)?payment.getMessage():"Payment failed"
+                            "Payment failed"
                     ));
                 }
-
             }
         }else{
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
@@ -1192,6 +1141,97 @@ public class PatientService {
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
             ));
         }
+    }
+
+    private HealthTipOrders savingHealthtipOrder(Users model, HealthTipPackage packageModel, Float packagePrice, Float amount, String currencyOption, Coupon coupon) {
+        HealthTipOrders order = new HealthTipOrders();
+        order.setPatientId(model);
+        order.setHealthTipPackage(packageModel);
+        order.setAmount(packagePrice);
+        order.setCurrencyAmount(amount);
+        order.setCurrency(currencyOption);
+        order.setStatus(OrderStatus.Pending);
+        order.setCoupon(coupon);
+        order.setCreatedAt(LocalDateTime.now());
+        return healthTipOrdersRepository.save(order);
+    }
+
+    private boolean createHealthtipPayment(HealthTipOrders order, WalletTransaction transaction) throws JsonProcessingException {
+        Map<String, Object> transactionDetail = new HashMap<>();
+        transactionDetail.put("ref_transaction_id", transaction.getTransactionId());
+        transactionDetail.put("reference_number", transaction.getReferenceNumber());
+        boolean status = false;
+        transactionDetail.put("status",false);
+
+        if(transactionMode != null && transactionMode == 1){
+            transaction.setTransactionId(generateDateTime());
+            transaction.setTransactionStatus("Completed");
+            order.setStatus(OrderStatus.Completed);
+            status = true;
+        }
+        else if(transactionMode!=null && transactionMode==2){
+            transaction.setTransactionId(generateDateTime());
+            transaction.setTransactionStatus("Cancel");
+            order.setStatus(OrderStatus.Cancelled);
+        }
+        else {
+            if(order.getAmount() > 0) {
+                Map<String, Object> payment = evcPlusPaymentService.processPayment("API_PURCHASE", transactionDetail, order.getAmount(), transaction.getPayerMobile(), order.getPatientId().toString(), "USD", "healthtip");
+                if(payment.get("status").equals(200)){
+                    transaction.setTransactionId(generateDateTime());
+                    transaction.setTransactionStatus("Completed");
+                    order.setStatus(OrderStatus.Completed);
+                    status = true;
+                }
+                else{
+                    transaction.setTransactionId(generateDateTime());
+                    transaction.setTransactionStatus("Cancel");
+                    order.setStatus(OrderStatus.Cancelled);
+                }
+            }else{
+                transaction.setTransactionId(generateDateTime());
+                transaction.setTransactionStatus("Completed");
+                order.setStatus(OrderStatus.Completed);
+                status = true;
+            }
+        }
+        healthTipOrdersRepository.save(order);
+        walletTransactionRepository.save(transaction);
+        return status;
+    }
+
+    private WalletTransaction saveIntoWalletTransactionForHealthtip(HealthTipPackageBookingRequest request, Integer patientId, HealthTipOrders orders) {
+        Users patient = usersRepository.findById(patientId).orElse(null);
+        WalletTransaction transaction = new WalletTransaction();
+        transaction.setPaymentMethod(request.getPayment_method());
+        transaction.setPatientId(patient);
+        transaction.setOrderId(orders.getId());
+        transaction.setPaymentGatewayType(request.getPayment_method());
+        transaction.setTransactionDate(LocalDateTime.now());
+        transaction.setTransactionType("wallet_balance_load");
+        transaction.setAmount(orders.getAmount());
+        transaction.setIsDebitCredit("debit");
+        transaction.setPayeeId(1); // payee is super admin and his id is 1
+        transaction.setPayerId(patient.getUserId());
+        transaction.setReferenceNumber(patient.getUserId().toString());  //this is same as payer no
+
+        Users adminContactNumber = usersRepository.findById(1).orElse(null);
+        transaction.setPayeeMobile(adminContactNumber.getContactNumber());
+        transaction.setPayerMobile(request.getPayment_number() == null || request.getPayment_number().isEmpty() ? patient.getContactNumber() : request.getPayment_number());
+
+        transaction.setCreatedAt(LocalDateTime.now());
+        transaction.setUpdatedAt(LocalDateTime.now());
+        transaction.setRefTransactionId(orders.getId().toString());
+        transaction.setPaymentNumber(request.getPayment_number() == null || request.getPayment_number().isEmpty() ? null : request.getPayment_number());
+
+        //        todo : need to implement mh_wallet
+        transaction.setCurrentBalance(0.0F); // by-default
+        transaction.setPreviousBalance(0.0f); // by-default
+        transaction.setServiceType("Service_Type"); //Service_Type_Lab_Report
+        transaction.setTransactionId(generateDateTime());
+        transaction.setTransactionStatus("Pending");
+
+        return transaction;
     }
 
 
