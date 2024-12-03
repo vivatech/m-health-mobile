@@ -1013,7 +1013,7 @@ public class PatientService {
         HealthTipPackage packageModel = healthTipPackageRepository.findById(request.getPackage_id()).orElse(null);
         if(packageModel!=null){
             Float packagePrice = (request.getType().equalsIgnoreCase("video")?
-                    (packageModel.getPackagePriceVideo() == null ? 0.0f :packageModel.getPackagePriceVideo()):packageModel.getPackagePrice());
+                    (packageModel.getPackagePriceVideo() == null ? 0.0f :packageModel.getPackagePriceVideo()):(packageModel.getPackagePrice() == null ? 0.0f : packageModel.getPackagePrice()));
 
             if(packageModel.getType()==PackageType.Paid &&
                     (packagePrice==null || (packagePrice!=null && packagePrice<=0.0f))){
