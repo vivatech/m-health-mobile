@@ -1172,7 +1172,7 @@ public class PatientService {
                     publicService.sendHealthTipsMsg(model, "HEALTHTIPS_SUPSCRIPTION_CONFIRMATION", "PATIENT");
 
                     return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                            SUCCESS_MESSAGE,
+                            Constants.SUCCESS_CODE,
                             Constants.SUCCESS_CODE,
                             messageSource.getMessage(Constants.HTIP_CAT_SUBSCRIBED,null,locale)
                     ));
