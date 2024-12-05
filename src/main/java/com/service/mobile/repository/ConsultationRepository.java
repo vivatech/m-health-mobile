@@ -18,7 +18,7 @@ import java.util.Optional;
 
 public interface ConsultationRepository extends JpaRepository<Consultation, Integer> {
     //TODO fix this query (this is based on date we need time)
-    @Query("SELECT c FROM Consultation c WHERE c.patientId.userId = ?1 AND c.requestType IN ('Book', 'Cancel', 'Pending', 'Failed') AND c.consultationDate > CURRENT_DATE  ORDER BY c.caseId DESC")
+    @Query("SELECT c FROM Consultation c WHERE c.patientId.userId = ?1 AND c.requestType IN ('Book', 'Cancel', 'Pending', 'Failed') AND c.consultationDate >= CURRENT_DATE  ORDER BY c.caseId DESC")
     List<Consultation> findUpcomingConsultationsForPatient(Integer userId);
 
     @Query("SELECT c FROM Consultation c WHERE c.doctorId.userId = ?1 AND c.requestType IN ('Book', 'Cancel') AND TO_TIMESTAMP(CONCAT(c.consultationDate, ' ', c.slotId.slotTime)) > CURRENT_TIMESTAMP ORDER BY c.caseId DESC")

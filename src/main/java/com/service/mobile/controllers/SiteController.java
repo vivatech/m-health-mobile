@@ -113,11 +113,9 @@ public class SiteController {
     @PostMapping(path = "/recent-orders", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> recentOrders(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                           Locale locale,
-                                          @RequestHeader(name = "X-type", required = false)
-                                          String type,
                                           @ModelAttribute UpdatePictureRequest request
     ) {
-        return orderService.recentOrders(locale,request.getUser_id(),type);
+        return orderService.recentOrders(locale,request.getUser_id());
     }
 
     @GetMapping("/get-state-list")

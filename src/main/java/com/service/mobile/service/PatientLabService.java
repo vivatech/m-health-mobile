@@ -28,6 +28,8 @@ import java.util.*;
 @Slf4j
 public class PatientLabService {
     @Autowired
+    private WalletTransactionRepository walletTransactionRepository;
+    @Autowired
     private GlobalConfigurationRepository globalConfigurationRepository;
 
     @Autowired
@@ -83,6 +85,8 @@ public class PatientLabService {
 
     @Value("${app.system.user.id}")
     private Integer SystemUserId;
+    @Value("${app.transaction.mode}")
+    private Integer transactionMode;
 
     public ResponseEntity<?> labRequest(LabRequestDto request, Locale locale) {
         if(request.getName()==null){request.setName("");}
@@ -510,25 +514,40 @@ public class PatientLabService {
 
 
     public ResponseEntity<?> addLabRequest(AddLabRequestDto data, Locale locale) throws JsonProcessingException {
-        Integer caseId = data.getCase_id();
-        List<Integer> subCatId = data.getSub_cat_id();
-        Consultation consultDetail = consultationRepository.findById(data.getCase_id()).orElse(null);
-        Users labUser = usersRepository.findById(Integer.valueOf(data.getLab_id())).orElse(null);
-        Users patient = usersRepository.findById(data.getUser_id()).orElse(null);
+        if(data.getUser_id() == null || data.getLab_id() == null || data.getSub_cat_id() == null || data.getSub_cat_id().isEmpty()){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.NO_CONTENT_FOUNT,null,locale)
+            ));
+        }
+        try{
+            List<Integer> subCatId = data.getSub_cat_id();
+            // Check only for doctor prescribed request
+            Consultation consultDetail = null;
+            List<LabConsultation> checkConsultation = new ArrayList<>();
+            Integer caseId = null;
+            if(data.getCase_id() != null){
+                caseId = data.getCase_id();
+                consultDetail = consultationRepository.findById(data.getCase_id()).orElse(null);
+                checkConsultation = labConsultationRepository.findBySubCategoryIdCaseIdLadIdNotNull(subCatId,caseId);
+            }
 
-        // Check only for doctor prescribed request
-        List<LabConsultation> checkConsultation = labConsultationRepository.findBySubCategoryIdCaseIdLadIdNotNull(subCatId,caseId);
+            Users labUser = usersRepository.findById(Integer.valueOf(data.getLab_id())).orElse(null);
+            Users patient = usersRepository.findById(data.getUser_id()).orElse(null);
 
-        if (checkConsultation.isEmpty() || caseId == null) {
             String currencyOption = data.getCurrency_option() != null ? data.getCurrency_option() : "USD";
+
             LabOrders labOrder = new LabOrders();
-            labOrder.setCaseId(consultDetail);
+            labOrder.setCaseId(data.getCase_id() == null ? null : consultDetail);
+            labOrder.setPatientId(patient);
             labOrder.setLab(labUser);
             labOrder.setReportDate(data.getReport_date());
             labOrder.setReportTimeSlot(data.getReport_time_slot());
             labOrder.setPaymentMethod(data.getPayment_method());
             labOrder.setAddress(data.getAddress());
             labOrder.setSampleCollectionMode(data.getSample_collection_mode());
+            labOrder.setStatus(OrderStatus.Pending);
 
             BillInfoDto billData = publicService.getBillInfo(Integer.valueOf(data.getLab_id()), subCatId, data.getSample_collection_mode(),"");
 
@@ -541,82 +560,92 @@ public class PatientLabService {
             Float amount = currencyAmount > 0 ? currencyAmount : finalConsultationFees;
             labOrder.setCurrencyAmount(amount);
             labOrder.setCurrency(currencyOption);
-            labOrder = labOrdersRepository.save(labOrder);
+
             if (!"Pay_Home".equals(data.getPayment_method())) {
                 Users user = patient;
-                String refId = generateDateTime();
                 WalletTransaction userTransaction = getWalletTransaction(data, finalConsultationFees, user);
 
-                Map<String, Object> transactionDetail = new HashMap<>();
-                transactionDetail.put("ref_transaction_id", userTransaction.getTransactionId());
-                transactionDetail.put("reference_number", userTransaction.getReferenceNumber());
+                if(transactionMode != null && transactionMode == 1){
+                    userTransaction.setTransactionStatus("Completed");
+                    labOrder.setPaymentStatus(data.getPayment_method().toString().equalsIgnoreCase("Pay_Home")? OrderStatus.Pending : OrderStatus.Completed);
+                }
+                else if(transactionMode != null && transactionMode ==2){
+                    userTransaction.setTransactionStatus("Failed");
+                    labOrder.setPaymentStatus(OrderStatus.Failed);
+                }
+                else {
+                    Map<String, Object> transactionDetail = new HashMap<>();
+                    transactionDetail.put("ref_transaction_id", userTransaction.getTransactionId());
+                    transactionDetail.put("reference_number", userTransaction.getReferenceNumber());
 
-                Map<String, Object> payment = eVCPlusPaymentService.processPayment(
-                        "API_PURCHASE",transactionDetail
-                        ,amount,data.getPayer_mobile()
-                        ,patient.getUserId().toString(),currencyOption,"paid_against_lab_report");
+                    Map<String, Object> payment = eVCPlusPaymentService.processPayment(
+                            "API_PURCHASE", transactionDetail
+                            , amount, data.getPayer_mobile()
+                            , patient.getUserId().toString(), currencyOption, "paid_against_lab_report");
 
-                if (payment != null && !payment.get("status").equals(200)) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                            Constants.NO_CONTENT_FOUNT_CODE,
-                            Constants.NO_CONTENT_FOUNT_CODE,
-                            "Failed"
-                    ));
-                } else {
-
-                    Integer userTrans = publicService.createTransaction(userTransaction,UserType.Patient,null,null);
-                    publicService.addUserWalletBalance(userTrans,patient,UserType.Patient,"CREDIT",finalConsultationFees);
-                    patient.setTotalMoney(patient.getTotalMoney() + finalConsultationFees);
-                    patient = usersRepository.save(patient);
+                    if (payment != null && !payment.get("status").equals(200)) {
+                        userTransaction.setTransactionStatus("Failed");
+                        labOrder.setPaymentStatus(OrderStatus.Failed);
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                                Constants.NO_CONTENT_FOUNT_CODE,
+                                Constants.NO_CONTENT_FOUNT_CODE,
+                                "Failed"
+                        ));
+                    } else {
+                        userTransaction.setTransactionStatus("Completed");
+                        labOrder.setPaymentStatus(data.getPayment_method().toString().equalsIgnoreCase("Pay_Home")? OrderStatus.Pending : OrderStatus.Completed);
+                        Integer userTrans = publicService.createTransaction(userTransaction, UserType.Patient, null, null);
+                        publicService.addUserWalletBalance(userTrans, patient, UserType.Patient, "CREDIT", finalConsultationFees);
+                        patient.setTotalMoney(patient.getTotalMoney() + finalConsultationFees);
+                        patient = usersRepository.save(patient);
+                    }
+                    walletTransactionRepository.save(userTransaction);
                 }
             }
 
-            String transactionId = String.valueOf(System.currentTimeMillis());
-            labOrder.setPatientId(patient);
-            labOrder.setDoctor(consultDetail != null ? consultDetail.getDoctorId() : null);
-            labOrder.setLab(labUser);
+            String transactionId = generateDateTime();
+
             labOrder.setReportCharge(billData.getReportCharge().floatValue());
             labOrder.setExtraCharges(billData.getExtraCharges().floatValue());
             labOrder.setAmount(billData.getTotal().floatValue());
-            labOrder.setPaymentStatus(data.getPayment_method().toString().equalsIgnoreCase("Pay_Home")? OrderStatus.Pending : OrderStatus.Completed);
             labOrder.setTransactionId(!"Pay_Home".equals(data.getPayment_method()) ? transactionId : null);
-            labOrder.setReportDate(data.getReport_date());
-            labOrder.setAddress(data.getAddress());
-            labOrder.setSampleCollectionMode(data.getSample_collection_mode());
-            labOrder.setReportTimeSlot(data.getReport_time_slot());
-            labOrder.setPaymentMethod(data.getPayment_method());
+            labOrder.setCreatedAt(LocalDateTime.now());
+            labOrder.setUpdatedAt(LocalDateTime.now());
+            //values with no mean
+            labOrder.setCommission(0.00f);
+            labOrder.setCommissionSlsh(0.00f);
+            labOrder.setIsTransferred(TransferStatus.NO);
+
             labOrder = labOrdersRepository.save(labOrder);
 
             updateLabConsultations(subCatId, caseId, data.getUser_id(), labOrder);
-            if (!"Pay_Home".equals(data.getPayment_method())) {
-                processTransactions(data, finalConsultationFees, transactionId, patient);
-            }
+//            if (!"Pay_Home".equals(data.getPayment_method())) {
+//                processTransactions(data, finalConsultationFees, transactionId, patient);
+//            }
 
-            sendNotifications(labOrder, data.getSample_collection_mode(), caseId != null);
+//            sendNotifications(labOrder, data.getSample_collection_mode(), caseId != null);
 
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.ORDER_CREATED_SUCCESS,null,locale)
+                    messageSource.getMessage(Constants.ORDER_CREATED_SUCCESS,null,locale),
+                    new ArrayList<>()
             ));
+        }catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error in add lab request : {}", e.getMessage());
         }
-        else {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                    Constants.NO_CONTENT_FOUNT_CODE,
-                    Constants.NO_CONTENT_FOUNT_CODE,
-                    messageSource.getMessage(Constants.ORDER_ALREADY_CREATED,null,locale)
-            ));
-        }
+        return null;
     }
 
     private WalletTransaction getWalletTransaction(AddLabRequestDto data, float finalConsultationFees, Users user) {
         WalletTransaction userTransaction = new WalletTransaction();
         userTransaction.setOrderId(null);
         userTransaction.setAmount(finalConsultationFees);
-        userTransaction.setServiceType("load_wallet_balance");
+        userTransaction.setServiceType("lab");
         userTransaction.setTransactionType("wallet_balance_load");
         userTransaction.setTransactionStatus("Pending");
-        userTransaction.setIsDebitCredit("CREDIT");
+        userTransaction.setIsDebitCredit("debit");
         userTransaction.setPatientId(user);
         userTransaction.setPayerMobile(data.getPayer_mobile());
         userTransaction.setPaymentNumber(data.getPayer_mobile());

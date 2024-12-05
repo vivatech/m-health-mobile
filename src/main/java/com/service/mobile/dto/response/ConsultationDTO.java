@@ -22,8 +22,6 @@ public class ConsultationDTO {
     private String cancel_reason;
     private String status;
     private String profile_pic;
-    private String profile_picture;
-    private Integer patient_id;
     private Object nurse;
     private Object clinic;
 }

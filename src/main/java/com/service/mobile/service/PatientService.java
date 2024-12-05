@@ -495,7 +495,7 @@ public class PatientService {
                 }
             }
             else {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                         Constants.NO_CONTENT_FOUNT,
                         Constants.NO_CONTENT_FOUNT_CODE,
                         messageSource.getMessage(Constants.NO_CONTENT_FOUNT, null, locale)
@@ -1117,7 +1117,8 @@ public class PatientService {
                         return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                 Constants.SUCCESS_CODE,
                                 Constants.SUCCESS_CODE,
-                                messageSource.getMessage(Constants.HTIP_CAT_SUBSCRIBED,null,locale)
+                                messageSource.getMessage(Constants.HTIP_CAT_SUBSCRIBED,null,locale),
+                                order.getId()
                         ));
                     }else{
                         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
