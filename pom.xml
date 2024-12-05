@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.service.mobile</groupId>
 	<artifactId>mobile-service</artifactId>
-	<version>0.0.1.5</version>
+	<version>0.0.1.6</version>
 	<name>mobile-service</name>
 	<description>test service</description>
 	<properties>
