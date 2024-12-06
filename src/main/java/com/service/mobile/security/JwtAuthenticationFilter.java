@@ -127,6 +127,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                         "/mobile/*",
                                         "/mobile/**",
                                         "/mobile/site/**",
+                                        "/swagger-ui-custom.html",
+                                        "/swagger-ui.html",
+                                        "/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/v3/api-docs",
+                                        "/v3/api-docs/swagger-config",
                                         "/**")
                                 .permitAll().anyRequest().authenticated()
                 )

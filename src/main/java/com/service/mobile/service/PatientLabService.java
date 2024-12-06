@@ -148,6 +148,7 @@ public class PatientLabService {
                     LabRequestsResponse data = new LabRequestsResponse();
 
                     data.setCase_id(c.getCaseId());
+                    data.setDoctor_name(c.getDoctorId().getFirstName() + " " + c.getDoctorId().getLastName());
                     data.setDate(c.getConsultationDate());
                     data.setTime(c.getSlotId().getSlotTime());
                     data.setStatus(status);
