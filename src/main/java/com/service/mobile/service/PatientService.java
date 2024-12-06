@@ -1114,11 +1114,13 @@ public class PatientService {
 
                         publicService.sendHealthTipsMsg(model, "HEALTHTIPS_SUPSCRIPTION_CONFIRMATION", "PATIENT");
 
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("order_id", order.getId());
                         return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                 Constants.SUCCESS_CODE,
                                 Constants.SUCCESS_CODE,
                                 messageSource.getMessage(Constants.HTIP_CAT_SUBSCRIBED,null,locale),
-                                order.getId()
+                                data
                         ));
                     }else{
                         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
