@@ -1,5 +1,6 @@
 package com.service.mobile.repository;
 
+import com.service.mobile.model.Consultation;
 import com.service.mobile.model.LabOrders;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,4 +19,6 @@ public interface LabOrdersRepository extends JpaRepository<LabOrders, Integer> {
 
     @Query("Select u from LabOrders u where u.patientId.userId = ?1 and DATE(u.createdAt) >= ?2 and DATE(u.createdAt) <= ?3")
     Page<LabOrders> findByPatientIdAndDate(Integer userId, LocalDate start,LocalDate end, Pageable pageable);
+
+    LabOrders findByCaseId(Consultation c);
 }

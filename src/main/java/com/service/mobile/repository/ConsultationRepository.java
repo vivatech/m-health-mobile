@@ -89,4 +89,12 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     @Query("Select count(u.caseId) from Consultation u where u.slotId.slotId = ?1 and u.doctorId.userId = ?2 and " +
             " u.consultationDate = ?3")
     Long countBySlotIdAndDoctorIdConsultationDate(Integer slotId, Integer doctorId, LocalDate date);
+
+    Page<Consultation> findByPatientIdAndReportSuggestedAndRequestTypeOrderByCaseIdDesc(Users user, String number, RequestType requestType, Pageable pageable);
+
+    @Query(value = "SELECT * FROM mh_consultation c WHERE c.patient_id = ?1 AND c.consultation_date = ?2 AND c.report_suggested = '1' AND c.request_type = 'Book'", nativeQuery = true)
+    Page<Consultation> findByPatientIdAndDate(Integer userId, LocalDate date, Pageable pageable);
+
+    @Query(value = "SELECT c.* FROM mh_consultation c JOIN mh_users u ON u.user_id = c.doctor_id WHERE c.patient_id = ?1 AND c.report_suggested = '1' AND c.request_type = 'Book' AND (u.first_name like '%name%' OR u.last_name like '%name%')", nativeQuery = true)
+    Page<Consultation> findByPatientIdAndName(Integer userId, String name, Pageable pageable);
 }

@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -89,78 +90,92 @@ public class PatientLabService {
     private Integer transactionMode;
 
     public ResponseEntity<?> labRequest(LabRequestDto request, Locale locale) {
-        if(request.getName()==null){request.setName("");}
-        Page<Consultation> consultations = null;
-        Pageable pageable= PageRequest.of(request.getPage(), 5);
-        if(request.getDate()!=null){
-            consultations = consultationRepository
-                    .findByPatientReportSuggestedAndRequestTypeAndNameAndDate(request.getUser_id(),"1", RequestType.Book,request.getName(),request.getDate(),pageable);
-        }else {
-            consultations = consultationRepository
-                    .findByPatientReportSuggestedAndRequestTypeAndName(request.getUser_id(),"1", RequestType.Book,request.getName(),pageable);
+        if(request.getUser_id() == null){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.BLANK_DATA_GIVEN,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+                    ));
         }
-        if(consultations!=null && !consultations.getContent().isEmpty()){
-            List<LabRequestsResponse> responses = new ArrayList<>();
-            for(Consultation c:consultations.getContent()){
-                List<LabOrders> labOrdersList = labOrdersRepository.findByConsultationId(c.getCaseId());
-                List<String> labReportDoc = new ArrayList<>();
-                LabOrders labOrders = null;
-                String status = null;
-                if(!labOrdersList.isEmpty()){
-                    labOrders = labOrdersList.get(0);
-                }
-                if(labOrders!=null && labOrders.getPaymentStatus()==OrderStatus.Pending){
-                    status = labOrders.getPaymentStatus().toString();
-                }else if(labOrders!=null && labOrders.getPaymentStatus()==OrderStatus.Completed){
-                    List<LabReportDoc> labReportDocs = labReportDocRepository.findByCaseIdAndStatus(c.getCaseId(),Status.A);
-                    for(LabReportDoc lrd:labReportDocs){
-                        labReportDoc.add(baseUrl + "lab/" + labOrders.getCaseId().getCaseId() + "/" + lrd.getLabReportDocName());
-                    }
-                    status = labOrders.getPaymentStatus().toString();
-                }else if(labOrders!=null && labOrders.getPaymentStatus()==OrderStatus.Inprogress){
-                    status = labOrders.getPaymentStatus().toString();
-                }else{
-                    status = OrderStatus.New.toString();
-                }
-                String requestResultText = "";
-                if(c.getCaseId()!=null){
-                    CompleteAndPendingReportsDto countData = publicService.getCompleteAndPendingReports(c.getCaseId());
-                    String tempRequestResultText = messageSource.getMessage(Constants.REQUEST_RESULT_TEXT,null,locale);
-                    tempRequestResultText = tempRequestResultText.replace("{total}",countData.getCompleted_report().toString());
-                    tempRequestResultText = tempRequestResultText.replace("{pending}",countData.getCompleted_report().toString());
-                    requestResultText = tempRequestResultText;
-                    if(countData.getCompleted_report()>0 && countData.getPending_report()>0){
-                        status = "Partailly Completed";
-                    }
-                }
-                LabRequestsResponse data = new LabRequestsResponse();
+        try {
+            Pageable pageable = PageRequest.of(request.getPage() == null ? 0 : request.getPage(), 5);
+            Users patient = usersRepository.findById(request.getUser_id()).orElse(null);
+            Page<Consultation> consultationList = consultationRepository.findByPatientIdAndReportSuggestedAndRequestTypeOrderByCaseIdDesc(
+                    patient, "1", RequestType.Book, pageable);
 
-                data.setCase_id(c.getCaseId());
-                data.setDate(c.getConsultationDate());
-                data.setTime(c.getSlotId().getSlotTime());
-                data.setStatus(status);
-                data.setLabReportDoc(labReportDoc);
-                data.setTotal_count(consultations.getTotalElements());
-                data.setRequest_result_text(requestResultText);
-
-                responses.add(data);
-
+            //filters
+            if (request.getDate() != null) {
+                consultationList = consultationRepository.findByPatientIdAndDate(patient.getUserId(), request.getDate(), pageable);
             }
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.LAB_CONSULTATION_FOUND_SUCCESSFULLY,null,locale),
-                    responses
-            ));
-        }else{
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
+            if (request.getName() != null && !request.getName().isEmpty()) {
+                String name = request.getName().toLowerCase().trim();
+                consultationList = consultationRepository.findByPatientIdAndName(patient.getUserId(), name, pageable);
+            }
+            List<LabRequestsResponse> responses = new ArrayList<>();
+            if(!consultationList.getContent().isEmpty()) {
+                for (Consultation c : consultationList.getContent()) {
+                    List<LabOrders> labOrdersList = labOrdersRepository.findByConsultationId(c.getCaseId());
+                    List<String> labReportDoc = new ArrayList<>();
+                    LabOrders labOrders = null;
+                    String status = null;
+                    if (!labOrdersList.isEmpty()) {
+                        labOrders = labOrdersList.get(0);
+                    }
+                    if (labOrders != null && labOrders.getPaymentStatus() == OrderStatus.Pending) {
+                        status = labOrders.getPaymentStatus().toString();
+                    } else if (labOrders != null && labOrders.getPaymentStatus() == OrderStatus.Completed) {
+                        List<LabReportDoc> labReportDocs = labReportDocRepository.findByCaseIdAndStatus(c.getCaseId(), Status.A);
+                        for (LabReportDoc lrd : labReportDocs) {
+                            labReportDoc.add(baseUrl + "lab/" + labOrders.getCaseId().getCaseId() + "/" + lrd.getLabReportDocName());
+                        }
+                        status = labOrders.getPaymentStatus().toString();
+                    } else if (labOrders != null && labOrders.getPaymentStatus() == OrderStatus.Inprogress) {
+                        status = labOrders.getPaymentStatus().toString();
+                    } else {
+                        status = OrderStatus.New.toString();
+                    }
+                    String requestResultText = "";
+                    if (c.getCaseId() != null) {
+                        CompleteAndPendingReportsDto countData = publicService.getCompleteAndPendingReports(c.getCaseId());
+                        String tempRequestResultText = messageSource.getMessage(Constants.REQUEST_RESULT_TEXT, null, locale);
+                        tempRequestResultText = tempRequestResultText.replace("{total}", countData.getCompleted_report().toString());
+                        tempRequestResultText = tempRequestResultText.replace("{pending}", countData.getCompleted_report().toString());
+                        requestResultText = tempRequestResultText;
+                        if (countData.getCompleted_report() > 0 && countData.getPending_report() > 0) {
+                            status = "Partailly Completed";
+                        }
+                    }
+                    LabRequestsResponse data = new LabRequestsResponse();
+
+                    data.setCase_id(c.getCaseId());
+                    data.setDate(c.getConsultationDate());
+                    data.setTime(c.getSlotId().getSlotTime());
+                    data.setStatus(status);
+                    data.setLabReportDoc(labReportDoc);
+                    data.setTotal_count(consultationList.getTotalElements());
+                    data.setRequest_result_text(requestResultText);
+
+                    responses.add(data);
+
+                }
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.LAB_CONSULTATION_FOUND_SUCCESSFULLY, null, locale),
+                        responses
+                ));
+            }else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.NO_RECORD_FOUND_CODE,
                     messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-            ));
+                ));
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+            log.error("Error in lab requests api : {}", e.getMessage());
         }
-
-
+        return null;
     }
 
     public ResponseEntity<?> addedReports(Integer userId, Locale locale) {
