@@ -57,28 +57,29 @@ public class SiteService {
     public ResponseEntity<?> getMobileRelease(MobileReleaseRequest request, Locale locale, String type) {
         Response response = new Response();
         try {
-            if (request != null) {
-                MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceTypeAndType(request.getApp_version(), request.getDevice_type(), type);
-                if (releaseData != null) {
-                    response = new Response(Constants.SUCCESS_CODE,
+            if (request.getApp_version() == null || request.getApp_version().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        new Response(Constants.NO_RECORD_FOUND,
+                                Constants.NO_RECORD_FOUND_CODE,
+                                messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale)
+                        ));
+            }
+            DeviceType deviceType = request.getDevice_type() == null || request.getDevice_type().isEmpty() ? DeviceType.Android : DeviceType.valueOf(request.getDevice_type().trim());
+            MobileRelease releaseData = mobileReleaseRepository.findByAppVersionAndDeviceType(request.getApp_version().trim(), deviceType);
+            if (releaseData != null) {
+                response = new Response(Constants.SUCCESS_CODE,
                             Constants.SUCCESS_CODE,
                             messageSource.getMessage(Constants.SUCCESS_MESSAGE, null, locale),
                             new MobileReleaseDto(releaseData)
                     );
-                    return ResponseEntity.ok(response);
-                } else {
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                            new Response(Constants.NO_RECORD_FOUND_CODE,
+                return ResponseEntity.ok(response);
+            }
+            else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        new Response(Constants.NO_RECORD_FOUND_CODE,
                                     Constants.NO_RECORD_FOUND_CODE,
                                     messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale)
-                            ));
-                }
-            } else {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
-                        Constants.NO_RECORD_FOUND_CODE,
-                        Constants.BLANK_DATA_GIVEN_CODE,
-                        messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
-                ));
+                        ));
             }
         }catch (Exception e){
             e.printStackTrace();
