@@ -2,6 +2,7 @@ package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.config.PaymentOptionConfig;
+import com.service.mobile.dto.MessageService;
 import com.service.mobile.dto.OfferInformationDTO;
 import com.service.mobile.dto.dto.*;
 import com.service.mobile.dto.enums.*;
@@ -13,9 +14,7 @@ import com.service.mobile.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -31,8 +30,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.service.mobile.dto.enums.UserType.NursePartner;
 
 @Service
 public class PublicService {
@@ -88,6 +85,8 @@ public class PublicService {
 
     @Value("${app.system.user.id}")
     private Integer SystemUserId;
+    @Value("${app.charge.home.collection}")
+    private Integer homeChargeCollection;
 
     @Autowired
     private UserLocationRepository userLocationRepository;
@@ -142,6 +141,10 @@ public class PublicService {
     private LanguageService languageService;
     @Autowired
     private SDFSMSService sdfsmsService;
+    @Autowired
+    private MessageService messageService;
+    @Value("${app.ZoneId}")
+    private String zone;
 
     public List<Country> findAllCountry(){
         return countryRepository.findAll();
@@ -509,12 +512,20 @@ public class PublicService {
 
     public ResponseEntity<?> getLanguage(Locale locale) {
         List<Language> languages = languageRepository.findAllByStatus("A");
-        if (languages.size()>0) {
+        if (!languages.isEmpty()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            for(Language l : languages){
+                Map<String, Object> data = new HashMap<>();
+                data.put("id", l.getId());
+                data.put("name", l.getName());
+
+                list.add(data);
+            }
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.LANGUAGE_LIST_FOUND,null,locale),
-                    languages
+                    list
             ));
         }else{
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
@@ -590,10 +601,10 @@ public class PublicService {
 
     public List<PaymentMethodResponse.Option> getPaymentMethod() {
         List<PaymentMethodResponse.Option> currencyOptions = new ArrayList<>();
-        for (Map.Entry<String, String> entry : paymentOptionConfig.getCurrency().entrySet()) {
+        for (Map.Entry<String, String> entry : paymentOptionConfig.getPaymentMethod().entrySet()) {
             PaymentMethodResponse.Option option = new PaymentMethodResponse.Option();
             option.setValue(entry.getKey());
-            option.setTitle(entry.getValue().toLowerCase());
+            option.setTitle(entry.getValue());
             currencyOptions.add(option);
         }
 
@@ -661,6 +672,7 @@ public class PublicService {
             response.setStatus("error");
             response.setMessage(messageSource.getMessage(Constants.COUPIN_CODE_REACHED_LIMIT,null,locale));
         } else {
+            //check if user avail this offer or not
             List<UsersUsedCouponCode> usersUsedCouponCode = usersUsedCouponCodeRepository.findByUserIdAndCouponId(userId,checkCoupon.getId());
             boolean hasUserUsedCoupon = usersUsedCouponCode.size()>0;
 
@@ -688,10 +700,17 @@ public class PublicService {
                 response.setStatus("success");
                 response.setMessage(messageSource.getMessage(Constants.COUPON_CODE_SUCCESS_MESSAGE,null,locale));
                 response.setData(discountDetails);
+
+                //set UsersUsedCouponCode -> implies that user cannot be able to use this offer again
+                UsersUsedCouponCode code = new UsersUsedCouponCode();
+                code.setUserId(userId);
+                code.setCouponId(checkCoupon.getId());
+                code.setCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
+
+                usersUsedCouponCodeRepository.save(code);
             }
         }
         return response;
-
     }
 
     private double calculateDiscountAmount(Coupon checkCoupon, double currentAmount) {
@@ -1015,7 +1034,7 @@ public class PublicService {
         return response;
     }
 
-    public BillInfoDto getBillInfo(Integer labId, List<Integer> reportId, String collectionMode, String currencyOption) {
+    public BillInfoDto getBillInfo(Integer labId, List<Integer> reportId, String collectionMode, String currencyOption, Locale locale) {
         Integer paymentRate = 1;
         String currencySym = currencySymbolFdj; // Adjust this to your actual symbol
         if (currencyOption!=null && currencyOption.equalsIgnoreCase("slsh")) {
@@ -1030,45 +1049,46 @@ public class PublicService {
         labDetailList.add(labDetail);
 
         String labVisitOnly = "";
-        float diagnosisCost = 0.0f;
+        Integer diagnosisCost = 0;
         Boolean isHomeVisit = true;
         String onlyLabVisitMsg = null;
         String onlyLabVisitMsgApi = null;
-        Map<Integer, String> reportName = new HashMap<>();
+        List<ReportDto> reportNames = new ArrayList<>();
         if (!reportId.isEmpty()) {
             for (Integer subCatId : reportId) {
-                List<LabPrice> labPrices = labPriceRepository.findByLabIdAndSubCatId(labId, subCatId);
-                for (LabPrice p : labPrices) {
-                    diagnosisCost += (p.getLabPrice()) * paymentRate;
-                }
+                LabPrice labPrice = labPriceRepository.findByLabIdAndSubCatId(labId, subCatId);
+                if(labPrice != null) diagnosisCost += (int)labPrice.getLabPrice().floatValue();
             }
-
-            List<LabSubCategoryMaster> subCategory = labSubCategoryMasterRepository.findByIdinList(reportId);
-            reportName = subCategory.stream()
-                    .collect(Collectors.toMap(LabSubCategoryMaster::getSubCatId, LabSubCategoryMaster::getSubCatName));
-
+            diagnosisCost *= paymentRate;
             List<ReportSubCatDto> dtos = checkHomeVisit(reportId);
+            for(ReportSubCatDto d : dtos){
+                ReportDto r = new ReportDto();
+                r.setKey(d.getSub_cat_id());
+                r.setValue(d.getSub_cat_name());
+
+                reportNames.add(r);
+            }
             labVisitOnly = dtos.stream()
                     .map(ReportSubCatDto::getSub_cat_name)
                     .collect(Collectors.joining(","));
 
             if (!labVisitOnly.isEmpty()) {
                 isHomeVisit = false;
-                onlyLabVisitMsg = "Only lab visit available for: " + labVisitOnly;
+                onlyLabVisitMsg = messageService.gettingMessages("only_lab_visit_msg", labVisitOnly, locale);
                 onlyLabVisitMsgApi = onlyLabVisitMsg;
             }
         }
 
-        float collectionCharge = 0.0f;
+        Integer collectionCharge = 0;
         if ("Home_Visit".equalsIgnoreCase(collectionMode)) {
-            collectionCharge = 50.0f * paymentRate;
+            collectionCharge = homeChargeCollection * paymentRate;
         } else if ("Lab_Visit".equalsIgnoreCase(collectionMode)) {
-            collectionCharge = 0.0f;
+            collectionCharge = 0;
         } else {
-            collectionCharge = (onlyLabVisitMsg != null) ? 0.0f : 50.0f * paymentRate;
+            collectionCharge = (onlyLabVisitMsg != null) ? 0 : homeChargeCollection * paymentRate;
         }
 
-        float totalPrice = diagnosisCost + collectionCharge;
+        float totalPrice = (float)diagnosisCost + (float) collectionCharge;
 
         BillInfoDto response = new BillInfoDto(
                 lab.getClinicName(),
@@ -1077,14 +1097,14 @@ public class PublicService {
                 isHomeVisit,
                 onlyLabVisitMsg,
                 onlyLabVisitMsgApi,
-                currencySym + " " + String.format("%.2f", diagnosisCost),
-                currencySym + " " + String.format("%.2f", collectionCharge),
-                currencySym + " " + String.format("%.2f", totalPrice),
-                reportName,
-                null,
-                (int) diagnosisCost,
-                (int) collectionCharge,
-                (int) totalPrice
+                currencySym + " " + diagnosisCost,
+                currencySym + " " + collectionCharge,
+                currencySym + " " +totalPrice,
+                new HashMap<>(),
+                reportNames,
+                diagnosisCost,
+                collectionCharge,
+                totalPrice
         );
 
         return response;
@@ -1102,9 +1122,12 @@ public class PublicService {
 
     public String getTotalConsultationAmount(Integer caseId) {
         Orders orders = ordersRepository.findByCaseId(caseId);
-        String currency = (orders.getCurrency()!=null && !orders.getCurrency().isEmpty())?orders.getCurrency():currencySymbolFdj;
-        Float amount = (orders.getCurrencyAmount()!=null)?orders.getCurrencyAmount():orders.getAmount();
-        return currency+" "+amount;
+        if(orders != null) {
+            String currency = (orders.getCurrency() != null && !orders.getCurrency().isEmpty()) ? orders.getCurrency() : currencySymbolFdj;
+            Float amount = (orders.getCurrencyAmount() != null) ? orders.getCurrencyAmount() : orders.getAmount();
+            return currency + " " + amount;
+        }
+        return null;
     }
 
     public List<AvailableNursesMapDto> availableNursesMap() {

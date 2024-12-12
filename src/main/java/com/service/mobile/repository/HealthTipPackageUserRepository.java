@@ -15,7 +15,7 @@ import java.util.Optional;
 
 @Repository
 public interface HealthTipPackageUserRepository extends JpaRepository<HealthTipPackageUser,Integer> {
-    @Query("Select u from HealthTipPackageUser u where u.user.userId = ?1 and u.isExpire = ?2")
+    @Query("Select u from HealthTipPackageUser u where u.user.userId = ?1 and u.isExpire = ?2 order by u.id DESC")
     List<HealthTipPackageUser> findByUserIdAndExpirey(Integer userId, YesNo yesNo);
 
     @Query("Select u from HealthTipPackageUser u where u.user.userId = ?1 order by u.id DESC")

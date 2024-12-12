@@ -159,10 +159,10 @@ public class AuthService {
                         if (LocalDateTime.now().isAfter(otp.getExpiredAt())) {
                             users.setAttemptCounter((short) (users.getAttemptCounter() + 1));
                             usersRepository.save(users);
-                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new VerifyOtpErroRes(
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                                     Constants.NO_CONTENT_FOUNT_CODE,
-                                    false,
-                                    messageSource.getMessage(USER_SUSPENDED, null, locale),new ArrayList<>()));
+                                    NO_CONTENT_FOUNT_CODE,
+                                    messageSource.getMessage(OTP_EXPIRE, null, locale),new ArrayList<>()));
                         }
                         //check otp matching
                         else if (!utility.md5Hash(request.getOtp()).equals(otp.getOtp())) {
@@ -189,7 +189,7 @@ public class AuthService {
                             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                     Constants.SUCCESS_CODE,
                                     Constants.SUCCESS_CODE,
-                                    messageSource.getMessage(Constants.OTP_VERIFIED_SUCCESSFULLY, null, locale),
+                                    messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS, null, locale),
                                     response
                             ));
                         }
@@ -260,7 +260,7 @@ public class AuthService {
                 authKeyRepository.delete(key);
 
                 response.put("status", SUCCESS_CODE);
-                response.put("message", "user_logged_success");
+                response.put("message", messageSource.getMessage(USER_LOGIN_IS_SUCCESS, null,locale));
                 return ResponseEntity.ok(response);
             } else {
                 response.put("status", NO_CONTENT_FOUNT_CODE);

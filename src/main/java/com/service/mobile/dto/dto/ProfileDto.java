@@ -23,7 +23,6 @@ public class ProfileDto {
     public String state;
     public String city;
     public String residence_address;
-    public String address;
     public LocalDate dob;
     public String gender;
 }

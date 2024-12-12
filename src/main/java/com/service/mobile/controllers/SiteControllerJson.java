@@ -124,16 +124,14 @@ public class SiteControllerJson {
 
     @PostMapping(path = "/consultations", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> consultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
-                                           @RequestHeader(name = "X-type") String type,
                                            @RequestBody ConsultationsRequest request) {
-        return consultationService.consultations(request,type,locale);
+        return consultationService.consultations(request, locale);
     }
 
     @PostMapping(path = "/search-consultations", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> searchConsultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
-                                           @RequestHeader(name = "X-type") String type,
                                            @RequestBody ConsultationsRequest request) {
-        return consultationService.searchConsultations(request,type,locale);
+        return consultationService.searchConsultations(request, locale);
     }
 
     @PostMapping(path = "/get-video-attachment", consumes = {MediaType.APPLICATION_JSON_VALUE})

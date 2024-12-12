@@ -18,7 +18,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class ConsultationResponse {
     private Integer case_id;
-    private Integer patient_id;
+//    private Integer patient_id;
     private String name;
     private String consult_type;
     private ConsultationType consultation_type;

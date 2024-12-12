@@ -18,7 +18,6 @@ import com.service.mobile.repository.SlotTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,8 +26,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +58,8 @@ public class ConsultationService {
 
     @Value("${app.currency.symbol.fdj}")
     private String currencySymbolFdj;
+    @Value("${app.ZoneId}")
+    private String zone;
 
     public ResponseEntity<?> checkOnGoingConsultation(Integer userId, Locale locale) {
         List<SlotType> slotTypeOpt = slotTypeRepository.findByStatus(SlotStatus.active);
@@ -102,190 +104,102 @@ public class ConsultationService {
         ));
     }
 
-    public ResponseEntity<?> consultations(ConsultationsRequest request,String type, Locale locale) {
+    public ResponseEntity<?> consultations(ConsultationsRequest request, Locale locale) {
         Pageable pageable = PageRequest.of(request.getPage(),5);
-        if(type.equalsIgnoreCase("Patient")){
-            Page<Consultation> consultations = consultationRepository.findByPatientIdOrderByCaseId(request.getUser_id(),pageable);
-            if(!consultations.getContent().isEmpty()){
-                List<ConsultationResponse> list = new ArrayList<>();
-                for(Consultation consultation:consultations.getContent()){
-                    HomeConsultationInformation nurse = null;
-                    ClinicInformation clinic = null;
-                    if(consultation.getConsultType().equalsIgnoreCase("visit_home")){
-                        nurse = publicService.getHomeConsultationInformation(consultation.getAssignedTo());
-                    }
-                    if(consultation.getConsultType().equalsIgnoreCase("visit") ||
-                            consultation.getConsultType().equalsIgnoreCase("clinic visit")){
-                        clinic = publicService.getClinicInformation(consultation.getDoctorId().getUserId());
-                    }
-                    String cancelMessage = consultation.getCancelMessage();
-                    ConsultationResponse dto = new ConsultationResponse();
-
-                    dto.setCase_id(consultation.getCaseId());
-                    dto.setName(consultation.getDoctorId().getFirstName()+" "+consultation.getDoctorId().getLastName());
-                    dto.setConsult_type(consultation.getConsultType().equalsIgnoreCase("call")?
-                            "video":consultation.getConsultType());
-                    dto.setConsultation_type(consultation.getConsultationType());
-                    dto.setAdded_type(consultation.getAddedType());
-                    dto.setDate(consultation.getConsultationDate());
-                    dto.setTime(consultation.getSlotId().getSlotTime());
-                    dto.setCharges(publicService.getTotalConsultationAmount(consultation.getCaseId()));
-                    dto.setStatus(consultation.getRequestType());
-                    dto.setCancel_reason(cancelMessage);
-                    dto.setProfile_pic((consultation.getDoctorId().getProfilePicture() != null && !consultation.getDoctorId().getProfilePicture().isEmpty())
-                            ? baseUrl + "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + consultation.getDoctorId().getProfilePicture() : "");
-                    dto.setNurse(nurse);
-                    dto.setClinic(clinic);
-                    dto.setTotal_count(consultations.getTotalElements());
-
-                    list.add(dto);
+        LocalDateTime localDateTime = LocalDateTime.now(ZoneId.of(zone));
+        LocalDate date = localDateTime.toLocalDate();
+        Page<Consultation> consultations = consultationRepository.findByPatientIdAndConsultationDate(request.getUser_id(), date, pageable);
+        if(!consultations.getContent().isEmpty()){
+            List<ConsultationResponse> list = new ArrayList<>();
+            for(Consultation consultation:consultations.getContent()) {
+                //check if the consultation is already passed then not to include
+                if(consultation.getConsultationDate().equals(localDateTime.toLocalDate()) && consultation.getSlotId().getSlotStartTime().isBefore(localDateTime.toLocalTime())){
+                    continue;
                 }
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.RECENT_ORDERS_FOUND_SUCCESSFULLY,null,locale),
-                        list
-                ));
-            }else{
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-                ));
+                HomeConsultationInformation nurse = null;
+                ClinicInformation clinic = null;
+                if (consultation.getConsultType().equalsIgnoreCase("visit_home")) {
+                    nurse = publicService.getHomeConsultationInformation(consultation.getAssignedTo());
+                }
+                if (consultation.getConsultType().equalsIgnoreCase("visit") ||
+                        consultation.getConsultType().equalsIgnoreCase("clinic visit")) {
+                    clinic = publicService.getClinicInformation(consultation.getDoctorId().getHospitalId());
+                }
+                String cancelMessage = consultation.getCancelMessage();
+                ConsultationResponse dto = new ConsultationResponse();
+
+                dto.setCase_id(consultation.getCaseId());
+                dto.setName(consultation.getDoctorId().getFirstName() + " " + consultation.getDoctorId().getLastName());
+                dto.setConsult_type(consultation.getConsultType().equalsIgnoreCase("call") ?
+                        "video" : consultation.getConsultType());
+                dto.setConsultation_type(consultation.getConsultationType());
+                dto.setAdded_type(consultation.getAddedType());
+                dto.setDate(consultation.getConsultationDate());
+                dto.setTime(consultation.getSlotId().getSlotTime());
+                dto.setCharges(publicService.getTotalConsultationAmount(consultation.getCaseId()));
+                dto.setStatus(consultation.getRequestType());
+                dto.setCancel_reason(cancelMessage);
+                dto.setProfile_pic((consultation.getDoctorId().getProfilePicture() != null && !consultation.getDoctorId().getProfilePicture().isEmpty())
+                        ? baseUrl + "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + consultation.getDoctorId().getProfilePicture() : "");
+                dto.setNurse(nurse);
+                dto.setClinic(clinic);
+                dto.setTotal_count(consultations.getTotalElements());
+
+                list.add(dto);
             }
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.RECENT_ORDERS_FOUND_SUCCESSFULLY,null,locale),
+                    list
+            ));
         }else{
-            Page<Consultation> consultations = consultationRepository.findByDoctorIdOrderByCaseId(request.getUser_id(),pageable);
-            if(!consultations.getContent().isEmpty()){
-                List<ConsultationResponse> list = new ArrayList<>();
-                for(Consultation consultation:consultations.getContent()){
-                    String cancelMessage = consultation.getCancelMessage();
-                    ConsultationResponse dto = new ConsultationResponse();
-
-                    dto.setCase_id(consultation.getCaseId());
-                    dto.setPatient_id(consultation.getPatientId().getUserId());
-                    dto.setName(consultation.getPatientId().getFirstName()+" "+consultation.getPatientId().getLastName());
-                    dto.setConsult_type(consultation.getConsultType());
-                    dto.setConsultation_type(consultation.getConsultationType());
-                    dto.setAdded_type(consultation.getAddedType());
-                    dto.setDate(consultation.getConsultationDate());
-                    dto.setTime(consultation.getSlotId().getSlotTime());
-                    dto.setCharges(publicService.getTotalConsultationAmount(consultation.getCaseId()));
-                    dto.setStatus(consultation.getRequestType());
-                    dto.setCancel_reason(cancelMessage);
-                    dto.setProfile_pic((consultation.getPatientId().getProfilePicture() != null && !consultation.getPatientId().getProfilePicture().isEmpty())
-                            ? baseUrl + "uploaded_file/UserProfile/" + consultation.getPatientId().getUserId() + "/" + consultation.getPatientId().getProfilePicture() : "");
-                    dto.setTotal_count(consultations.getTotalElements());
-
-                    list.add(dto);
-                }
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.RECENT_ORDERS_FOUND_SUCCESSFULLY,null,locale),
-                        list
-                ));
-            }else{
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-                ));
-            }
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+            ));
         }
+
+
     }
 
-    public ResponseEntity<?> searchConsultations(ConsultationsRequest request, String type, Locale locale) {
-        if(type.equalsIgnoreCase("Patient")){
-            List<Consultation> consultations = consultationRepository.findByPatientIdAndDateOrderByCaseId(request.getUser_id(),request.getDate());
-            if(!consultations.isEmpty()){
-                List<ConsultationResponse> list = new ArrayList<>();
-                for(Consultation consultation:consultations){
-                    String cancelMessage = consultation.getCancelMessage();
-                    ConsultationResponse dto = new ConsultationResponse();
+    public ResponseEntity<?> searchConsultations(ConsultationsRequest request, Locale locale) {
+        List<Consultation> consultations = consultationRepository.findByPatientIdAndDateOrderByCaseId(request.getUser_id(),request.getDate());
+        if(!consultations.isEmpty()){
+            List<ConsultationResponse> list = new ArrayList<>();
+            for(Consultation consultation:consultations){
+                String cancelMessage = consultation.getCancelMessage();
+                ConsultationResponse dto = new ConsultationResponse();
 
-                    dto.setCase_id(consultation.getCaseId());
-                    dto.setName(consultation.getDoctorId().getFirstName()+" "+consultation.getDoctorId().getLastName());
-                    dto.setConsult_type(consultation.getConsultType());
-                    dto.setConsultation_type(consultation.getConsultationType());
-                    dto.setAdded_type(consultation.getAddedType());
-                    dto.setDate(consultation.getConsultationDate());
-                    dto.setTime(consultation.getSlotId().getSlotTime());
-                    dto.setCharges(publicService.getTotalConsultationAmount(consultation.getCaseId()));
-                    dto.setStatus(consultation.getRequestType());
-                    dto.setCancel_reason(cancelMessage);
-                    dto.setProfile_pic((consultation.getDoctorId().getProfilePicture() != null && !consultation.getDoctorId().getProfilePicture().isEmpty())
-                            ? baseUrl + "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + consultation.getDoctorId().getProfilePicture() : "");
-                    dto.setTotal_count(Long.valueOf(consultations.size()));
+                dto.setCase_id(consultation.getCaseId());
+                dto.setName(consultation.getDoctorId().getFirstName()+" "+consultation.getDoctorId().getLastName());
+                dto.setConsult_type(consultation.getConsultType());
+                dto.setConsultation_type(consultation.getConsultationType());
+                dto.setAdded_type(consultation.getAddedType());
+                dto.setDate(consultation.getConsultationDate());
+                dto.setTime(consultation.getSlotId().getSlotTime());
+                dto.setCharges(publicService.getTotalConsultationAmount(consultation.getCaseId()));
+                dto.setStatus(consultation.getRequestType());
+                dto.setCancel_reason(cancelMessage);
+                dto.setProfile_pic((consultation.getDoctorId().getProfilePicture() != null && !consultation.getDoctorId().getProfilePicture().isEmpty())
+                        ? baseUrl + "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + consultation.getDoctorId().getProfilePicture() : "");
+                dto.setTotal_count(Long.valueOf(consultations.size()));
 
-                    list.add(dto);
-                }
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.RECENT_ORDERS_FOUND_SUCCESSFULLY,null,locale),
-                        list
-                ));
-            }else{
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-                ));
+                list.add(dto);
             }
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.RECENT_ORDERS_FOUND_SUCCESSFULLY,null,locale),
+                    list
+            ));
         }else{
-            List<Consultation> consultations = consultationRepository.findByDoctorIdAndDateOrderByCaseId(request.getUser_id(),request.getDate());
-            if(!consultations.isEmpty()){
-                List<ConsultationResponse> list = new ArrayList<>();
-                for(Consultation consultation:consultations){
-                    String cancelMessage = consultation.getCancelMessage();
-                    ConsultationResponse dto = new ConsultationResponse();
-
-                    dto.setCase_id(consultation.getCaseId());
-                    dto.setPatient_id(consultation.getPatientId().getUserId());
-                    dto.setName(consultation.getPatientId().getFirstName()+" "+consultation.getPatientId().getLastName());
-                    dto.setConsult_type(consultation.getConsultType());
-                    dto.setConsultation_type(consultation.getConsultationType());
-                    dto.setAdded_type(consultation.getAddedType());
-                    dto.setDate(consultation.getConsultationDate());
-                    dto.setTime(consultation.getSlotId().getSlotTime());
-                    dto.setCharges(publicService.getTotalConsultationAmount(consultation.getCaseId()));
-                    dto.setStatus(consultation.getRequestType());
-                    dto.setCancel_reason(cancelMessage);
-                    dto.setProfile_pic((consultation.getPatientId().getProfilePicture() != null && !consultation.getPatientId().getProfilePicture().isEmpty())
-                            ? baseUrl + "uploaded_file/UserProfile/" + consultation.getPatientId().getUserId() + "/" + consultation.getPatientId().getProfilePicture() : "");
-                    dto.setTotal_count(Long.valueOf(consultations.size()));
-
-                    list.add(dto);
-                }
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.RECENT_ORDERS_FOUND_SUCCESSFULLY,null,locale),
-                        list
-                ));
-            }else{
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-                ));
-            }
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+            ));
         }
     }
-
-
-
-//    public ResponseEntity<?> getConsultationType(Locale locale) {
-//
-//        List<ConsultationDTO> consultDtoList = new ArrayList<>();
-//
-//        for (ConsultType consultType : APIGatewayEnum.ConsultType.values()) {
-//            ConsultDto consultDto = new ConsultDto();
-//            consultDto.setType(consultType);
-//            consultDto.setTitle(getConsultTypeTitle(consultType));
-//
-//            consultDtoList.add(consultDto);
-//        }
-//
-//    }
 }

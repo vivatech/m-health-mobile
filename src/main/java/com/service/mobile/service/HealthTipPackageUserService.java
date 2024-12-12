@@ -40,8 +40,8 @@ public class HealthTipPackageUserService {
     @Value("${app.base.url}")
     private String baseUrl;
 
-    @Value("${app.categories.path}")
-    private String categoryPath;
+    @Value("${app.path}")
+    private String path;
 
     @Value("${app.default.image}")
     private String defaultImage;
@@ -64,21 +64,19 @@ public class HealthTipPackageUserService {
             }
 
             String image = getCategoryImageUrl(pcat.getHealthTipCategoryMaster());
-            List<HealthTipOrders> orders = healthTipOrdersRepository.findByPatientIdAndHathTipPackageId(userId,pcat.getHealthTipPackage().getPackageId());
-            if(orders!=null){
-                String currency = "";
-                Float ammount = 0f;
-                for(HealthTipOrders order:orders){
-                    currency = (order.getCurrency()!=null && !order.getCurrency().isEmpty())?
-                            order.getCurrency():currencySymbolFdj;
-                    ammount = (order.getCurrencyAmount()!=null)? order.getCurrencyAmount() : order.getAmount();
-                }
+            HealthTipOrders order = healthTipOrdersRepository.findByPatientIdAndHathTipPackageId(userId,pcat.getHealthTipPackage().getPackageId());
+            if(order != null){
+                String currency = (order.getCurrency()!=null && !order.getCurrency().isEmpty())?
+                    order.getCurrency():currencySymbolFdj;
+                Float amount = (order.getCurrencyAmount()!=null)? order.getCurrencyAmount() : order.getAmount();
+
                 HealthTipPackageUser t =tipPackageUsers.stream().filter(c->c.getHealthTipPackage().getPackageId()==pcat.getHealthTipPackage().getPackageId()).findFirst().orElse(null);
                 ActiveHealthTipsPackageResponse temp = new ActiveHealthTipsPackageResponse();
                 temp.setPackage_id(pcat.getHealthTipPackage().getPackageId());
                 temp.setPackage_name(categories);
+                temp.setCategory_id(pcat.getHealthTipCategoryMaster().getCategoryId());
                 temp.setImage(image);
-                temp.setPackage_price(currency+" "+ammount);
+                temp.setPackage_price(currency+" "+amount);
                 temp.setPackage_type(pcat.getHealthTipPackage().getType());
                 temp.setExpired_at(formatExpiryDate(t.getExpiredAt()));
                 responses.add(temp);
@@ -95,9 +93,10 @@ public class HealthTipPackageUserService {
     public String getCategoryImageUrl(HealthTipCategoryMaster category) {
         String photo = category.getPhoto();
         if (photo != null && !photo.isEmpty()) {
-            Path imagePath = Paths.get(categoryPath, String.valueOf(category.getCategoryId()), photo);
+            String location = path + "category/" + category.getCategoryId() + "/" + photo;
+            Path imagePath = Paths.get(location);
             if (Files.exists(imagePath)) {
-                return baseUrl + "uploaded_file/category/" + category.getCategoryId() + "/" + photo;
+                return location;
             }
         }
         return baseUrl + defaultImage;

@@ -13,4 +13,6 @@ public interface MobileReleaseRepository extends JpaRepository<MobileRelease,Int
 
     @Query(value = "SELECT m.* FROM mh_mobile_release m WHERE m.app_version = ?1 AND m.device_type = ?2 AND m.user_type = ?3", nativeQuery = true)
     MobileRelease findByAppVersionAndDeviceTypeAndType(@Param("appVersion") String appVersion, @Param("deviceType") String deviceType, @Param("type") String type);
+
+    MobileRelease findByAppVersionAndDeviceType(String version, DeviceType type);
 }

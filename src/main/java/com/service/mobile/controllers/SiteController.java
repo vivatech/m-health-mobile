@@ -17,8 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 @RestController
 @RequestMapping("/mobile/site")
@@ -65,10 +64,19 @@ public class SiteController {
         ));
         List<Country> countries = publicService.findAllCountry();
         if (countries.size()>0) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            for(Country c : countries){
+                Map<String, Object> data = new HashMap<>();
+                data.put("id", c.getId());
+                data.put("name", c.getName());
+                data.put("phonecode", c.getPhonecode());
+
+                list.add(data);
+            }
             response = new Response(Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.COUNTRY_LIST_RECIVED,null,locale),
-                    countries
+                    list
                     );
             responseEntity = ResponseEntity.status(HttpStatus.OK).body(response);
         }
@@ -237,16 +245,14 @@ public class SiteController {
 
     @PostMapping(path = "/consultations", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> consultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
-                                           @RequestHeader(name = "X-type") String type,
                                            @ModelAttribute ConsultationsRequest request) {
-        return consultationService.consultations(request,type,locale);
+        return consultationService.consultations(request, locale);
     }
 
     @PostMapping(path = "/search-consultations", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> searchConsultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
-                                           @RequestHeader(name = "X-type") String type,
                                            @ModelAttribute ConsultationsRequest request) {
-        return consultationService.searchConsultations(request,type,locale);
+        return consultationService.searchConsultations(request, locale);
     }
 
     @GetMapping("/app-banner")

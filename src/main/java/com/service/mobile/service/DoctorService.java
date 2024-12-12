@@ -7,15 +7,13 @@ import com.service.mobile.dto.dto.CommentsDto;
 import com.service.mobile.dto.dto.ConsultationFees;
 import com.service.mobile.dto.dto.SearchDocResponse;
 import com.service.mobile.dto.dto.TransformDto;
-import com.service.mobile.dto.enums.ConsultationType;
-import com.service.mobile.dto.enums.FeeType;
-import com.service.mobile.dto.enums.RequestType;
-import com.service.mobile.dto.enums.UserType;
+import com.service.mobile.dto.enums.*;
 import com.service.mobile.dto.request.DoctorAvailabilityListLatestRequest;
 import com.service.mobile.dto.request.GetReviewRequest;
 import com.service.mobile.dto.request.SearchDoctorRequest;
 import com.service.mobile.dto.response.*;
 import com.service.mobile.model.*;
+import com.service.mobile.model.State;
 import com.service.mobile.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -616,12 +614,14 @@ public class DoctorService {
             }
             String[] languageIds  = doctor.getLanguageFluency().split(",");
             String languageName = "";
-            if(languageIds.length>0){
-                List<Integer> langIds = new ArrayList<>();
-                for(String s:languageIds){langIds.add(Integer.parseInt(s));}
-                List<Language> languages = languageRepository.findByIds(langIds);
-                for(Language l:languages){languageName = languageName + l.getName()+",";}
+            if(languageIds.length>0) {
+                for (String i : languageIds) {
+                    Language language = languageRepository.findById(Integer.valueOf(i)).orElse(null);
+                    if (language != null) languageName += language.getName() + ",";
+                }
+                languageName = languageName.substring(0, languageName.length()-1);
             }
+
             List<ConsultationRating> consultationRatings = consultationRatingRepository.getByDoctorIdActive(doctorId);
             Long totalConsultCount = consultationRatingRepository.countByDoctorIdAll(doctorId);
             List<CommentsDto> commentsDtos = new ArrayList<>();
@@ -631,11 +631,13 @@ public class DoctorService {
                     if(r.getPatientId().getProfilePicture()!=null && !r.getPatientId().getProfilePicture().isEmpty()){
                         fileUrl = baseUrl + "/uploaded_file/UserProfile/"+r.getPatientId().getUserId()+"/"+r.getPatientId().getProfilePicture();
                     }
+                    DateTimeFormatter spaceFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    String dateTimeFromSpace = spaceFormatter.format(r.getCreatedAt());
                     CommentsDto dto = new CommentsDto();
                     dto.setComment(r.getComment());
-                    dto.setName(r.getDoctorId().getFirstName()+" "+r.getDoctorId().getLastName());
-                    dto.setRating(r.getRating());
-                    dto.setCreated_at(r.getCreatedAt());
+                    dto.setName(r.getPatientId().getFirstName()+" "+r.getPatientId().getLastName());
+                    dto.setRating((int)r.getRating().floatValue());
+                    dto.setCreated_at(dateTimeFromSpace);
                     dto.setFile_url(fileUrl);
                     dto.setTotal_count(totalConsultCount);
 
@@ -648,13 +650,13 @@ public class DoctorService {
             if (charges != null && !charges.isEmpty()) {
                 for (Charges charge : charges) {
                     if(charge.getFeeType().name().equalsIgnoreCase("call")){
-                        dto.setCall_commission(charge.getCommission());
-                        dto.setCall_consultation_fees(charge.getConsultationFees());
-                        dto.setCall_final_consultation_fees(charge.getFinalConsultationFees());
+                        dto.setCall_commission((int)charge.getCommission().floatValue());
+                        dto.setCall_consultation_fees((int)charge.getConsultationFees().floatValue());
+                        dto.setCall_final_consultation_fees((int)charge.getFinalConsultationFees().floatValue());
                     }else if(charge.getFeeType().name().equalsIgnoreCase("visit")){
-                        dto.setVisit_commission(charge.getCommission());
-                        dto.setVisit_consultation_fees(charge.getConsultationFees());
-                        dto.setVisit_final_consultation_fees(charge.getFinalConsultationFees());
+                        dto.setVisit_commission((int)charge.getCommission().floatValue());
+                        dto.setVisit_consultation_fees((int)charge.getConsultationFees().floatValue());
+                        dto.setVisit_final_consultation_fees((int)charge.getFinalConsultationFees().floatValue());
                     }
                 }
             }

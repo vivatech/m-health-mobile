@@ -3,7 +3,6 @@ package com.service.mobile.repository;
 import com.service.mobile.dto.enums.ConsultationType;
 import com.service.mobile.dto.enums.RequestType;
 import com.service.mobile.model.Consultation;
-import com.service.mobile.model.LabConsultation;
 import com.service.mobile.model.Users;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -53,9 +52,6 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     @Query("Select u from Consultation u where u.patientId.userId = ?1 order by u.caseId DESC")
     Page<Consultation> findByPatientIdOrderByCaseId(Integer userId,Pageable pageable);
 
-    @Query("Select u from Consultation u where u.doctorId.userId = ?1 order by u.caseId DESC")
-    Page<Consultation> findByDoctorIdOrderByCaseId(Integer userId, Pageable pageable);
-
     @Query("Select u from Consultation u where u.patientId.userId = ?1 and u.consultationDate = ?2 order by u.caseId DESC")
     List<Consultation> findByPatientIdAndDateOrderByCaseId(Integer userId, LocalDate date);
 
@@ -89,4 +85,7 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     @Query("Select count(u.caseId) from Consultation u where u.slotId.slotId = ?1 and u.doctorId.userId = ?2 and " +
             " u.consultationDate = ?3")
     Long countBySlotIdAndDoctorIdConsultationDate(Integer slotId, Integer doctorId, LocalDate date);
+
+    @Query("SELECT c FROM Consultation c WHERE c.patientId.userId = ?1 AND c.consultationDate >= ?2 ORDER BY c.caseId DESC")
+    Page<Consultation> findByPatientIdAndConsultationDate(Integer userId, LocalDate localDate, Pageable pageable);
 }

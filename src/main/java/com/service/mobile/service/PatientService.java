@@ -48,7 +48,7 @@ import java.security.SecureRandom;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-import static com.service.mobile.config.Constants.SUCCESS_MESSAGE;
+import static com.service.mobile.config.Constants.*;
 
 @Service
 @Slf4j
@@ -708,34 +708,40 @@ public class PatientService {
     }
 
     public ResponseEntity<?> applyCouponCode(Locale locale, ApplyCouponCodeRequest request) {
-        if(request.getCoupon_code()!=null && !request.getCoupon_code().isEmpty()){
-            CouponCodeResponseDTO data = publicService.checkPromoCode(
-                    request.getUser_id(),
-                    request.getCategory(),
-                    request.getPrice(),
-                    request.getCoupon_code(),
-                    locale
-            );
-            if(data.getStatus().equalsIgnoreCase("success")){
+        if (request.getUser_id() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.UNAUTHORIZED_MSG,
+                    UNAUTHORIZED_CODE,
+                    messageSource.getMessage(UNAUTHORIZED_MSG, null, locale)
+            ));
+        }
+        if (request.getCoupon_code() == null || request.getCoupon_code().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT,
+                    messageSource.getMessage(PLEASE_ENTER_COUPON_CODE, null, locale)
+            ));
+        }
+        try {
+            CouponCodeResponseDTO data = publicService.checkPromoCode(request.getUser_id(), request.getCategory(), request.getPrice(), request.getCoupon_code(), locale);
+
+            if (data.getStatus().equalsIgnoreCase("success")) {
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
                         data.getMessage(),
                         data.getData()
                 ));
-            }else{
+            } else {
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.NO_CONTENT_FOUNT_CODE,
                         Constants.NO_CONTENT_FOUNT_CODE,
                         data.getMessage()
                 ));
             }
-        }else {
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.NO_CONTENT_FOUNT_CODE,
-                    Constants.NO_CONTENT_FOUNT_CODE,
-                    messageSource.getMessage(Constants.PLEASE_ENTER_COUPON_CODE,null,locale)
-            ));
+        } catch (Exception e) {
+            log.error("Error in coupon code : {}", e);
+            return null;
         }
     }
 
@@ -1919,57 +1925,13 @@ public class PatientService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getSloats(Locale locale, GetSloatsRequest request,String type) {
+    public ResponseEntity<?> getSloats(Locale locale, GetSloatsRequest request) {
         if(request.getCase_id()!=null && request.getCase_id()!=0){
 
             Consultation consultation = consultationRepository.findById(request.getCase_id()).orElse(null);
             if(consultation!=null){
 
-                SlotMaster slots = consultation.getSlotId();
-
-                GetSloatsResponse response = new GetSloatsResponse();
-                if(type.equalsIgnoreCase("doctor")){
-                    Users users= consultation.getPatientId();
-                    String photo = "";
-                    if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
-                        photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getPatientId().getUserId() + "/" + users.getProfilePicture();
-                    }
-
-                    response.setSlot_day(slots.getSlotDay());
-                    response.setSlot_time(slots.getSlotTime());
-                    response.setSlot_type(slots.getSlotType());
-                    response.setConsultation_date(consultation.getConsultationDate());
-                    response.setTo(consultation.getPatientId().getUserId());
-                    response.setName(users.getFirstName() + " " + users.getLastName());
-                    response.setStatus(consultation.getRequestType());
-                    response.setConsultation_type(consultation.getConsultationType());
-                    response.setAdded_type(consultation.getAddedType());
-                    response.setSpecialization("");
-                    response.setProfile_picture(photo);
-                }else {
-                    Users users= consultation.getDoctorId();
-                    String specializationName = "";
-                    if(users.getSpecializationId()!=null && users.getSpecializationId()!=0){
-                        Specialization specialization = specializationRepository.findById(users.getSpecializationId()).orElse(null);
-                        if(specialization!=null){specializationName = specialization.getName();}
-                    }
-                    String photo = "";
-                    if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
-                        photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + users.getProfilePicture();
-                    }
-
-                    response.setSlot_day(slots.getSlotDay());
-                    response.setSlot_time(slots.getSlotTime());
-                    response.setSlot_type(slots.getSlotType());
-                    response.setConsultation_date(consultation.getConsultationDate());
-                    response.setTo(consultation.getPatientId().getUserId());
-                    response.setName(users.getFirstName() + " " + users.getLastName());
-                    response.setStatus(consultation.getRequestType());
-                    response.setConsultation_type(consultation.getConsultationType());
-                    response.setAdded_type(consultation.getAddedType());
-                    response.setSpecialization(specializationName);
-                    response.setProfile_picture(photo);
-                }
+                GetSloatsResponse response = getGetSloatsResponse(consultation);
 
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.SUCCESS_CODE,
@@ -1991,6 +1953,30 @@ public class PatientService {
                     messageSource.getMessage(Constants.NO_DETAILS_FOUND,null,locale)
             ));
         }
+    }
+
+    private GetSloatsResponse getGetSloatsResponse(Consultation consultation) {
+        SlotMaster slots = consultation.getSlotId();
+
+        GetSloatsResponse response = new GetSloatsResponse();
+        Users users= consultation.getPatientId();
+        String photo = "";
+        if(users.getProfilePicture()!=null && !users.getProfilePicture().isEmpty()){
+            photo = baseUrl+ "uploaded_file/UserProfile/" + consultation.getPatientId().getUserId() + "/" + users.getProfilePicture();
+        }
+
+        response.setSlot_day(slots.getSlotDay());
+        response.setSlot_time(slots.getSlotTime());
+        response.setSlot_type(slots.getSlotType().getId());
+        response.setConsultation_date(consultation.getConsultationDate());
+        response.setTo(consultation.getDoctorId().getUserId());
+        response.setName(users.getFirstName() + " " + users.getLastName());
+        response.setStatus(consultation.getRequestType());
+        response.setConsultation_type(consultation.getConsultationType());
+        response.setAdded_type(consultation.getAddedType());
+        response.setSpecialization("");
+        response.setProfile_picture(photo);
+        return response;
     }
 
     public ResponseEntity<?> myOrders(Locale locale, HealthTipPackageHistoryRequest request) {
