@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 public class CommentsDto {
     private String comment;
     private String name;
-    private Float rating;
-    private LocalDateTime created_at;
+    private Integer rating;
+    private String created_at;
     private String file_url;
     private Long total_count;
 }

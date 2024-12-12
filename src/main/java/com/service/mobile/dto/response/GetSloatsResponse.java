@@ -18,7 +18,7 @@ import java.time.LocalDate;
 public class GetSloatsResponse {
     private String slot_day;
     private String slot_time;
-    private SlotType slot_type;
+    private Integer slot_type;
     private LocalDate consultation_date;
     private Integer to;
     private String name;

@@ -33,10 +33,10 @@ public class ViewProfileResponse {
     private String language;
     private List<CommentsDto> review;
     private String gender;
-    private Float call_commission;
-    private Float call_consultation_fees;
-    private Float call_final_consultation_fees;
-    private Float visit_commission;
-    private Float visit_consultation_fees;
-    private Float visit_final_consultation_fees;
+    private Integer call_commission;
+    private Integer call_consultation_fees;
+    private Integer call_final_consultation_fees;
+    private Integer visit_commission;
+    private Integer visit_consultation_fees;
+    private Integer visit_final_consultation_fees;
 }

@@ -15,7 +15,6 @@ public interface LabSubCategoryMasterRepository extends JpaRepository<LabSubCate
     @Query("Select u from LabSubCategoryMaster u where u.subCatId in ?1")
     List<LabSubCategoryMaster> findByIdinList(List<Integer> reportId);
 
-
     @Query("Select u from LabSubCategoryMaster u where u.subCatId in ?1 and u.isHomeConsultantAvailable = ?2")
     List<LabSubCategoryMaster> findByIdinListAndHomeConsultant(List<Integer> reportId, YesNo homeAvailability);
 }

@@ -241,9 +241,8 @@ public class PatientController {
     @PostMapping(path = "/get-sloats", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> getSloats(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                 Locale locale,
-                                        @RequestHeader(name = "X-type", required = false) String type,
                                         @ModelAttribute GetSloatsRequest request) throws IOException {
-        return patientService.getSloats(locale,request,type);
+        return patientService.getSloats(locale,request);
     }
 
     @GetMapping("/get-sort-by")

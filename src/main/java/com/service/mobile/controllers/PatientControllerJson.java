@@ -256,9 +256,8 @@ public class PatientControllerJson {
     @PostMapping(path = "/get-sloats", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> getSloats(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                 Locale locale,
-                                        @RequestHeader(name = "X-type", required = false) String type,
                                         @RequestBody GetSloatsRequest request) throws IOException {
-        return patientService.getSloats(locale,request,type);
+        return patientService.getSloats(locale,request);
     }
 
     @PostMapping(path="/verify-otp", consumes = {MediaType.APPLICATION_JSON_VALUE})

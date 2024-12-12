@@ -13,6 +13,7 @@ import lombok.Setter;
 public class ActiveHealthTipsPackageResponse {
     private Integer package_id;
     private String package_name;
+    private Integer category_id;
     private String image;
     private String package_price;
     private PackageType package_type=PackageType.Free;

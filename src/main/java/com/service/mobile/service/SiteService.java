@@ -22,6 +22,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -100,17 +104,19 @@ public class SiteService {
             AppBannerResponse dto = new AppBannerResponse();
 
             dto.setType(banner.getType());
-            dto.setType(projectBase);
+            dto.setDomain(projectBase);
+            String locationOfImage = "/uploaded_file/image-gallery/"+banner.getIname();
             if(banner.getType().equalsIgnoreCase("video")){
-                dto.setPath((banner.getVname()!=null && !banner.getVname().isEmpty())?baseUrl+"/uploaded_file/videos/"+banner.getVname():video);
-                dto.setThumb((banner.getVname()!=null && !banner.getVname().isEmpty())?baseUrl+"/uploaded_file/image-gallery/"+banner.getIname():video);
+                String locationOfVideoPath = "/uploaded_file/videos/"+banner.getVname();
+                String path = fileExitsOrNot(locationOfVideoPath);
+                String thumb = fileExitsOrNot(locationOfImage);
+                dto.setPath(path);
+                dto.setThumb(thumb);
             }else{
-                dto.setPath(baseUrl+"/uploaded_file/image-gallery/"+banner.getIname());
+                String image = fileExitsOrNot(locationOfImage);
+                dto.setPath(image);
                 dto.setThumb(null);
             }
-            dto.setType(banner.getType());
-            dto.setType(banner.getType());
-
             response.add(dto);
         }
         if(!response.isEmpty()){
@@ -127,6 +133,14 @@ public class SiteService {
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
             ));
         }
+    }
+
+    public String fileExitsOrNot(String location) {
+        Path fileLocation = Paths.get(location);
+        if (Files.exists(fileLocation)) {
+            return location;
+        }
+        return null;
     }
 
     public ResponseEntity<?> getVideoAttachment(Locale locale, GetSloatsRequest request) {

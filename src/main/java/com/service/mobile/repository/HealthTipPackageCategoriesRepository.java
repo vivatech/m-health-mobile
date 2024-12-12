@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @Repository
 public interface HealthTipPackageCategoriesRepository extends JpaRepository<HealthTipPackageCategories, Integer> {
-    @Query("Select u from HealthTipPackageCategories u where u.healthTipPackage.packageId in ?1")
+    @Query("Select u from HealthTipPackageCategories u where u.healthTipPackage.packageId in ?1 order by u.healthTipPackageCategoryId DESC")
     List<HealthTipPackageCategories> findByPackageIds(List<Integer> healthTipsId);
 
     @Query("Select u.healthTipCategoryMaster.categoryId from HealthTipPackageCategories u where u.healthTipPackage.packageId in ?1")

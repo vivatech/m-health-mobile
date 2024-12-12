@@ -2,6 +2,7 @@ package com.service.mobile.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.service.mobile.config.Constants;
+import com.service.mobile.config.PaymentOptionConfig;
 import com.service.mobile.dto.dto.*;
 import com.service.mobile.dto.enums.*;
 import com.service.mobile.dto.request.*;
@@ -87,6 +88,8 @@ public class PatientLabService {
     private Integer SystemUserId;
     @Value("${app.transaction.mode}")
     private Integer transactionMode;
+    @Autowired
+    private PaymentOptionConfig paymentOptionConfig;
 
     public ResponseEntity<?> labRequest(LabRequestDto request, Locale locale) {
         if(request.getName()==null){request.setName("");}
@@ -373,15 +376,10 @@ public class PatientLabService {
             response.setTime(explode[0]+":"+explode[1]+"-"+explode[2]+":"+explode[3]);
             response.setDate(consultation.getConsultationDate());
             response.setDoctor_name(consultation.getDoctorId().getFirstName()+ " "+consultation.getDoctorId().getLastName());
-            List<LabOrders> labOrders = labOrdersRepository.findByConsultationId(consultation.getCaseId());
-            OrderStatus status = OrderStatus.New;
-            for(LabOrders orders:labOrders){
-                if(orders.getPaymentStatus()== OrderStatus.Pending){ status = OrderStatus.Pending; }
-                else if(orders.getPaymentStatus()== OrderStatus.Completed){ status = OrderStatus.Completed; }
-                else if(orders.getPaymentStatus()== OrderStatus.Inprogress){ status = OrderStatus.Inprogress; }
-                else{status = OrderStatus.New; }
-            }
-            response.setStatus(status);
+            LabOrders labOrders = labOrdersRepository.findByConsultationId(consultation.getCaseId()).get(0);
+            if(labOrders != null){
+                response.setStatus(labOrders.getPaymentStatus().name());
+            }else response.setStatus("New");
         }
         return response;
     }
@@ -429,14 +427,7 @@ public class PatientLabService {
                     messageSource.getMessage(Constants.REPORT_ID_REQUIRED,null,locale)
             ));
         }else{
-            BillInfoDto dto = publicService.getBillInfo(request.getLab_id(),request.getReport_id(),request.getCollection_mode(),request.getCurrency_option());
-            List<ReportDto> report = new ArrayList<>();
-            int i = 0;
-            for (Map.Entry<Integer, String> entry : dto.getReportNameKeyList().entrySet()) {
-                report.add(new ReportDto(entry.getKey(), entry.getValue()));
-                i++;
-            }
-            dto.setReportName(report);
+            BillInfoDto dto = publicService.getBillInfo(request.getLab_id(),request.getReport_id(),request.getCollection_mode(),request.getCurrency_option(), locale);
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
@@ -447,69 +438,84 @@ public class PatientLabService {
     }
 
     public ResponseEntity<?> selectTimeSlot(BillInfoRequest request, Locale locale) {
-        Integer userId = request.getUser_id();
-        Integer caseId = request.getCase_id();
-        ConsultDetailSummaryDto summary = getConsultDetailSummary(caseId) == null ? new ConsultDetailSummaryDto() : getConsultDetailSummary(caseId);
-
-        Users userdata = usersRepository.findById(userId).orElse(null);
-
-        List<Integer> getSubCatIds = request.getReport_id();
-        List<PaymentMethodResponse.Option> paymentMethod = new ArrayList<>();
-
-        if (getSubCatIds != null && !getSubCatIds.isEmpty()) {
-            List<ReportSubCatDto> labVisitOnly = publicService.checkHomeVisit(getSubCatIds);
-            if (labVisitOnly.isEmpty()) {
-                paymentMethod.add(new PaymentMethodResponse.Option("Pay_Home", "Pay at Home"));
-            }
+        if (request.getUser_id() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.UNAUTHORIZED_MSG,
+                    Constants.UNAUTHORIZED_CODE,
+                    messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
+            ));
         }
+        try {
+            //consultation details
+            ConsultDetailSummaryDto summary = new ConsultDetailSummaryDto();
+            if (request.getCase_id() != null) {
+                summary = getConsultDetailSummary(request.getCase_id(), locale);
+            }
+            //user details
+            Users userdata = usersRepository.findById(request.getUser_id()).orElse(null);
 
-        List<PaymentMethodResponse.Option> getPaymentMethod = publicService.getPaymentMethod();
-        paymentMethod.addAll(getPaymentMethod);
+            List<PaymentMethodResponse.Option> paymentMethod = new ArrayList<>();
 
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("address", userdata.getResidenceAddress());
-        userData.put("contact_number", userdata.getContactNumber());
-        userData.put("country_code", userdata.getCountryCode());
+            if (request.getReport_id() != null && !request.getReport_id().isEmpty()) {
+                List<ReportSubCatDto> labVisitOnly = publicService.checkHomeVisit(request.getReport_id());
+                if (labVisitOnly.isEmpty()) {
+                    paymentMethod.add(new PaymentMethodResponse.Option("Pay_Home", "Pay at Home"));
+                }
+            }
+            //add payment method
+            List<PaymentMethodResponse.Option> getPaymentMethod = publicService.getPaymentMethod();
+            paymentMethod.addAll(getPaymentMethod);
 
-        SelectTimeSlotResponseDto responseData = new SelectTimeSlotResponseDto();
-        responseData.setUserdata(userData);
-        responseData.setSummary(summary);
-        responseData.setPayment_method(paymentMethod);
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("address", userdata.getResidenceAddress());
+            userData.put("contact_number", userdata.getContactNumber());
+            userData.put("country_code", userdata.getCountryCode());
 
-        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                Constants.SUCCESS_CODE,
-                Constants.SUCCESS_CODE,
-                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
-                responseData
-        ));
+            SelectTimeSlotResponseDto responseData = new SelectTimeSlotResponseDto();
+            responseData.setUserdata(userData);
+            responseData.setSummary(summary);
+            responseData.setPayment_method(paymentMethod);
+
+            return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(Constants.SUCCESS_MESSAGE, null, locale),
+                    responseData
+            ));
+        } catch (Exception e) {
+            log.error("Error while selecting lab : {}", e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.UNAUTHORIZED_MSG,
+                    Constants.UNAUTHORIZED_CODE,
+                    e.getMessage()
+            ));
+        }
     }
 
-    private ConsultDetailSummaryDto getConsultDetailSummary(Integer caseId) {
-        List<LabOrders> list = labOrdersRepository.findByConsultationId(caseId);
-        for(LabOrders orders:list){
-            Consultation consultation = orders.getCaseId();
-            if(consultation !=null){
-                ConsultDetailSummaryDto response = new ConsultDetailSummaryDto();
-                if (consultation != null) {
-                    String[] consultTime = consultation.getSlotId().getSlotTime().split(":");
-                    response.setCase_id(consultation.getCaseId());
-                    response.setTime(consultTime[0] + ":" + consultTime[1] + " - " + consultTime[2] + ":" + consultTime[3]);
-                    response.setDate(consultation.getConsultationDate());
-                    response.setDoctor_name(consultation.getDoctorId() != null
-                            ? consultation.getDoctorId().getFirstName() + " " + consultation.getDoctorId().getLastName()
-                            : "-");
+    private ConsultDetailSummaryDto getConsultDetailSummary(Integer caseId, Locale locale) {
+        try {
+            Consultation consultation = consultationRepository.findById(caseId).orElse(null);
+            ConsultDetailSummaryDto response = new ConsultDetailSummaryDto();
+            if (consultation != null) {
+                String[] consultTime = consultation.getSlotId().getSlotTime().split(":");
+                response.setCase_id(consultation.getCaseId());
+                response.setTime(consultTime[0] + ":" + consultTime[1] + " - " + consultTime[2] + ":" + consultTime[3]);
+                response.setDate(consultation.getConsultationDate());
+                response.setDoctor_name(consultation.getDoctorId() != null
+                        ? consultation.getDoctorId().getFirstName() + " " + consultation.getDoctorId().getLastName()
+                        : "-");
 
-                    OrderStatus status;
-                    if(orders.getPaymentStatus()== OrderStatus.Pending){ status = OrderStatus.Pending; }
-                    else if(orders.getPaymentStatus()== OrderStatus.Completed){ status = OrderStatus.Completed; }
-                    else if(orders.getPaymentStatus()== OrderStatus.Inprogress){ status = OrderStatus.Inprogress; }
-                    else{status = OrderStatus.New; }
-                    response.setStatus(status);
-                }
-                return response;
+                List<LabOrders> labOrders = labOrdersRepository.findByConsultationId(caseId);
+                if (!labOrders.isEmpty()) {
+                    LabOrders order = labOrders.get(0);
+                    response.setStatus(messageSource.getMessage(order.getPaymentStatus().toString(), null, locale));
+                } else response.setStatus(messageSource.getMessage("New", null, locale));
             }
+            return response;
+        } catch (Exception e) {
+            log.error("Error in consultation : {}", e);
+            return null;
         }
-        return null;
     }
 
 
@@ -549,7 +555,7 @@ public class PatientLabService {
             labOrder.setSampleCollectionMode(data.getSample_collection_mode());
             labOrder.setStatus(OrderStatus.Pending);
 
-            BillInfoDto billData = publicService.getBillInfo(Integer.valueOf(data.getLab_id()), subCatId, data.getSample_collection_mode(),"");
+            BillInfoDto billData = publicService.getBillInfo(Integer.valueOf(data.getLab_id()), subCatId, data.getSample_collection_mode(),"USD", locale);
 
             float finalConsultationFees = billData.getTotal();
             Float currencyAmount = 0F;

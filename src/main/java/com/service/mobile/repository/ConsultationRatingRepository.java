@@ -1,5 +1,6 @@
 package com.service.mobile.repository;
 
+import com.service.mobile.dto.enums.ConsultationStatus;
 import com.service.mobile.model.Consultation;
 import com.service.mobile.model.ConsultationRating;
 import com.service.mobile.model.Users;
@@ -32,7 +33,7 @@ public interface ConsultationRatingRepository extends JpaRepository<Consultation
     List<ConsultationRating> getByCaseIdAndDoctorId(Integer caseId,Integer doctorId);
 
 //    @Query("SELECT cr FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1 AND cr.status = 'Approve'")
-    @Query(value = "SELECT cr.* FROM mh_consultation_rating cr JOIN mh_users u ON u.user_id = cr.doctor_id WHERE cr.doctor_id = ?1 LIMIT 2 ", nativeQuery = true)
+    @Query(value = "SELECT cr FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1 AND cr.status = 'Approve' order by cr.id desc Limit 2")
     List<ConsultationRating> getByDoctorIdActive(Integer doctorId);
 
     @Query("SELECT count(cr.id) FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1")
