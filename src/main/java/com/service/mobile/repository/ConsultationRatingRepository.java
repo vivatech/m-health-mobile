@@ -29,8 +29,8 @@ public interface ConsultationRatingRepository extends JpaRepository<Consultation
     @Query("SELECT cr FROM ConsultationRating cr WHERE cr.caseId = ?1")
     List<ConsultationRating> getByCaseId(Integer caseId);
 
-    @Query("SELECT cr FROM ConsultationRating cr WHERE cr.caseId = ?1 and cr.doctorId.userId = ?2")
-    List<ConsultationRating> getByCaseIdAndDoctorId(Integer caseId,Integer doctorId);
+    @Query("SELECT cr FROM ConsultationRating cr WHERE cr.caseId = ?1 and cr.doctorId.userId = ?2 ORDER BY cr.id DESC LIMIT 1")
+    ConsultationRating getByCaseIdAndDoctorId(Integer caseId,Integer doctorId);
 
 //    @Query("SELECT cr FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1 AND cr.status = 'Approve'")
     @Query(value = "SELECT cr FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1 AND cr.status = 'Approve' order by cr.id desc Limit 2")

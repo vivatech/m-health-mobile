@@ -13,7 +13,7 @@ public interface LabOrdersRepository extends JpaRepository<LabOrders, Integer> {
     @Query("Select u from LabOrders u where u.caseId.caseId = ?1")
     List<LabOrders> findByConsultationId(Integer caseId);
 
-    @Query("Select u from LabOrders u where u.patientId.userId = ?1")
+    @Query("Select u from LabOrders u where u.patientId.userId = ?1 ORDER BY u.id DESC")
     Page<LabOrders> findByPatientId(Integer userId, Pageable pageable);
 
     @Query("Select u from LabOrders u where u.patientId.userId = ?1 and DATE(u.createdAt) >= ?2 and DATE(u.createdAt) <= ?3")

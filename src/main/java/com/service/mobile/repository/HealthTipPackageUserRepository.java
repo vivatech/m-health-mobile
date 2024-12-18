@@ -30,10 +30,10 @@ public interface HealthTipPackageUserRepository extends JpaRepository<HealthTipP
     @Query("Select u from HealthTipPackageUser u where u.id = ?1 and u.isExpire = ?2")
     Optional<HealthTipPackageUser> getByIdAndExpiry(Integer userId, YesNo yesNo);
 
-    @Query("Select u.healthTipPackage.packageId from HealthTipPackageUser u where u.user.userId = ?1 and u.isExpire = ?2")
+    @Query("Select DISTINCT(u.healthTipPackage.packageId) from HealthTipPackageUser u where u.user.userId = ?1 and u.isExpire = ?2")
     List<Integer> findPackageIdsByUserIdAndExpire(int userId, YesNo yesNo);
 
-    @Query("Select u from HealthTipPackageUser u where u.user.userId = ?1 and u.healthTipPackage.packageId = ?2 and u.isExpire = 'No'")
+    @Query("Select u from HealthTipPackageUser u where u.user.userId = ?1 and u.healthTipPackage.packageId = ?2 and u.isExpire = 'No' ORDER BY u.id DESC")
     List<HealthTipPackageUser> findByUserIdAndPackageId(Integer userId, Integer categoryId);
 
     @Query("SELECT u FROM HealthTipPackageUser u " +

@@ -992,7 +992,7 @@ public class PublicService {
 
     public ResponseEntity<?> getAllCategoriesList(Locale locale) {
         List<CategoriesDto> list = new ArrayList<>();
-        List<HealthTipCategoryMaster> categoryMasters = healthTipCategoryMasterRepository.findAll();
+        List<HealthTipCategoryMaster> categoryMasters = healthTipCategoryMasterRepository.findByStatus(Status.A);
         for(HealthTipCategoryMaster master:categoryMasters){
             String name = locale.getLanguage().equalsIgnoreCase("en")? master.getName() : master.getNameSl();
             list.add(new CategoriesDto(master.getCategoryId(),name));

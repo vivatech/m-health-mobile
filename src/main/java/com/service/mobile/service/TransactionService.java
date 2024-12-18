@@ -7,6 +7,9 @@ import com.service.mobile.dto.response.MyTransactionsResponse;
 import com.service.mobile.dto.response.Response;
 import com.service.mobile.model.*;
 import com.service.mobile.repository.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -47,149 +50,120 @@ public class TransactionService {
 
     @Value("${app.currency.symbol.fdj}")
     private String currencySymbolFdj;
+    @PersistenceContext
+    private EntityManager entityManager;
+    @Autowired
+    private NurseDemandOrdersRepository nurseDemandOrdersRepository;
 
     public ResponseEntity<?> myTransactions(Locale locale, MyTransactionsRequest request) {
-        Pageable pageable = PageRequest.of(request.getPage(),10);
-        List<WalletTransaction> transactions = new ArrayList<>();
+        if(request.getUser_id() == null || request.getUser_id() == 0
+            || request.getPage() == null ){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.BLANK_DATA_GIVEN,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
+            ));
+        }
+        StringBuilder sb = new StringBuilder("Select t From WalletTransaction t WHERE t.patientId.userId = :userId AND t.isDebitCredit = 'debit' ");
+        if(request.getCreated_date() != null){
+            sb.append("AND DATE(t.createdAt) = :createdAt ");
+        }
+        if(request.getType() != null && !request.getType().isEmpty()){
+            sb.append("AND t.serviceType = :type ");
+        }
+        sb.append("ORDER BY t.id DESC");
+
+        Query query = entityManager.createQuery(sb.toString(), WalletTransaction.class);
+
+        query.setParameter("userId", request.getUser_id());
+        if(request.getCreated_date() != null){
+            query.setParameter("createdAt", request.getCreated_date());
+        }
+        if(request.getType() != null && !request.getType().isEmpty()){
+            query.setParameter("type", request.getType());
+        }
+        List<WalletTransaction> transactions = query.getResultList();
+        Long total = (long) transactions.size();
+        // Apply pagination
+        int page = request.getPage();
+        int pageSize = 10;
+        query.setFirstResult(page * pageSize);
+        query.setMaxResults(pageSize);
+
+        transactions = query.getResultList();
+
         List<MyTransactionsResponse> responses = new ArrayList<>();
-        Long total = 0L;
-        if(request.getCreated_date()!=null){
-            if(request.getType()!=null && !request.getType().isEmpty() &&
-                    !request.getType().equalsIgnoreCase("all")){
-                Page<WalletTransaction> page = walletTransactionRepository.
-                        findByPatientIdIsDebitCreditServiceTypeCreatedAt(
-                                request.getUser_id(),"debit",request.getCreated_date(),request.getType(),pageable
-                        );
-                transactions = page.getContent();
-                total = page.getTotalElements();
-            }else{
-                Page<WalletTransaction> page = walletTransactionRepository.
-                        findByPatientIdIsDebitCreditCreatedAt(
-                                request.getUser_id(),"debit",request.getCreated_date(),pageable
-                        );
-                transactions = page.getContent();
-                total = page.getTotalElements();
-            }
-        }
-        else{
-            if(request.getType()!=null && !request.getType().isEmpty() &&
-                    !request.getType().equalsIgnoreCase("all")){
-                Page<WalletTransaction> page = walletTransactionRepository.
-                        findByPatientIdServiceType(
-                                request.getUser_id(),"debit",request.getType(),pageable
-                        );
-                transactions = page.getContent();
-                total = page.getTotalElements();
-            }else{
-                Page<WalletTransaction> page = walletTransactionRepository.
-                        findByPatientIdIsDebit(
-                                request.getUser_id(),"debit",pageable);
-                transactions = page.getContent();
-                total = page.getTotalElements();
-            }
-        }
 
         if(!transactions.isEmpty()){
             for(WalletTransaction wt:transactions){
                 String title = "";
-                Integer case_id = null;
+                Object case_id = "";
                 String orderStatus = null;
-                Orders orderDetail = ordersRepository.findById(wt.getOrderId()).orElse(null);
-                HealthTipOrders healthTipOrders = healthTipOrdersRepository.findById(wt.getOrderId()).orElse(null);
-                LabOrders labOrders = labOrdersRepository.findById(wt.getOrderId()).orElse(null);
+                String currency = "";
+                String healthTipPackageName = "";
+                String packageName = "";
+                String doctorName = "";
+                String consultationType = "";
+                String addedType = null;
+                float amount = 0.0f;
                 if(wt.getServiceType().equalsIgnoreCase("consultation")){
-
-                    if(orderDetail!=null && orderDetail.getPackageId()!=null && orderDetail.getHealthtipPackageId()!=null){
-                        if(orderDetail.getStatus()==OrderStatus.Cancelled && wt.getIsDebitCredit().equalsIgnoreCase("credit")){
-                            title = messageSource.getMessage(Constants.CONSULT_REQUEST_REJECT,null,locale);
-                        }else if(wt.getIsDebitCredit().equalsIgnoreCase("credit") && wt.getOrderId()==null){
-                            title = messageSource.getMessage(Constants.MONEY_ADDED_WALLET,null,locale);
-                        }else{
-                            if(orderDetail.getStatus() == OrderStatus.Cancelled && wt.getIsDebitCredit().equalsIgnoreCase("DEBIT")){
-                                title = messageSource.getMessage(Constants.BOOKED_CONSULT,null,locale);
-                            }else{
-                                if(orderDetail.getStatus() != OrderStatus.Cancelled && wt.getIsDebitCredit().equalsIgnoreCase("DEBIT")){
-                                    title = messageSource.getMessage(Constants.BOOKED_CONSULT,null,locale);
-                                }
-                            }
+                    title = messageSource.getMessage(Constants.BOOKED_CONSULT,null,locale);
+                    if(wt.getOrderId() != null) {
+                        Orders orders = ordersRepository.findById(wt.getOrderId()).orElse(null);
+                        if(orders != null){
+                            case_id = orders.getCaseId().getCaseId();
+                            orderStatus = orders.getStatus().name();
+                            currency = orders.getCurrencyAmount() == null ? currencySymbolFdj + " " + orders.getAmount()
+                                            : orders.getCurrency() + " " + orders.getCurrencyAmount();
+                            amount = orders.getAmount();
+                            doctorName = orders.getDoctorId().getFirstName() + " " + orders.getDoctorId().getLastName();
+                            consultationType = orders.getCaseId().getConsultType() != null
+                                    ? orders.getCaseId().getConsultType()
+                                    : messageSource.getMessage(Constants.PAID_MSG,null,locale);
+                            addedType = orders.getCaseId().getAddedType() != null
+                                    ? orders.getCaseId().getAddedType().name()
+                                    : "";
                         }
-                    }else{
-                        if(orderDetail.getStatus()==OrderStatus.Cancelled && wt.getIsDebitCredit().equalsIgnoreCase("credit")){
-                            title = messageSource.getMessage(Constants.CONSULT_REQUEST_REJECT,null,locale);
-                        }else{
-                            if(orderDetail.getStatus() == OrderStatus.Cancelled && wt.getIsDebitCredit().equalsIgnoreCase("DEBIT")){
-                                title = messageSource.getMessage(Constants.BOOKED_CONSULT,null,locale);
-                            }else{
-                                if(orderDetail.getStatus() != OrderStatus.Cancelled && wt.getIsDebitCredit().equalsIgnoreCase("DEBIT") &&
-                                        orderDetail.getPackageId()!=null &&
-                                    (orderDetail.getPackageId().getPackageName() !=null && !orderDetail.getPackageId().getPackageName().isEmpty())
-                                ){
-                                    title = messageSource.getMessage(Constants.PURCHASE_PACKAGE,null,locale);
-                                }else if(orderDetail.getStatus() != OrderStatus.Cancelled && wt.getIsDebitCredit().equalsIgnoreCase("DEBIT") &&
-                                        orderDetail.getHealthtipPackageId()!=null &&
-                                        (orderDetail.getHealthtipPackageId().getPackageName() !=null && !orderDetail.getHealthtipPackageId().getPackageName().isEmpty())
-                                ){
-                                    title = messageSource.getMessage(Constants.PURCHASE_PACKAGE,null,locale);
-                                }
-                            }
-                        }
-
-                    }
+                    }else continue;
                 }
-                else if(wt.getServiceType().equalsIgnoreCase("lab")){
-                    if(labOrders!=null){
-                        orderStatus = labOrders.getStatus().toString();
-                    }
-                    title = messageSource.getMessage(Constants.BOOKED_LAB_MSG,null,locale);
-                }
-                else if(wt.getServiceType().equalsIgnoreCase("load_wallet_balance")){
-                    orderStatus = wt.getTransactionStatus();
-                    title = publicService.getPaymentServiceType(locale).getLoad_wallet_balance();
+                else if(wt.getServiceType().equalsIgnoreCase("healthtip")){
+                    title = messageSource.getMessage(Constants.HEALTHTIP_PURCHASED,null,locale);
+                    if(wt.getOrderId() != null){
+                        HealthTipOrders orders = healthTipOrdersRepository.findById(wt.getOrderId()).orElse(null);
+                        orderStatus = orders == null ? "" : orders.getStatus().name();
+                        currency = orders == null ? "" :
+                                (orders.getCurrencyAmount() == null ? currencySymbolFdj + " " + orders.getAmount()
+                                        : orders.getCurrency() + " " + orders.getCurrencyAmount());
+                        amount = orders.getAmount();
+                        HealthTipPackageCategories categories = healthTipPackageCategoriesRepository.findByHealthTipPackage(orders.getHealthTipPackage().getPackageId());
+                        healthTipPackageName = categories == null ? "" :
+                                (locale.getLanguage().equalsIgnoreCase("en")
+                                        ? categories.getHealthTipCategoryMaster().getName()
+                                        : categories.getHealthTipCategoryMaster().getNameSl());
+                        packageName = orders == null ? "" :
+                                (locale.getLanguage().equals("en")
+                                        ? orders.getHealthTipPackage().getPackageName()
+                                        : orders.getHealthTipPackage().getPackageNameSl());
+                    }else continue;
                 }
                 else if(wt.getServiceType().equalsIgnoreCase("nurse_on_demand")){
-                    if(orderDetail!=null){
-                        orderStatus = orderDetail.getStatus().toString();
-                    }
                     title = messageSource.getMessage(Constants.NURSE_ON_DEMAND,null,locale);
+                    if(wt.getOrderId() != null){
+                        NurseDemandOrders orders = nurseDemandOrdersRepository.findById(wt.getOrderId()).orElse(null);
+                        orderStatus = orders == null ? "" : orders.getStatus().name();
+                    }else continue;
                 }
-                else{
-                    if(healthTipOrders!=null){
-                        orderStatus = healthTipOrders.getStatus().toString();
-                    }
-                    title = messageSource.getMessage(Constants.HEALTHTIP_PURCHASED,null,locale);
+                else if(wt.getServiceType().equalsIgnoreCase("lab")){
+                    title = messageSource.getMessage(Constants.BOOKED_LAB_MSG,null,locale);
+                    if(wt.getOrderId() != null){
+                        LabOrders orders = labOrdersRepository.findById(wt.getOrderId()).orElse(null);
+                        orderStatus = orders == null ? "" : orders.getStatus().name();
+                    }else continue;
                 }
-
-                String currency = "";
-                HealthTipPackageCategories packData = null;
-                if(orderDetail!=null && wt.getServiceType().equalsIgnoreCase("consultation")){
-                    currency = (orderDetail.getCurrency()!=null && !orderDetail.getCurrency().isEmpty())?
-                            orderDetail.getCurrency() + " " + orderDetail.getCurrencyAmount() :
-                            currencySymbolFdj + " " + orderDetail.getAmount();
+                else if(wt.getServiceType().equalsIgnoreCase("load_wallet_balance")){
+                    title = publicService.getPaymentServiceType(locale).getLoad_wallet_balance();
                 }
-                else if(healthTipOrders!=null && wt.getServiceType().equalsIgnoreCase("healthtip")){
-                    currency = (healthTipOrders.getCurrency()!=null && !healthTipOrders.getCurrency().isEmpty())?
-                            healthTipOrders.getCurrency() + " " + healthTipOrders.getCurrencyAmount() :
-                            currencySymbolFdj + " " + healthTipOrders.getAmount();
-                    List<HealthTipPackageCategories> packDataList = healthTipPackageCategoriesRepository.findByPackageIds(healthTipOrders.getHealthTipPackage().getPackageId());
-                    if(!packDataList.isEmpty()){packData = packDataList.get(0);}
-                }
-                else{
-                    currency = currencySymbolFdj + " " + wt.getAmount();
-                }
-                String healthtips_package_name = "";
-                if((locale.getLanguage().equalsIgnoreCase("en"))){
-                    if(packData!=null && packData.getHealthTipCategoryMaster()!=null
-                            && packData.getHealthTipCategoryMaster().getNameSl()!=null &&
-                            !packData.getHealthTipCategoryMaster().getNameSl().isEmpty()){
-                        healthtips_package_name = packData.getHealthTipCategoryMaster().getNameSl();
-                    }
-                }else{
-                    if(packData!=null && packData.getHealthTipCategoryMaster()!=null
-                            && packData.getHealthTipCategoryMaster().getName()!=null &&
-                            !packData.getHealthTipCategoryMaster().getName().isEmpty()){
-                        healthtips_package_name = packData.getHealthTipCategoryMaster().getName();
-                    }
-                }
+                else continue;
 
                 MyTransactionsResponse data = new MyTransactionsResponse();
 
@@ -197,23 +171,16 @@ public class TransactionService {
                 data.setCase_id(case_id);
                 data.setTransaction_id(wt.getTransactionId());
                 data.setContact_number((wt.getPayerMobile()!=null && !wt.getPayerMobile().isEmpty())? Long.valueOf(wt.getPayerMobile().replace("+","")) : "-");
-                data.setTransaction_type(wt.getIsDebitCredit().equalsIgnoreCase("DEBIT") ?
-                                ("+"+currencySymbolFdj + " " + currency) : ("-" + wt.getAmount() + "-" + currency)
-                        );
-                data.setPackage_name(
-                        (orderDetail!=null && orderDetail.getPackageId()!=null)?orderDetail.getPackageId().getPackageName():""
-                );
-                data.setHealthtips_package_name(healthtips_package_name);
-                data.setDoctor_name(
-                        (orderDetail!=null && orderDetail.getDoctorId()!=null)?orderDetail.getDoctorId().getFirstName() + " " + orderDetail.getDoctorId().getLastName():""
-                );
+                data.setTransaction_type(wt.getIsDebitCredit().equalsIgnoreCase("credit")
+                        ? (locale.getLanguage().equalsIgnoreCase("en") ? "+USD " + amount : "+ " + currencySymbolFdj + " " + amount)
+                        : "-" + currency);
+                data.setPackage_name(packageName);
+                data.setHealthtips_package_name(healthTipPackageName);
+                data.setDoctor_name(doctorName);
                 data.setCreated_at(wt.getCreatedAt());
                 data.setStatus((orderStatus!=null && orderStatus.equalsIgnoreCase("Cancel"))?"Cancelled":orderStatus);
-                data.setConsultation_type(
-                        (orderDetail!=null && orderDetail.getCaseId().getConsultType()!=null)?
-                                orderDetail.getCaseId().getConsultType():messageSource.getMessage(Constants.PAID_MSG,null,locale)
-                );
-                data.setAdded_type((orderDetail!=null && orderDetail.getCaseId()!=null)?orderDetail.getCaseId().getAddedType().toString():"");
+                data.setConsultation_type(consultationType);
+                data.setAdded_type(addedType);
                 data.setTotal_count(total);
 
                 responses.add(data);

@@ -62,17 +62,17 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     Long countByRequestTypeAndSlotIdAndDoctorIdAndConsultationDate(List<RequestType> list, List<Integer> allocatedSlots, Integer doctorId, LocalDate consultationDate);
 
     @Query("Select u from Consultation u where u.requestType = ?1 and u.createdAt = DATE(?2) and u.patientId.userId = ?3 and" +
-            " u.doctorId.userId = ?4 and u.consultationType = ?5 and u.consultationDate = ?6 order by u.consultationDate DESC, u.createdAt DESC")
+            " u.doctorId.userId = ?4 and u.consultationType = ?5 and u.consultationDate = ?6 order by u.consultationDate DESC")
     List<Consultation> findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
             RequestType requestType,LocalDate newOrderDate, Integer patient, Integer doctor
             , ConsultationType consultationType,
             LocalDate consultationDate);
 
     @Query("Select count(u.caseId) from Consultation u where u.patientId.userId = ?1 and u.doctorId.userId = ?2 and " +
-            "u.requestType = ?4 and u.consultationDate = ?3")
+            "u.requestType != ?4 and u.consultationDate >= ?3 and u.consultationType = ?5")
     Long countByPatientIdAndDoctorIdAndConsultationDateAndConsultationTypeAndRequestType(
             Users patientId, Integer userId,
-            LocalDate consultationDate, RequestType requestType);
+            LocalDate consultationDate, RequestType requestType, ConsultationType type);
 
     @Query("SELECT COUNT(u.caseId) FROM Consultation u WHERE u.patientId.userId = ?1 AND u.doctorId.userId = ?2 AND " +
             "DATE(u.createdAt) = ?3 AND u.consultationType = ?4 AND u.consultType = ?5 AND " +
