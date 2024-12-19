@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -16,14 +17,13 @@ public class SearchDocResponse {
     private String about_me;
     private String experience;
     private String profile_picture;
-    private float rating;
+    private int rating;
     private int max_fees;
-    private int review;
+    private long review;
     private int hospital_id;
     private String hospital_name;
     private String speciality;
     private List<String> languages;
-    private ConsultationFees consultation_fees;
-    private boolean isAvailableToday = false;
+    private Map<String, String> consultation_fees;
     private Integer total_count;
 }

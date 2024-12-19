@@ -23,4 +23,7 @@ public interface ChargesRepository extends JpaRepository<Charges,Integer> {
 
     @Query(value = "Select u from Charges u where u.userId = ?1 and u.feeType = ?2")
     Charges findCharges(Integer doctor, FeeType type);
+
+    @Query("Select MAX(u.finalConsultationFees) from Charges u")
+    Float findMaxConsultationFee();
 }

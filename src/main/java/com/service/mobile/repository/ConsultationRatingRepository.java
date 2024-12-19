@@ -1,9 +1,6 @@
 package com.service.mobile.repository;
 
-import com.service.mobile.dto.enums.ConsultationStatus;
-import com.service.mobile.model.Consultation;
 import com.service.mobile.model.ConsultationRating;
-import com.service.mobile.model.Users;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface ConsultationRatingRepository extends JpaRepository<ConsultationRating, Integer> {
-    List<ConsultationRating> findByDoctorId(Users val);
+
 
     @Query(value = "SELECT AVG(cr.rating) FROM mh_consultation_rating cr WHERE cr.doctor_id = ?1", nativeQuery = true)
     float findDoctorRating(Integer userId);
@@ -45,4 +42,13 @@ public interface ConsultationRatingRepository extends JpaRepository<Consultation
 
     @Query("SELECT count(cr) FROM ConsultationRating cr WHERE cr.caseId = ?1 and cr.patientId.userId = ?2")
     Long countByCaseIdAndPatientId(Integer caseId, Integer userId);
+
+    @Query("SELECT SUM(cr.rating) FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1 AND cr.status = 'Approve' ")
+    Long findSumByDoctorId(Integer userId);
+
+    @Query("SELECT count(cr.comment) FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1")
+    Long findReview(Integer userId);
+
+    @Query("SELECT count(cr) FROM ConsultationRating cr WHERE cr.doctorId.userId = ?1 AND cr.status = 'Approve' ")
+    Long findCountByDoctorId(Integer userId);
 }
