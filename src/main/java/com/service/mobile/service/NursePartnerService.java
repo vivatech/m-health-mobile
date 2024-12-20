@@ -92,31 +92,7 @@ public class NursePartnerService {
     public ResponseEntity<?> nurseService(Locale locale) {
         List<NurseService> services = nurseServiceRepository.findByStatus("A");
         if (services != null && !services.isEmpty()) {
-            String currency = "₹"; // Retrieve the currency symbol from application properties or other configuration
-            List<ServiceResponse> data = new ArrayList<>();
-
-            for (NurseService serv : services) {
-                ServiceResponse serve = new ServiceResponse();
-                serve.setId(serv.getId());
-
-                if ("en".equals(locale.getLanguage())) {
-                    serve.setService_name(serv.getSeviceName());
-                    serve.setDescription(serv.getDescription());
-                } else {
-                    serve.setService_name(serv.getSeviceNameSl());
-                    serve.setDescription(serv.getDescriptionSl());
-                }
-
-                serve.setService_price(currency + " " + serv.getTotalServicePrice());
-
-                if (serv.getServiceImage() != null && !serv.getServiceImage().isEmpty()) {
-                    serve.setService_image(baseUrl + "/uploaded_file/nurse_services/" + serv.getId() + "/" + serv.getServiceImage());
-                } else {
-                    serve.setService_image(baseUrl + "/uploaded_file/noimagefound.png");
-                }
-
-                data.add(serve);
-            }
+            List<ServiceResponse> data = getServiceResponses(locale, services);
 
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
@@ -125,12 +101,40 @@ public class NursePartnerService {
                     data
             ));
         } else {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
             ));
         }
+    }
+
+    private List<ServiceResponse> getServiceResponses(Locale locale, List<NurseService> services) {
+        List<ServiceResponse> data = new ArrayList<>();
+
+        for (NurseService serv : services) {
+            ServiceResponse serve = new ServiceResponse();
+            serve.setId(serv.getId());
+
+            if ("en".equals(locale.getLanguage())) {
+                serve.setService_name(serv.getSeviceName());
+                serve.setDescription(serv.getDescription());
+            } else {
+                serve.setService_name(serv.getSeviceNameSl());
+                serve.setDescription(serv.getDescriptionSl());
+            }
+
+            serve.setService_price(currencySymbol + " " + serv.getTotalServicePrice());
+
+            if (serv.getServiceImage() != null && !serv.getServiceImage().isEmpty()) {
+                serve.setService_image(baseUrl + "/uploaded_file/nurse_services/" + serv.getId() + "/" + serv.getServiceImage());
+            } else {
+                serve.setService_image(baseUrl + "/uploaded_file/noimagefound.png");
+            }
+
+            data.add(serve);
+        }
+        return data;
     }
 
     public ResponseEntity<?> logsNurseNotFound(Locale locale, LogsNurseNotFoundRequest request) {
@@ -179,13 +183,15 @@ public class NursePartnerService {
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale)
+                    messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+                    new ArrayList<>()
             ));
         } else {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.REQUEST_PARAM_MISSING,null,locale)
+                    messageSource.getMessage(Constants.REQUEST_PARAM_MISSING,null,locale),
+                    new ArrayList<>()
             ));
         }
     }
@@ -240,22 +246,10 @@ public class NursePartnerService {
                 response.setSlsh_amount("SLSH " + (Math.round(slshAmount * 100.0) / 100.0));
             }
 
-            IdNameMobileDto nurseData = new IdNameMobileDto();
-            nurseData.setId(nurse.getId());
-            nurseData.setMobile(nurse.getContactNumber());
-            nurseData.setName(nurse.getName());
+            IdNameMobileDto nurseData = getNurseDeatils(nurse);
             response.setNurse(nurseData);
 
-            NurseServiceState nurseServiceState = new NurseServiceState();
-            nurseServiceState.setPatientId(request.getUser_id());
-            nurseServiceState.setNurseId(nurse.getId());
-            nurseServiceState.setLatPatient(request.getP_latutude().toString());
-            nurseServiceState.setLongPatient(request.getN_longitude().toString());
-            nurseServiceState.setLatNurse(request.getN_latutude().toString());
-            nurseServiceState.setLongNurse(request.getN_longitude().toString());
-            nurseServiceState.setState(State.PROCESSING);
-            nurseServiceState.setDistance(request.getDistance().toString());
-            nurseServiceState.setSearchId(request.getSearch_id().toString());
+            NurseServiceState nurseServiceState = getNurseServiceState(request, nurse);
             nurseServiceState = nurseServiceStateRepository.save(nurseServiceState);
             response.setState_id(nurseServiceState.getId());
 
@@ -273,6 +267,28 @@ public class NursePartnerService {
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
             ));
         }
+    }
+
+    private IdNameMobileDto getNurseDeatils(PartnerNurse nurse) {
+        IdNameMobileDto nurseData = new IdNameMobileDto();
+        nurseData.setId(nurse.getId());
+        nurseData.setMobile(nurse.getContactNumber());
+        nurseData.setName(nurse.getName());
+        return nurseData;
+    }
+
+    private NurseServiceState getNurseServiceState(GetNurseLocationInfoRequest request, PartnerNurse nurse) {
+        NurseServiceState nurseServiceState = new NurseServiceState();
+        nurseServiceState.setPatientId(request.getUser_id());
+        nurseServiceState.setNurseId(nurse.getId());
+        nurseServiceState.setLatPatient(request.getP_latutude().toString());
+        nurseServiceState.setLongPatient(request.getN_longitude().toString());
+        nurseServiceState.setLatNurse(request.getN_latutude().toString());
+        nurseServiceState.setLongNurse(request.getN_longitude().toString());
+        nurseServiceState.setState(State.PROCESSING);
+        nurseServiceState.setDistance(request.getDistance().toString());
+        nurseServiceState.setSearchId(request.getSearch_id().toString());
+        return nurseServiceState;
     }
 
     //NOTE-TODO (NOT IN BAANNOO)

@@ -11,6 +11,7 @@ import com.service.mobile.dto.response.*;
 import com.service.mobile.model.*;
 import com.service.mobile.model.State;
 import com.service.mobile.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -24,7 +25,7 @@ import org.springframework.data.domain.Pageable;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -32,7 +33,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class PublicService {
+    @Autowired
+    private SmsLogRepository smsLogRepository;
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     public static final String PATIENT ="patient";
     @Autowired
@@ -145,6 +151,12 @@ public class PublicService {
     private MessageService messageService;
     @Value("${app.ZoneId}")
     private String zone;
+    @Value("${app.database.url}")
+    private String nurseURL;
+    @Value("${app.database.username}")
+    private String nurseUserName;
+    @Value("${app.database.password}")
+    private String nursePassword;
 
     public List<Country> findAllCountry(){
         return countryRepository.findAll();
@@ -861,15 +873,7 @@ public class PublicService {
                         consultationFees.put(charge.getFeeType(), currencySymbolFdj+" "+String.format("%.2f", charge.getFinalConsultationFees()));
                     }
 
-                    DoctorRattingDTO doctorDTO = new DoctorRattingDTO();
-                    doctorDTO.setId(doc.getUserId());
-                    doctorDTO.setFirst_name(doc.getFirstName());
-                    doctorDTO.setLast_name(doc.getLastName());
-                    doctorDTO.setHospital_id(doc.getHospitalId());
-                    doctorDTO.setHospital_name(doc.getClinicName());
-                    doctorDTO.setPhoto(photo);
-                    doctorDTO.setRating(finalCount);
-                    doctorDTO.setConsultation_fees(consultationFees);
+                    DoctorRattingDTO doctorDTO = getDoctorRattingDTO(doc, photo, finalCount, consultationFees);
 
                     doctors.add(doctorDTO);
                 }
@@ -899,20 +903,25 @@ public class PublicService {
                     consultationFees.put(charge.getFeeType(), currencySymbolFdj+" "+String.format("%.2f", charge.getFinalConsultationFees()));
                 }
 
-                DoctorRattingDTO doctorDTO = new DoctorRattingDTO();
-                doctorDTO.setId(doc.getUserId());
-                doctorDTO.setFirst_name(doc.getFirstName());
-                doctorDTO.setLast_name(doc.getLastName());
-                doctorDTO.setHospital_id(doc.getHospitalId());
-                doctorDTO.setHospital_name(doc.getClinicName());
-                doctorDTO.setPhoto(photo);
-                doctorDTO.setRating(0.0);
-                doctorDTO.setConsultation_fees(consultationFees);
+                DoctorRattingDTO doctorDTO = getDoctorRattingDTO(doc, photo, 0.0, consultationFees);
 
                 doctors.add(doctorDTO);
             }
         }
         return doctors;
+    }
+
+    private static DoctorRattingDTO getDoctorRattingDTO(Users doc, String photo, double rating, Map<FeeType, String> consultationFees) {
+        DoctorRattingDTO doctorDTO = new DoctorRattingDTO();
+        doctorDTO.setId(doc.getUserId());
+        doctorDTO.setFirst_name(doc.getFirstName());
+        doctorDTO.setLast_name(doc.getLastName());
+        doctorDTO.setHospital_id(doc.getHospitalId());
+        doctorDTO.setHospital_name(doc.getClinicName());
+        doctorDTO.setPhoto(photo);
+        doctorDTO.setRating(rating);
+        doctorDTO.setConsultation_fees(consultationFees);
+        return doctorDTO;
     }
 
     public ResponseEntity<?> nearByDoctor(Locale locale, NearByDoctorRequest request) {
@@ -1131,62 +1140,149 @@ public class PublicService {
     }
 
     public List<AvailableNursesMapDto> availableNursesMap() {
-        /*NOTE-TODO make this code (NOT IN BAANOO)
-        *
-        * */
-        return new ArrayList<>();
+
+        String query = """
+            SELECT
+                msisdn AS number,
+                name AS nurseName,
+                last_location_update_time AS time,
+                last_latitude AS lati,
+                last_longitude AS longi
+            FROM
+                nurses
+            WHERE
+                last_latitude IS NOT NULL AND
+                DATE_FORMAT(last_location_update_time, "%Y-%m-%d") = CURRENT_DATE AND
+                state IN ("active", "to-activate")
+            ORDER BY
+                last_location_update_time DESC
+        """;
+
+        List<AvailableNursesMapDto> nurseList = new ArrayList<>();
+
+        try{
+            Connection connection = DriverManager.getConnection(nurseURL, nurseUserName, nursePassword);
+            PreparedStatement statement = connection.prepareStatement(query);
+            ResultSet resultSet = statement.executeQuery();
+
+            while (resultSet.next()) {
+                AvailableNursesMapDto nurse = new AvailableNursesMapDto();
+                nurse.setNumber(resultSet.getString("number"));
+                nurse.setNurseName(resultSet.getString("nurseName"));
+                nurse.setTime(resultSet.getTime("time").toLocalTime());
+                nurse.setLati(resultSet.getFloat("lati"));
+                nurse.setLongi(resultSet.getFloat("longi"));
+                nurseList.add(nurse);
+            }
+            return nurseList;
+        }catch (Exception e){
+            e.printStackTrace();
+            log.error("Error while fetching nurse details from another database : {} ", e);
+            return null;
+        }
     }
 
     //NOTE : Not in Baannoo check this function
     public void sendNurseOnDemandMsg(SendNurseOnDemandMsgRequest request, String scenario, UserType userType,Locale locale) {
-//        Users userModel = null;
-//        PartnerNurse nurseModel = null;
-//        if(request.getPatient_id()!=null && request.getPatient_id()!=0){
-//            userModel = usersRepository.findById(request.getPatient_id()).orElse(null);
-//        }
-//        if(request.getNurse_id()!=null && request.getNurse_id()!=0){
-//            nurseModel = partnerNurseRepository.findById(request.getNurse_id()).orElse(null);
-//        }
-//        String prevLang  = locale.getLanguage();
-//
-//        String patientName = (userModel != null) ? userModel.getFirstName() + " " + userModel.getLastName():"";
-//
-//        if (userType == UserType.Patient && userModel.getNotificationLanguage() != null && !userModel.getNotificationLanguage().isEmpty()) {
-//            locale = new Locale(userModel.getNotificationLanguage());
-//        } else {
-//            locale = new Locale("sl");
-//        }
-//
-//        if (userType == UserType.NursePartner) {
-//            locale = new Locale("sl");
-//        }
-//
-//        String getReminderMsgData = scenario;
-//
-//        String getReminderMsg = messageSource.getMessage(scenario, null, locale);
-//        NotificationData notificationData = new NotificationData();
-//        SmsData smsData = new SmsData();
-//
-//        if (scenario.equalsIgnoreCase("NURSE_NOT_FOUND_PATIENT_NOD")) {
-//
-//            getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", userModel.getFirstName() + " " + userModel.getLastName());
-//
-//            notificationData.setFromId(request.getNurse_id());
-//            notificationData.setToId(request.getPatient_id());
-//            notificationData.setCaseId(request.getId());
-//
-//            smsData.setFromId(request.getNurse_id());
-//            smsData.setToId(request.getPatient_id());
-//            smsData.setSmsFor(scenario);
-//            smsData.setCaseId(request.getId());
-//            smsData.setUserType(UserType.Patient.name());
-//        }
-//
-//        Notifications.createNotification(notificationData, getReminderMsg);
-//        SmsLog.createSmsLog(smsData, getReminderMsg);
-//
-//        LocaleContextHolder.setLocale(new Locale(prevLang));
-//        return ResponseEntity.ok().body("Notification and SMS sent successfully");
+        Users userModel = null;
+        PartnerNurse nurseModel = null;
+        if(request.getPatient_id()!=null && request.getPatient_id()!=0){
+            userModel = usersRepository.findById(request.getPatient_id()).orElse(null);
+        }
+        if(request.getNurse_id()!=null && request.getNurse_id()!=0){
+            nurseModel = partnerNurseRepository.findById(request.getNurse_id()).orElse(null);
+        }
+        Locale prevLang  = locale;
+
+        String patientName = (userModel != null) ? userModel.getFirstName() + " " + userModel.getLastName():"";
+
+        if (userType == UserType.Patient && userModel.getNotificationLanguage() != null && !userModel.getNotificationLanguage().isEmpty()) {
+            if (userModel.getNotificationLanguage().equalsIgnoreCase("sl") || userModel.getNotificationLanguage().equalsIgnoreCase("so") )
+                locale = new Locale("so");
+            else locale = Locale.ENGLISH;
+        }else locale = new Locale("so");
+
+        if (userType == UserType.NursePartner) {
+            locale = new Locale("so");
+        }
+
+        String getReminderMsgData = scenario;
+
+        String getReminderMsg = messageSource.getMessage(scenario, null, locale);
+        NotificationData notificationData = new NotificationData();
+        SmsData smsData = new SmsData();
+
+        //Patient
+        if (scenario.equalsIgnoreCase("NURSE_NOT_FOUND_PATIENT_NOD")) {
+
+            getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName);
+
+            notificationData.setFromId(request.getNurse_id());
+            notificationData.setToId(request.getPatient_id());
+            notificationData.setCaseId(request.getId());
+
+            smsData.setFromId(request.getNurse_id());
+            smsData.setToId(request.getPatient_id());
+            smsData.setSmsFor(scenario);
+            smsData.setCaseId(request.getId());
+            smsData.setUserType(UserType.Patient.name());
+        }
+
+        //Agent Order failed message
+        if(scenario.equalsIgnoreCase("AGENT_NOTIFICATION_FOR_FAILED_NOD")){
+            List<Users> agents = usersRepository.findByStatusAndTypeOrderByAsc(Status.A.name(), UserType.Agentuser);
+            if(!agents.isEmpty()){
+                for(Users agent : agents){
+                    getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName)
+                            .replace("{{PATIENT_MOBILE}}", userModel.getContactNumber())
+                            .replace("{{STATUS}}", request.getStatus());
+
+                    notificationData.setFromId(request.getPatient_id());
+                    notificationData.setToId(agent.getUserId());
+
+                    smsData.setFromId(request.getPatient_id());
+                    smsData.setToId(agent.getUserId());
+                    smsData.setSmsFor(scenario);
+                    smsData.setUserType("AGENTUSER");
+                }
+            }
+        }
+
+        Notification notification = createNotification(notificationData, getReminderMsg);
+        SmsLog smsLog = creatSmsLog(smsData, getReminderMsg);
+        locale = prevLang;
+        return;
+
+    }
+
+    public SmsLog creatSmsLog(SmsData smsData, String getReminderMsg) {
+        SmsLog smsLog = new SmsLog();
+        smsLog.setToId(smsData.getToId());
+        smsLog.setFromId(smsData.getFromId());
+        smsLog.setLabOrdersId(smsData.getLabOrderId());
+        smsLog.setConsultDate(smsData.getConsultantTime());
+        smsLog.setCaseId(smsData.getCaseId());
+        smsLog.setSmsFor(smsData.getSmsFor());
+        smsLog.setMsg(getReminderMsg);
+        smsLog.setIsSent(0);
+        smsLog.setUserType(smsLog.getUserType());
+
+        return smsLogRepository.save(smsLog);
+    }
+
+    public Notification createNotification(NotificationData notificationData, String getReminderMsg) {
+        Notification notification = new Notification();
+        notification.setFromId(notificationData.getFromId());
+        notification.setToId(notification.getToId());
+        notification.setMessage(getReminderMsg);
+        notification.setUrl(notificationData.getUrl());
+        notification.setCaseId(notification.getCaseId());
+        notification.setCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
+        notification.setIsRead("0");
+        notification.setType(notificationData.getType() == null ? NotificationType.Consult : notificationData.getType());
+
+        //push notification :TODO
+        return notificationRepository.save(notification);
 
 
     }
