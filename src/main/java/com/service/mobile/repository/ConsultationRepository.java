@@ -23,8 +23,8 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     @Query("SELECT c FROM Consultation c WHERE c.doctorId.userId = ?1 AND c.requestType IN ('Book', 'Cancel') AND TO_TIMESTAMP(CONCAT(c.consultationDate, ' ', c.slotId.slotTime)) > CURRENT_TIMESTAMP ORDER BY c.caseId DESC")
     List<Consultation> findUpcomingConsultationsForDoctor(Integer doctorId);
 
-    @Query("SELECT COUNT(c) FROM Consultation c WHERE c.doctorId.userId = ?1 AND c.requestType IN ?2 AND c.consultationDate >= ?3 AND c.consultationDate <= ?4")
-    int findTotalCases(Integer userId, List<RequestType> types, LocalDate st, LocalDate ed);
+    @Query("SELECT COUNT(c) FROM Consultation c WHERE c.doctorId.userId = ?1 AND c.requestType IN ?2 AND c.consultationDate <= CURRENT_DATE()")
+    int findTotalCases(Integer userId, List<RequestType> types);
 
     List<Consultation> findByDoctorIdAndConsultationDate(Users doctor, LocalDate requiredDate);
 

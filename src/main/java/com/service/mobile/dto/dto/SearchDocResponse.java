@@ -17,7 +17,7 @@ public class SearchDocResponse {
     private String about_me;
     private String experience;
     private String profile_picture;
-    private int rating;
+    private Object rating;
     private int max_fees;
     private long review;
     private int hospital_id;

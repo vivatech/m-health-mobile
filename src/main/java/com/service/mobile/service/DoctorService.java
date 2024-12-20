@@ -106,7 +106,7 @@ public class DoctorService {
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
             ));
         }
-        StringBuilder sb = new StringBuilder("SELECT u FROM Users u WHERE u.type = 'Doctor' AND u.status = 'A' ");
+        StringBuilder sb = new StringBuilder("SELECT u FROM Users u LEFT JOIN ConsultationRating cr ON cr.doctorId.userId = u.userId WHERE u.type = 'Doctor' AND u.status = 'A' ");
         String[] dayName = {"sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"};
         LocalDateTime dateTime = LocalDateTime.now(ZoneId.of(zone));
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -163,7 +163,7 @@ public class DoctorService {
                 GlobalConfiguration glb = globalConfigurationRepository.findByKey("ENTERPRISE_DOCTOR_CONTACT_NUMBER");
                 enterpriseNumbers = Arrays.stream(glb.getValue().split(",")).toList();
 
-                sb.append(" AND u.contactNumber IN :enterpriseNumbers");
+                sb.append(" AND u.contactNumber IN (:enterpriseNumbers) ");
             }
         }
 
@@ -179,7 +179,7 @@ public class DoctorService {
         //specialization
         if(request.getSpecialization_id() != null && !request.getSpecialization_id().isEmpty()){
             //getting userIds from specialization
-            sb.append(" AND u.userId IN (SELECT ds.userId.userId FROM DoctorSpecialization ds WHERE ds.specializationId.id IN (:sId)) ");
+            sb.append(" AND u.userId IN (SELECT ds.userId.userId FROM DoctorSpecialization ds WHERE ds.userId.doctorClassification != 'general_practitioner' AND ds.specializationId.id IN (:sId)) ");
         }
 
         //doctor name
@@ -218,7 +218,7 @@ public class DoctorService {
             if(request.getSort_by() == 01)
                 sb.append(" ORDER BY u.experience DESC ");
             else if(request.getSort_by() == 02)
-                sb.append(" AND u.userId IN (SELECT u.userId FROM Users u LEFT JOIN ConsultationRating cr ON cr.doctorId.userId = u.userId GROUP BY u.userId ORDER BY SUM(CASE WHEN cr.doctorId.userId = u.userId THEN cr.rating ELSE 0 END) DESC, u.userId ASC)");
+                sb.append(" GROUP BY u.userId ORDER BY SUM(CASE WHEN cr.doctorId.userId = u.userId THEN cr.rating ELSE 0 END) DESC");
         }
         else{
             sb.append(" ORDER BY u.userId DESC");
@@ -235,6 +235,9 @@ public class DoctorService {
         if(request.getAvailability() != null){
             query.setParameter("daySlots", daySlots);
         }
+        if(request.getIs_enterprise() != null && !request.getIs_enterprise().isEmpty()){
+            query.setParameter("enterpriseNumbers", enterpriseNumbers);
+        }
 
         List<Users> users = query.getResultList();
         int total = users.size();
@@ -248,7 +251,7 @@ public class DoctorService {
             responseList.add(getResponse(u, locale, startDate, endDate, type, total, maxFee));
         }
         String message = messageSource.getMessage(FOUND_COUNT_DOCTOR, null, locale);
-        message = message.replaceFirst("X", String.valueOf(10));
+        message = message.replaceFirst("X", String.valueOf(users.size()));
         return ResponseEntity.status(HttpStatus.OK).body(new Response(
                 Constants.SUCCESS_CODE,
                 Constants.SUCCESS_CODE,
@@ -267,7 +270,7 @@ public class DoctorService {
 
         Long sum = consultationRatingRepository.findSumByDoctorId(u.getUserId());
         Long count = consultationRatingRepository.findCountByDoctorId(u.getUserId());
-        int finalCount = sum != null && count != null ? (int) (sum/count) : 0;
+        Object finalCount = sum != null && count != null ? (int) (sum/count) : 0;
         Long review = consultationRatingRepository.findReview(u.getUserId());
 
         //charges
@@ -296,7 +299,7 @@ public class DoctorService {
         response.setSpeciality(speciality);
 
         //total cases based upon future consultation
-        int cases = consultationRepository.findTotalCases(u.getUserId(), types, startDate, endDate);
+        int cases = consultationRepository.findTotalCases(u.getUserId(), types);
         response.setCases(cases);
 
         response.setId(u.getUserId());
