@@ -28,7 +28,7 @@ public class OrderData {
     private String package_name;
     private String doctor_name;
     private String created_at;
-    private Float rating;
+    private String rating;
     private String review;
     private Integer is_rating;
     private String pdf_url;

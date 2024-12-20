@@ -37,4 +37,7 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
 
     @Query("Select u from WalletTransaction u where u.orderId = ?1")
     List<WalletTransaction> findByOrderId(Integer id);
+
+    @Query("Select u from WalletTransaction u where u.orderId = ?1 AND u.serviceType = 'consultation' ORDER BY u.id desc LIMIT 1")
+    WalletTransaction findByOrderIdAndServiceType(Integer id);
 }

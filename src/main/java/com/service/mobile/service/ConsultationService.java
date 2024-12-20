@@ -64,11 +64,11 @@ public class ConsultationService {
     public ResponseEntity<?> checkOnGoingConsultation(Integer userId, Locale locale) {
         List<SlotType> slotTypeOpt = slotTypeRepository.findByStatus(SlotStatus.active);
 
-        Integer slotValue = Integer.parseInt(slotTypeOpt.get(0).getValue());
-        LocalTime consultationStartTime = LocalTime.now();
-        LocalTime consultationEndTime = consultationStartTime.minus(slotValue, ChronoUnit.MINUTES);
+        Long slotValue = Long.parseLong(slotTypeOpt.get(0).getValue());
+        LocalTime consultationStartTime = LocalTime.now(ZoneId.of(zone));
+        LocalTime consultationEndTime = LocalTime.now(ZoneId.of(zone)).plusMinutes(slotValue);
 
-        LocalDate localDate = LocalDate.now();
+        LocalDate localDate = LocalDate.now(ZoneId.of(zone));
         List<RequestType> requestType = List.of(RequestType.Book,RequestType.Pending);
         Optional<Consultation> consultationOpt = consultationRepository.findUpcomingConsultationForPatient(
                 userId,requestType,
@@ -77,11 +77,22 @@ public class ConsultationService {
         );
 
         if (!consultationOpt.isPresent()) {
-            return ResponseEntity.ok(new Response(Constants.SUCCESS_CODE, "No records found",Constants.SUCCESS_CODE, null));
+            return ResponseEntity.ok(new Response(Constants.SUCCESS_CODE, Constants.SUCCESS_CODE,Constants.SUCCESS, null));
         }
 
         Consultation consultation = consultationOpt.get();
         Orders orderDetail = ordersRepository.findByCaseId(consultation.getCaseId());
+        CheckOnGoingConsultationDto responseDTO = getCheckOnGoingConsultationDto(orderDetail, consultation);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.SUCCESS,null,locale),
+                responseDTO
+        ));
+    }
+
+    private CheckOnGoingConsultationDto getCheckOnGoingConsultationDto(Orders orderDetail, Consultation consultation) {
         String amount = String.valueOf((orderDetail.getCurrencyAmount() != null) ? orderDetail.getCurrencyAmount() : orderDetail.getAmount());
 
         CheckOnGoingConsultationDto responseDTO = new CheckOnGoingConsultationDto();
@@ -95,13 +106,7 @@ public class ConsultationService {
         responseDTO.setStatus(consultation.getRequestType());
         responseDTO.setProfile_pic((consultation.getDoctorId().getProfilePicture() != null && !consultation.getDoctorId().getProfilePicture().isEmpty())
                 ? baseUrl + "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + consultation.getDoctorId().getProfilePicture() : "");
-
-        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                Constants.SUCCESS_CODE,
-                Constants.SUCCESS_CODE,
-                messageSource.getMessage(Constants.SUCCESS,null,locale),
-                responseDTO
-        ));
+        return responseDTO;
     }
 
     public ResponseEntity<?> consultations(ConsultationsRequest request, Locale locale) {

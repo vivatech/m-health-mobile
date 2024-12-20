@@ -2,7 +2,6 @@ package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.enums.DeviceType;
-import com.service.mobile.dto.enums.UserType;
 import com.service.mobile.dto.request.GetSloatsRequest;
 import com.service.mobile.dto.request.MobileReleaseRequest;
 import com.service.mobile.dto.response.AppBannerResponse;
@@ -22,7 +21,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -87,7 +85,7 @@ public class SiteService {
             }
         }catch (Exception e){
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale), e.getMessage()
@@ -127,7 +125,7 @@ public class SiteService {
                     response
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -144,7 +142,15 @@ public class SiteService {
     }
 
     public ResponseEntity<?> getVideoAttachment(Locale locale, GetSloatsRequest request) {
-        List<VideoAttachment> attachments = videoAttachmentRepository.findByCaseIdIdDesc(request.getCase_id());
+        if(request.getUser_id() == null || request.getCase_id() == null
+         || request.getCase_id() == 0){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.BLANK_DATA_GIVEN,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN_CODE,null, locale)
+            ));
+        }
+        List<VideoAttachment> attachments = videoAttachmentRepository.findByCaseId(request.getCase_id());
         List<VideoAttachmentResponse> responses = new ArrayList<>();
         if(!attachments.isEmpty()){
             for(VideoAttachment attachment:attachments){
@@ -165,7 +171,7 @@ public class SiteService {
                     responses
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)

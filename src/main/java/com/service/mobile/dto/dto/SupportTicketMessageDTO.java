@@ -21,6 +21,6 @@ public class SupportTicketMessageDTO {
     private String attachment_type;
     private String created_by;
     private Integer created_by_id;
-    private LocalDateTime created_date;
+    private String  created_date;
     private Long total_count;
 }

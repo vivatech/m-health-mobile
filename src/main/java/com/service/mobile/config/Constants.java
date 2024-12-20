@@ -223,4 +223,7 @@ public class Constants {
     public static final String CATEGORY_CANNOT_BLANK = "app.category.not.blank";
     public static final String SUB_CATEGORY_CANNOT_BLANK = "app.subcategory.not.blank";
     public static final String PAYMENT_SUCCESS = "app.payment.success";
+    public static final String HEALTH_TIP_PACKAGE_FETCH_SUCCESSFULLY = "app.health.tip.fetch";
+    public static final String NOT_SET = "app.not.set";
+
 }

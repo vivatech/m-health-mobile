@@ -181,4 +181,9 @@ public class Users {
 
     @Column(name = "city_id")
     private Integer city;
+
+    @Column(name = "is_international")
+    private String isInternational;
+    @Column(name = "classification")
+    private String classification;
 }

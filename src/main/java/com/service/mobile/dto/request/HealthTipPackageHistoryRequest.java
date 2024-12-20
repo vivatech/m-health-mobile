@@ -21,6 +21,6 @@ public class HealthTipPackageHistoryRequest {
     private PackageType type;
     private LocalDate created_date;
     private LocalDate consultation_date;
-    private Integer category_id;
+    private String category_id;
     private String status;
 }

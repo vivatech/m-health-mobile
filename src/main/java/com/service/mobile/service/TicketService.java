@@ -16,6 +16,10 @@ import com.service.mobile.repository.AttachmentRepository;
 import com.service.mobile.repository.SupportTicketMessageRepository;
 import com.service.mobile.repository.SupportTicketRepository;
 import com.service.mobile.repository.UsersRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -35,9 +39,11 @@ import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
+@Slf4j
 public class TicketService {
 
     @Autowired
@@ -66,6 +72,10 @@ public class TicketService {
 
     @Autowired
     private SupportTicketMessageRepository supportTicketMessageRepository;
+    @PersistenceContext
+    private EntityManager entityManager;
+    @Value("${app.ZoneId}")
+    private String zone;
 
     public TicketService(SupportTicketRepository supportTicketRepository,
                          UsersRepository usersRepository,
@@ -78,32 +88,36 @@ public class TicketService {
     }
 
     public ResponseEntity<?> listSupportTickets(ListSupportTicketsRequest request, Locale locale) {
-        List<SupportTicketsDto> response = new ArrayList<>();
-        List<SupportTicket> supportTicketList = new ArrayList<>();
-        Long total = 0L;
-        Pageable pageable = PageRequest.of(request.getPage(), 10);
-        request.setName((request.getName()==null)?"":request.getName());
-        if(request.getId()!=null && request.getId()!=0){
-            SupportTicket supportTicket = supportTicketRepository.findById(request.getId()).orElse(null);
-            if(supportTicket!=null){
-                supportTicketList.add(supportTicket);
-            }
-        }else{
-            SupportTicketStatus status = null;
-            try {
-                status = Enum.valueOf(SupportTicketStatus.class, request.getStatus());
-            } catch (Exception e) { }
-            if(status!=null){
-                Page<SupportTicket> ticketPage = supportTicketRepository.findByStatusAndNameAndUserId(status,request.getName(),request.getUser_id(),pageable);
-                supportTicketList = ticketPage.getContent();
-                total = ticketPage.getTotalElements();
-            }else {
-                Page<SupportTicket> ticketPage = supportTicketRepository.findByNameAndUserId(request.getName(),request.getUser_id(),pageable);
-                supportTicketList = ticketPage.getContent();
-                total = ticketPage.getTotalElements();
-            }
+        if(request.getUser_id() == null || request.getPage() == null){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    Constants.BLANK_DATA_GIVEN,
+                    Constants.BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
+            ));
         }
-        Users users = usersRepository.findById(request.getUser_id()).orElse(null);
+        StringBuilder sb = new StringBuilder("SELECT u FROM SupportTicket u WHERE u.supportTicketCreatedBy = "+request.getUser_id());
+        if(request.getStatus() != null && !request.getStatus().isEmpty()){
+            sb.append(" AND u.supportTicketStatus = :").append(SupportTicketStatus.valueOf(request.getStatus()));
+        }
+        if(request.getName() != null && !request.getName().isEmpty()){
+            sb.append(" AND u.supportTicketTitle =").append(request.getName());
+        }if(request.getId() != null){
+            sb.append(" AND u.supportTicketId =").append(request.getId());
+        }
+        sb.append(" Order By u.supportTicketId DESC");
+        Query query = entityManager.createQuery(sb.toString(), SupportTicket.class);
+        List<SupportTicket> supportTicketList = query.getResultList();
+        Long total = (long) supportTicketList.size();
+
+        int pageNo = request.getPage();
+        int pageSize = 10;
+
+        query.setFirstResult(pageNo * pageSize);
+        query.setMaxResults(pageSize);
+
+        supportTicketList = query.getResultList();
+
+        List<SupportTicketsDto> response = new ArrayList<>();
         if(!supportTicketList.isEmpty()){
             for(SupportTicket ticket:supportTicketList){
 
@@ -113,27 +127,26 @@ public class TicketService {
                     if(ticket.getAttachmentId()!=null && ticket.getAttachmentId()!=0){
                         Attachment attachmentId = attachmentRepository.findById(ticket.getAttachmentId()).orElse(null);
                         if(attachmentId!=null){
+                            attachmentType = attachmentId.getAttachmentType();
                             photo = baseUrl + "uploaded_file/Support_Ticket/"+ticket.getSupportTicketId()+"/"+attachmentId.getAttachmentName();
                         }
                     }
-                }catch (Exception e){}
-                try{
-                    if(ticket.getAttachmentId()!=null && ticket.getAttachmentId()!=0){
-                        Attachment attachmentId = attachmentRepository.findById(ticket.getAttachmentId()).orElse(null);
-                        if(attachmentId!=null){
-                            attachmentType = attachmentId.getAttachmentType();
-                        }
-                    }
-                }catch (Exception e){}
+                }catch (Exception e){
+                    log.error("Error while fetching attachment in ticket list : {}",e);
+                }
+
                 String createdDate = "";
                 if (ticket.getSupportTicketCreatedAt()!=null) {
                     try{
                         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                        Date date = Date.from(ticket.getSupportTicketCreatedAt().atZone(ZoneId.systemDefault()).toInstant());
+                        Date date = Date.from(ticket.getSupportTicketCreatedAt().atZone(ZoneId.of(zone)).toInstant());
                         createdDate = formatter.format(date);
-                    }catch (Exception e){}
+                    }catch (Exception e){
+                        log.error("Error while fetching ticket : {}", e);
+                    }
                 }
 
+                Users patient = usersRepository.findById(request.getUser_id()).orElse(null);
                 SupportTicketsDto dto = new SupportTicketsDto();
                 dto.setId(ticket.getSupportTicketId());
                 dto.setName(ticket.getSupportTicketTitle());
@@ -141,7 +154,7 @@ public class TicketService {
                 dto.setPhoto(photo);
                 dto.setAttachment_type(attachmentType);
                 dto.setStatus(ticket.getSupportTicketStatus());
-                dto.setCreated_by(users.getFirstName()+" "+users.getLastName());
+                dto.setCreated_by(patient == null ? "" : patient.getFirstName()+" "+patient.getLastName());
                 dto.setCreated_date(createdDate);
                 dto.setTotal_count(total);
 
@@ -255,6 +268,8 @@ public class TicketService {
                 String photoPath = attachment != null ? baseUrl + "uploaded_file/Support_Ticket/" + data.getSupportTicket().getSupportTicketId() + "/" + attachment.getAttachmentName() : "";
                 String attachmentType = attachment != null ? attachment.getAttachmentType() : "";
 
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy hh:mm a");
+
                 dto.setId(data.getSupportTicketMsgsId());
                 dto.setMessage((data.getSupportTicketMsgsDetail()!=null)?data.getSupportTicketMsgsDetail().replaceAll("\\s+", " ").trim():null);
                 dto.setTicket_name((ticket!=null)?ticket.getSupportTicketTitle():null);
@@ -263,7 +278,7 @@ public class TicketService {
                 dto.setAttachment_type(attachmentType);
                 dto.setCreated_by((user!=null)?user.getFirstName() + " " + user.getLastName():null);
                 dto.setCreated_by_id(data.getSupportTicketMsgsCreatedBy());
-                dto.setCreated_date(data.getSupportTicketMsgsCreatedAt());
+                dto.setCreated_date(formatter.format(data.getSupportTicketMsgsCreatedAt()));
                 dto.setTotal_count(messages.getTotalElements());
                 response.add(dto);
             }

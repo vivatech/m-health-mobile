@@ -83,6 +83,8 @@ public class SiteControllerJson {
     @PostMapping(path = "/list-support-tickets", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> listSupportTickets(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
+                                                @RequestHeader(name = "X-type", defaultValue = "Patient")
+                                                String type,
                                                 @RequestBody ListSupportTicketsRequest request) {
         return ticketService.listSupportTickets(request,locale);
     }

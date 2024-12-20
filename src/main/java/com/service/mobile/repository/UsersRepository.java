@@ -44,4 +44,12 @@ public interface UsersRepository extends JpaRepository<Users,Integer> {
 
     @Query("SELECT u FROM Users u WHERE u.type = 'Doctor' AND u.status = 'A' AND u.hospitalId IN ?1 AND u.hasDoctorVideo IN ('visit', 'both') AND u.hospitalId > 0")
     List<Users> findNearbyDoctors(List<Integer> hospitalIds);
+
+//    @Query(value = "SELECT u.user_id " +
+//            "FROM mh_users u " +
+//            "LEFT JOIN mh_consultation_rating r ON r.doctor_id = u.user_id " +
+//            "GROUP BY u.user_id " +
+//            "ORDER BY SUM(CASE WHEN r.doctor_id = u.user_id THEN r.rating ELSE 0 END) DESC, u.user_id ASC",
+//            nativeQuery = true)
+//    List<Long> findSortedUserIds();
 }

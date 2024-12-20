@@ -125,7 +125,7 @@ public class NursePartnerService {
                     data
             ));
         } else {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -182,7 +182,7 @@ public class NursePartnerService {
                     messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale)
             ));
         } else {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.REQUEST_PARAM_MISSING,null,locale)
@@ -246,16 +246,7 @@ public class NursePartnerService {
             nurseData.setName(nurse.getName());
             response.setNurse(nurseData);
 
-            NurseServiceState nurseServiceState = new NurseServiceState();
-            nurseServiceState.setPatientId(request.getUser_id());
-            nurseServiceState.setNurseId(nurse.getId());
-            nurseServiceState.setLatPatient(request.getP_latutude().toString());
-            nurseServiceState.setLongPatient(request.getN_longitude().toString());
-            nurseServiceState.setLatNurse(request.getN_latutude().toString());
-            nurseServiceState.setLongNurse(request.getN_longitude().toString());
-            nurseServiceState.setState(State.PROCESSING);
-            nurseServiceState.setDistance(request.getDistance().toString());
-            nurseServiceState.setSearchId(request.getSearch_id().toString());
+            NurseServiceState nurseServiceState = getNurseServiceState(request, nurse);
             nurseServiceState = nurseServiceStateRepository.save(nurseServiceState);
             response.setState_id(nurseServiceState.getId());
 
@@ -267,12 +258,26 @@ public class NursePartnerService {
             ));
 
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
             ));
         }
+    }
+
+    private static NurseServiceState getNurseServiceState(GetNurseLocationInfoRequest request, PartnerNurse nurse) {
+        NurseServiceState nurseServiceState = new NurseServiceState();
+        nurseServiceState.setPatientId(request.getUser_id());
+        nurseServiceState.setNurseId(nurse.getId());
+        nurseServiceState.setLatPatient(request.getP_latutude().toString());
+        nurseServiceState.setLongPatient(request.getN_longitude().toString());
+        nurseServiceState.setLatNurse(request.getN_latutude().toString());
+        nurseServiceState.setLongNurse(request.getN_longitude().toString());
+        nurseServiceState.setState(State.PROCESSING);
+        nurseServiceState.setDistance(request.getDistance().toString());
+        nurseServiceState.setSearchId(request.getSearch_id().toString());
+        return nurseServiceState;
     }
 
     //NOTE-TODO (NOT IN BAANNOO)
@@ -348,9 +353,9 @@ public class NursePartnerService {
                 ));
             }
         }else{
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_CODE,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
             ));
         }

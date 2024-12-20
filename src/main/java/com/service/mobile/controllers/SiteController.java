@@ -204,6 +204,8 @@ public class SiteController {
     @PostMapping(path = "/list-support-tickets", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> listSupportTickets(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                Locale locale,
+                                                @RequestHeader(name = "X-type", defaultValue = "Patient")
+                                                String type,
                                                 @ModelAttribute ListSupportTicketsRequest request) {
         return ticketService.listSupportTickets(request,locale);
     }
