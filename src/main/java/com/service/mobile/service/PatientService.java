@@ -242,7 +242,7 @@ public class PatientService {
                 ));
             }
         } else {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -297,7 +297,7 @@ public class PatientService {
 
             return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -326,7 +326,7 @@ public class PatientService {
                 ));
             }
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -364,9 +364,9 @@ public class PatientService {
     public ResponseEntity<?> bookDoctor(Locale locale, BookDoctorRequest request) throws JsonProcessingException {
         Users users = usersRepository.findById(request.getUser_id()).orElse(null);
         if (users == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
-                    Constants.UNAUTHORIZED_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
             ));
         } else {
@@ -704,9 +704,9 @@ public class PatientService {
 
     public ResponseEntity<?> applyCouponCode(Locale locale, ApplyCouponCodeRequest request) {
         if (request.getUser_id() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
-                    UNAUTHORIZED_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(UNAUTHORIZED_MSG, null, locale)
             ));
         }
@@ -997,9 +997,9 @@ public class PatientService {
             dto.setData(data);
             return ResponseEntity.status(HttpStatus.OK).body(dto);
         }else{
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_CODE,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
             ));
         }
@@ -1139,7 +1139,7 @@ public class PatientService {
                 }
             }
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -1242,21 +1242,21 @@ public class PatientService {
     public ResponseEntity<?> cancelHealthTipPackage(Locale locale, CancelHealthTipPackageRequest request) {
         HealthTipPackage healthTipPackages = null;
         if (request.getUser_id() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_CODE,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
             ));
         } else if (request.getPackage_id() == null) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
             ));
         } else if (request.getPurchased_package_user_id() == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED, null, locale)
             ));
         } else {
@@ -1276,13 +1276,13 @@ public class PatientService {
                     ));
                 } else {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                            Constants.UNAUTHORIZED_CODE,
-                            Constants.UNAUTHORIZED_CODE,
+                            NO_CONTENT_FOUNT_CODE,
+                            NO_CONTENT_FOUNT_CODE,
                             messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED, null, locale)
                     ));
                 }
             } else {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                         Constants.NO_RECORD_FOUND_CODE,
                         Constants.BLANK_DATA_GIVEN_CODE,
                         messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
@@ -1477,9 +1477,9 @@ public class PatientService {
                 }
             }
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                Constants.UNAUTHORIZED_CODE,
-                Constants.UNAUTHORIZED_CODE,
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                NO_CONTENT_FOUNT_CODE,
+                NO_CONTENT_FOUNT_CODE,
                 messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED,null,locale)
         ));
     }
@@ -1512,9 +1512,9 @@ public class PatientService {
 
     public ResponseEntity<?> healthTipPackageHistory(Locale locale, HealthTipPackageHistoryRequest request) {
         if (request.getUser_id() == null || request.getPage() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    UNAUTHORIZED_CODE,
-                    UNAUTHORIZED_MSG,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(UNAUTHORIZED_MSG, null, locale)
             ));
         }
@@ -1709,9 +1709,9 @@ public class PatientService {
 
     public ResponseEntity<?> myOrders(Locale locale, HealthTipPackageHistoryRequest request) {
         if (request.getUser_id() == null || request.getPage() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     UNAUTHORIZED_MSG,
-                    UNAUTHORIZED_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(UNAUTHORIZED_MSG, null, locale)
             ));
         }
@@ -1854,9 +1854,9 @@ public class PatientService {
 
     public ResponseEntity<?> getResendOTP(Locale locale, ResendOtpRequest request) {
         if(request.getContact_number()==null || request.getContact_number().isEmpty()){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_MSG,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
             ));
         }

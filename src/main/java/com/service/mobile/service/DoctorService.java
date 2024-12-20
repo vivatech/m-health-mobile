@@ -90,7 +90,7 @@ public class DoctorService {
                     responses
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.NO_CITY_FOUND,null,locale)

@@ -85,7 +85,7 @@ public class SiteService {
             }
         }catch (Exception e){
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale), e.getMessage()
@@ -125,7 +125,7 @@ public class SiteService {
                     response
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -171,7 +171,7 @@ public class SiteService {
                     responses
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)

@@ -271,20 +271,20 @@ public class PatientLabService {
     public ResponseEntity<?> addReports(AddReportRequest request, Locale locale) {
 
         if (request.getCategory_id() == null){
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_CONTENT_FOUNT_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.CATEGORY_CANNOT_BLANK, null, locale)
             ));
         }else if(request.getSub_cat_id() == null){
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_CONTENT_FOUNT_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.SUB_CATEGORY_CANNOT_BLANK, null, locale)
             ));
         }
         else if (request.getUser_id() == null) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
@@ -350,7 +350,7 @@ public class PatientLabService {
         if(request.getUser_id() == null){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
-                    Constants.UNAUTHORIZED_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
             ));
         }
@@ -482,7 +482,7 @@ public class PatientLabService {
         if (request.getUser_id() == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
-                    Constants.UNAUTHORIZED_CODE,
+                    Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
             ));
         }
@@ -527,7 +527,7 @@ public class PatientLabService {
             log.error("Error while selecting lab : {}", e);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
-                    Constants.UNAUTHORIZED_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
                     e.getMessage()
             ));
         }
@@ -810,7 +810,7 @@ public class PatientLabService {
         if(request.getUser_id() == null){
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
-                    Constants.UNAUTHORIZED_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
             ));
         }

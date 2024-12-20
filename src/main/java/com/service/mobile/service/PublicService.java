@@ -255,7 +255,7 @@ public class PublicService {
                 ));
             }
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -391,14 +391,14 @@ public class PublicService {
                 ));
 
             }else{
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                        Constants.UNAUTHORIZED_CODE,
-                        Constants.UNAUTHORIZED_CODE,
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        Constants.NO_CONTENT_FOUNT_CODE,
                         messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
                 ));
             }
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -421,7 +421,7 @@ public class PublicService {
                     data
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.NO_STATE_FOUND,null,locale)
@@ -444,7 +444,7 @@ public class PublicService {
                     data
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.NO_STATE_FOUND,null,locale)
@@ -495,14 +495,14 @@ public class PublicService {
                         null
                 ));
             }else{
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                        Constants.UNAUTHORIZED_CODE,
-                        Constants.UNAUTHORIZED_CODE,
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        Constants.NO_CONTENT_FOUNT_CODE,
                         messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
                 ));
             }
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -528,7 +528,7 @@ public class PublicService {
                     list
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.NO_LANGUAGE_LIST_FOUND,null,locale)
@@ -540,24 +540,7 @@ public class PublicService {
     public ResponseEntity<?> getSpecialization(Locale locale) {
         List<Specialization> specializations = specializationRepository.findAllByStatus(Status.A);
         if (!specializations.isEmpty()) {
-            List<SpecializationResponse> responses = new ArrayList<>();
-            String photo = baseUrl+defaultImage;
-            for(Specialization specialization:specializations){
-                SpecializationResponse data = new SpecializationResponse();
-                if(specialization.getPhoto()!=null && !specialization.getPhoto().isEmpty()){
-                    String photoPath = baseUrl+"/uploaded_file/specialisation/"+specialization.getId()+"/"+specialization.getPhoto();
-                    data.setPhoto(photoPath);
-                }else{
-                    data.setPhoto(photo);
-                }
-
-                if(locale.getLanguage().equals("en")){
-                    data.setName(specialization.getName());
-                }else {data.setName(specialization.getNameSl());}
-                data.setId(specialization.getId());
-
-                responses.add(data);
-            }
+            List<SpecializationResponse> responses = getSpecializationResponses(locale, specializations);
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
@@ -565,12 +548,34 @@ public class PublicService {
                     responses
             ));
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.NO_SPECIALIZATION_LIST_FOUND,null,locale)
             ));
         }
+    }
+
+    private List<SpecializationResponse> getSpecializationResponses(Locale locale, List<Specialization> specializations) {
+        List<SpecializationResponse> responses = new ArrayList<>();
+        String photo = baseUrl+defaultImage;
+        for(Specialization specialization: specializations){
+            SpecializationResponse data = new SpecializationResponse();
+            if(specialization.getPhoto()!=null && !specialization.getPhoto().isEmpty()){
+                String photoPath = baseUrl+"/uploaded_file/specialisation/"+specialization.getId()+"/"+specialization.getPhoto();
+                data.setPhoto(photoPath);
+            }else{
+                data.setPhoto(photo);
+            }
+
+            if(locale.getLanguage().equals("en")){
+                data.setName(specialization.getName());
+            }else {data.setName(specialization.getNameSl());}
+            data.setId(specialization.getId());
+
+            responses.add(data);
+        }
+        return responses;
     }
 
     public ResponseEntity<?> getPaymentMethod(Locale locale) {
@@ -764,7 +769,7 @@ public class PublicService {
                 ));
             } else {
 
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                         Constants.NO_CONTENT_FOUNT_CODE,
                         Constants.NO_CONTENT_FOUNT_CODE,
                         messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
