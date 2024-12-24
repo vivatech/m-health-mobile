@@ -11,11 +11,11 @@ import lombok.Setter;
 @NoArgsConstructor
 public class ProcessPaymentRequest {
     private Integer user_id;
-    private Integer nurse_mobile;
-    private Integer search_id;
+    private String nurse_mobile;
+    private String search_id;
     private String currency;
     private String payment_method;
     private Integer state_id;
-    private Integer service_id;
+    private String service_id;
     private String payment_number;
 }

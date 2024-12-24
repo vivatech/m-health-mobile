@@ -45,7 +45,7 @@ public class NurseServiceState {
     private String longNurse;
 
     @Enumerated(EnumType.STRING)
-    private State state = State.INITIATED;
+    private State state;
 
     private String distance;
 
@@ -60,7 +60,7 @@ public class NurseServiceState {
     private String pRating;
 
     @Column(name = "rating_notified_to_patient")
-    private Boolean ratingNotifiedToPatient = false;
+    private int ratingNotifiedToPatient;
 
     @Lob
     @Column(name = "n_remark")
@@ -81,9 +81,8 @@ public class NurseServiceState {
     @Column(name = "device_env")
     private DeviceEnv deviceEnv;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "confirm_ack")
-    private ConfirmAck confirmAck = ConfirmAck.NO;
+    private String confirmAck;
 
     @Column(name = "cancel_at")
     private LocalDateTime cancelAt;

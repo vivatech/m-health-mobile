@@ -1195,6 +1195,7 @@ public class PublicService {
         Locale prevLang  = locale;
 
         String patientName = (userModel != null) ? userModel.getFirstName() + " " + userModel.getLastName():"";
+        String nurseName = (nurseModel != null) ? nurseModel.getName() : "";
 
         if (userType == UserType.Patient && userModel.getNotificationLanguage() != null && !userModel.getNotificationLanguage().isEmpty()) {
             if (userModel.getNotificationLanguage().equalsIgnoreCase("sl") || userModel.getNotificationLanguage().equalsIgnoreCase("so") )
@@ -1213,7 +1214,7 @@ public class PublicService {
         SmsData smsData = new SmsData();
 
         //Patient
-        if (scenario.equalsIgnoreCase("NURSE_NOT_FOUND_PATIENT_NOD")) {
+        if (scenario.equalsIgnoreCase(Constants.NURSE_NOT_FOUND_PATIENT_NOD)) {
 
             getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName);
 
@@ -1229,7 +1230,7 @@ public class PublicService {
         }
 
         //Agent Order failed message
-        if(scenario.equalsIgnoreCase("AGENT_NOTIFICATION_FOR_FAILED_NOD")){
+        if(scenario.equalsIgnoreCase(Constants.AGENT_NOTIFICATION_FOR_FAILED_NOD)){
             List<Users> agents = usersRepository.findByStatusAndTypeOrderByAsc(Status.A.name(), UserType.Agentuser);
             if(!agents.isEmpty()){
                 for(Users agent : agents){
@@ -1246,6 +1247,120 @@ public class PublicService {
                     smsData.setUserType("AGENTUSER");
                 }
             }
+        }
+
+        //CANCEL_SMS_PATIENT_NOD
+        if(scenario.equalsIgnoreCase(Constants.CANCEL_SMS_PATIENT_NOD)){
+            getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName)
+                    .replace("{{TRIP_ID}}", request.getTripId());
+
+            notificationData.setFromId(request.getNurse_id());
+            notificationData.setToId(request.getPatient_id());
+
+            smsData.setFromId(request.getNurse_id());
+            smsData.setToId(request.getPatient_id());
+            smsData.setSmsFor(scenario);
+            smsData.setUserType("PATIENT");
+        }
+
+        //CANCEL_SMS_NURSE_NOD -> NURSE
+        if(scenario.equalsIgnoreCase(Constants.CANCEL_SMS_NURSE_NOD)){
+            getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName)
+                    .replace("{{NURSE_NAME}}", nurseName)
+                    .replace("{{TRIP_ID}}", request.getTripId());
+
+            notificationData.setToId(request.getNurse_id());
+            notificationData.setFromId(request.getPatient_id());
+            notificationData.setCaseId(request.getId());
+
+            smsData.setToId(request.getNurse_id());
+            smsData.setFromId(request.getPatient_id());
+            smsData.setSmsFor(scenario);
+            smsData.setCaseId(request.getId());
+            smsData.setUserType("NURSEPARTNER");
+        }
+
+        //ORDER_CANCEL_BY_PATIENT_NURSE_NOD -> NURSE
+        if(scenario.equalsIgnoreCase(Constants.ORDER_CANCEL_BY_PATIENT_NURSE_NOD)){
+            getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName)
+                    .replace("{{NURSE_NAME}}", nurseName)
+                    .replace("{{TRIP_ID}}", request.getTripId()
+                    .replace("{{AMOUNT}}", request.getZaadNumber()));
+
+            notificationData.setToId(request.getNurse_id());
+            notificationData.setFromId(request.getPatient_id());
+            notificationData.setCaseId(request.getId());
+            notificationData.setType(NotificationType.Nod);
+
+            smsData.setToId(request.getNurse_id());
+            smsData.setFromId(request.getPatient_id());
+            smsData.setSmsFor(scenario);
+            smsData.setCaseId(request.getId());
+            smsData.setUserType("NURSEPARTNER");
+        }
+
+        //Patient Payment conformation
+        if(scenario.equalsIgnoreCase(Constants.PAYMENT_CONFIRM_PATIENT_NOD)){
+            getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName)
+                    .replace("{{NURSE_NAME}}", nurseName)
+                    .replace("{{TRIP_ID}}", request.getTripId()
+                            .replace("{{AMOUNT}}", request.getZaadNumber())
+                            .replace("{{CONTACT_NUMBER}}", nurseModel.getContactNumber())
+                            .replace("{{DATE}}", String.valueOf(LocalDate.now(ZoneId.of(zone)))));
+
+            notificationData.setFromId(request.getNurse_id());
+            notificationData.setToId(request.getPatient_id());
+            notificationData.setCaseId(request.getId());
+
+            smsData.setFromId(request.getNurse_id());
+            smsData.setToId(request.getPatient_id());
+            smsData.setSmsFor(scenario);
+            smsData.setCaseId(request.getId());
+            smsData.setUserType("PATIENT");
+        }
+
+        //Nurse
+        if(scenario.equalsIgnoreCase(Constants.CONFIRM_ONDEMAND_ORDER_NURSE)){
+            getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName)
+                    .replace("{{NURSE_NAME}}", nurseName)
+                            .replace("{{CONTACT_NUMBER}}", userModel.getContactNumber())
+                            .replace("{{DATE}}", String.valueOf(LocalDate.now(ZoneId.of(zone))));
+
+            notificationData.setToId(request.getNurse_id());
+            notificationData.setFromId(request.getPatient_id());
+            notificationData.setCaseId(request.getId());
+            notificationData.setType(NotificationType.Nod);
+
+            smsData.setToId(request.getNurse_id());
+            smsData.setFromId(request.getPatient_id());
+            smsData.setSmsFor(scenario);
+            smsData.setCaseId(request.getId());
+            smsData.setUserType("NURSEPARTNER");
+        }
+
+        //Agent Order message
+        if(scenario.equalsIgnoreCase(Constants.ORDER_NOTICE_AGENT_NOD)){
+            List<Users> agents = usersRepository.findByStatusAndTypeOrderByAsc(Status.A.name(), UserType.Agentuser);
+            if(!agents.isEmpty()){
+                for(Users agent : agents){
+                    getReminderMsg = getReminderMsgData.replace("{{PATIENT_NAME}}", patientName)
+                            .replace("{{NURSE_NAME}}", nurseName)
+                            .replace("{{DATE}}", String.valueOf(LocalDate.now(ZoneId.of(zone)))
+                                    .replace("{{LAT}}", request.getLat())
+                                    .replace("{{LONG}}", request.getLongi()));
+
+                    notificationData.setToId(agent.getUserId());
+                    notificationData.setFromId(request.getNurse_id());
+                    notificationData.setCaseId(request.getId());
+
+                    smsData.setFromId(request.getNurse_id());
+                    smsData.setToId(agent.getUserId());
+                    smsData.setSmsFor(scenario);
+                    smsData.setCaseId(request.getId());
+                    smsData.setUserType("AGENTUSER");
+                }
+            }
+
         }
 
         Notification notification = createNotification(notificationData, getReminderMsg);
@@ -1292,13 +1407,18 @@ public class PublicService {
         String searchId = data.getSearch_id();
         int reqId = data.getReqId();
 
-        if ("service_request".equals(type) && reqId == 2) {
-            List<NurseServiceState> stateModel = nurseServiceStateRepository.findBySearchId(searchId);
-            for(NurseServiceState s:stateModel){
-                s.setConfirmAck(ConfirmAck.YES);
+        try {
+            if ("service_request".equals(type) && reqId == 2) {
+                NurseServiceState stateModel = nurseServiceStateRepository.findBySearchId(searchId);
+                stateModel.setConfirmAck("1");
+
+                nurseServiceStateRepository.save(stateModel);
+                //TODO : need to check the log flow again
+//            createTransactionLog("NursePartnerService", "confirmAck", "NOD web acknowledgement.", "NURSEWEBACK", data.toString());
             }
-            nurseServiceStateRepository.saveAll(stateModel);
-            createTransactionLog("NursePartnerService", "confirmAck", "NOD web acknowledgement.", "NURSEWEBACK", data.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error in nod acknowledgment : {}", e);
         }
     }
 
@@ -1308,8 +1428,7 @@ public class PublicService {
     }
 
     private String generateLogMessage(String controllerName, String methodName, String transType, String returnType, String data, String handlingType) {
-        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
-        LocalDateTime dateTime = LocalDateTime.ofInstant(now, ZoneId.systemDefault());
+        LocalDateTime dateTime = LocalDateTime.now(ZoneId.of(zone));
         String date = dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + dateTime.format(DateTimeFormatter.ofPattern("XXX"));
 
         return String.format("%s [%s] [TYPE : %s] [METHOD NAME : %s] %s: %s : %s%n",

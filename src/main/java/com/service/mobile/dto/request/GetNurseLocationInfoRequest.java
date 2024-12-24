@@ -11,12 +11,12 @@ import lombok.Setter;
 @NoArgsConstructor
 public class GetNurseLocationInfoRequest {
     private Integer user_id;
-    private Integer p_latutude;
-    private Integer p_longitude;
-    private Integer n_latutude;
-    private Integer n_longitude;
+    private String p_latutude;
+    private String p_longitude;
+    private String n_latutude;
+    private String n_longitude;
     private String service_id;
     private String nurse_mobile;
-    private Integer search_id;
-    private Integer distance;
+    private String search_id;
+    private String distance;
 }
