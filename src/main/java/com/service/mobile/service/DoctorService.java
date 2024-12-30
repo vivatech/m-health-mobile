@@ -241,9 +241,8 @@ public class DoctorService {
 
         List<Users> users = query.getResultList();
         int total = users.size();
-        query.setFirstResult(request.getPage() * 10);
-        query.setMaxResults(10);
-        users = query.getResultList();
+
+        users = users.stream().skip((request.getPage() == null ? 0 : request.getPage()) * 10).limit(10).toList();
 
         int maxFee = (int)chargesRepository.findMaxConsultationFee().floatValue();
         List<SearchDocResponse> responseList = new ArrayList<>();
@@ -288,7 +287,8 @@ public class DoctorService {
 
         //specialization
         String speciality = null;
-        if(u.getDoctorClassification().equalsIgnoreCase(General_Practitioner)){
+        if(u.getDoctorClassification() != null && !u.getDoctorClassification().isEmpty()){
+            if(u.getDoctorClassification().equalsIgnoreCase(General_Practitioner))
             speciality = messageSource.getMessage(General_Practitioner, null, locale);
         }
         else{
@@ -305,7 +305,7 @@ public class DoctorService {
         response.setId(u.getUserId());
         response.setName(u.getFirstName() + " " + u.getLastName());
         response.setAbout_me(u.getAboutMe());
-        response.setExperience((int)u.getExperience().floatValue() + " " + messageSource.getMessage(YEAR_OF_EXPERIENCE, null, locale));
+        response.setExperience(u.getExperience() == null ? "" : (int)u.getExperience().floatValue() + " " + messageSource.getMessage(YEAR_OF_EXPERIENCE, null, locale));
         response.setRating(finalCount);
         response.setMax_fees(maxFee);
         response.setReview(review);

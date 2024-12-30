@@ -596,6 +596,8 @@ public class PatientService {
 
     private Orders saveIntoOrdersTable(Users patient, Users doctor, BookDoctorRequest request, Consultation consultation, Float finalAmount, Coupon coupon, Charges charges) {
         Orders order = new Orders();
+        order.setCommissionType(CommissionType.cost);
+        order.setDoctorAmount(finalAmount);
         if(charges != null) {
             order.setCommissionType(charges.getCommissionType());
             order.setCommission(charges.getCommission());
