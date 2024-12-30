@@ -5,6 +5,7 @@ import org.springframework.security.core.parameters.P;
 public class Constants {
 
     public static final String SUCCESS_CODE="200";
+    public static final String NO_CONTENT_CODE="201";
     public static final String INTERNAL_SERVER_ERROR_CODE = "10001";
     public static final String PLEASE_TICK_THE_CHECKBOX_CODE = "10002";
     public static final String USER_ALREADY_EXISTS_CODE = "10003";
@@ -148,6 +149,7 @@ public class Constants {
     public static final String SUPPORT_TICKET_UPDATED_SUCCESS = "app.support.ticket.updated.success";
     public static final String ACTIVE_SLOT_TIME_NOT_FOUND = "app.active.slot.time.not.found";
     public static final String SOMETHING_WENT_WRONG = "app.something.went.wrong";
+    public static final String SOMETHING_WENT_WRONG_IN_PAYMENT = "app.something.went.wrong.in.payment";
     public static final String RECENT_ORDERS_FOUND_SUCCESSFULLY = "app.recent.orders.found.successfully";
     public static final String DATA_RETRIEVED = "app.data.retrieved";
     public static final String GENRAL_PRACTITIONER = "app.genral.preactitioner";
@@ -164,6 +166,7 @@ public class Constants {
     public static final String ORDERS_FETCH_SUCCESSFULLY = "app.fetch.successfully";
     public static final String ORDER_NOT_FOUND = "app.order.not.found";
     public static final String UNABLE_BOOK_PKG = "app.unable.book.pkg";
+    public static final String UNABLE_NOD_CANCEL = "app.unable.to.cancel";
     public static final String NOT_ENOUGH_BALANCE = "app.not.enough.balance";
     public static final String HTIP_CAT_SUBSCRIBED = "app.htip.cat.subscribed";
     public static final String HOME_CONSULTATION_NOT_AVAILABLE_THIS_TIME = "app.home.consultation.not.available.this.time";
@@ -223,4 +226,14 @@ public class Constants {
     public static final String CATEGORY_CANNOT_BLANK = "app.category.not.blank";
     public static final String SUB_CATEGORY_CANNOT_BLANK = "app.subcategory.not.blank";
     public static final String PAYMENT_SUCCESS = "app.payment.success";
+    public static final String NURSE_NOT_FOUND_PATIENT_NOD = "app.nurse.not.found.patient.nod";
+    public static final String AGENT_NOTIFICATION_FOR_FAILED_NOD = "app.agent.notification.for.failed.nod";
+    public static final String SERVICE_NOT_FOUND = "app.service.not.found";
+    public static final String ORDER_CANCEL_BY_PATIENT_NURSE_NOD = "app.order.cancel.by.patient.nurse.nod";
+    public static final String CANCEL_SMS_PATIENT_NOD = "app.cancel.sms.patient.nod";
+    public static final String CANCEL_SMS_NURSE_NOD = "app.cancel.sms.nurse.nod";
+    public static final String PAYMENT_CONFIRM_PATIENT_NOD = "app.payment.confirm.patient.nod";
+    public static final String CONFIRM_ONDEMAND_ORDER_NURSE = "app.confirm.ondemand.order.nurse";
+    public static final String ORDER_NOTICE_AGENT_NOD = "app.order.notice.agent.nod";
+    public static final String RATING_DETAIL_TEXT_NOD = "app.rating.detail.text.nod";
 }
