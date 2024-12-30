@@ -15,4 +15,7 @@ public interface NurseServiceRepository extends JpaRepository<NurseService, Inte
 
     @Query("Select u from NurseService u where u.id in ?1")
     List<NurseService> findByIds(List<Integer> ids);
+
+    @Query("SELECT s.seviceName FROM NurseService s WHERE s.id IN (SELECT o.id.serviceId FROM NurseServiceOrder o WHERE o.id.orderId = ?1) ")
+    List<String> findByOrderId(Integer id);
 }

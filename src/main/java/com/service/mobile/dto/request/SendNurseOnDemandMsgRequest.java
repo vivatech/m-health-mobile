@@ -14,4 +14,9 @@ public class SendNurseOnDemandMsgRequest {
     private Integer nurse_id;
     private Integer id;
     private String status;
+    private String tripId;
+    private String zaadNumber;
+    private Float amount;
+    private String lat;
+    private String longi;
 }

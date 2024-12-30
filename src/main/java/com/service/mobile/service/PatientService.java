@@ -569,7 +569,7 @@ public class PatientService {
         //        todo : need to implement mh_wallet
         transaction.setCurrentBalance(0.0F); // by-default
         transaction.setPreviousBalance(0.0f); // by-default
-        transaction.setServiceType(serviceType); //Service_Type_Lab_Report
+        transaction.setServiceType(serviceType);
         transaction.setTransactionId(generateDateTime());
         transaction.setTransactionStatus("Pending");
 

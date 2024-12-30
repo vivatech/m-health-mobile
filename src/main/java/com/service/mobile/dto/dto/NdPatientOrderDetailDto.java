@@ -14,10 +14,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class NdPatientOrderDetailDto {
     private Integer order_id;
-    private Integer trip_id;
+    private String trip_id;
     private String nurse_name;
     private String nurse_contact;
-    private LocalDateTime date;
+    private String date;
     private String order_amount;
     private State state;
     private String service_type;
