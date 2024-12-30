@@ -682,9 +682,9 @@ public class NursePartnerService {
                 ));
             }
         }else{
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_CODE,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
             ));
         }

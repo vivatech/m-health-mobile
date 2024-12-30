@@ -107,7 +107,7 @@ public class AuthService {
             }
 
         } else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
@@ -209,7 +209,7 @@ public class AuthService {
                 ));
             }
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
@@ -266,14 +266,14 @@ public class AuthService {
                 response.put("status", NO_CONTENT_FOUNT_CODE);
                 response.put("message", "unauth_user");
                 response.put("data", new HashMap<>());
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
         }
         else {
             response.put("status", BLANK_DATA_GIVEN_CODE);
             response.put("message", BLANK_DATA_GIVEN);
             response.put("data", new HashMap<>());
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         }
     }
     public AuthKey saveNewSession(Integer userId, String authKey, String deviceToken, UserType loginType) {

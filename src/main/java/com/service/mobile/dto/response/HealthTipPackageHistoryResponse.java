@@ -17,13 +17,13 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class HealthTipPackageHistoryResponse {
     private String category_name;
-    private PackageType package_type;
+    private String  package_type;
     @JsonProperty("Frequency")
-    private DurationType Frequency;
+    private String Frequency;
     private String package_price;
     private YesNo is_expire;
     private String cancel_flg;
-    private LocalDateTime created_at;
-    private LocalDateTime expired_at;
-    private Long total_count;
+    private String created_at;
+    private String expired_at;
+    private Integer total_count;
 }

@@ -16,7 +16,7 @@ public interface HealthTipPackageCategoriesRepository extends JpaRepository<Heal
     @Query("Select u from HealthTipPackageCategories u where u.healthTipPackage.packageId in ?1 order by u.healthTipPackageCategoryId DESC")
     List<HealthTipPackageCategories> findByPackageIds(List<Integer> healthTipsId);
 
-    @Query("Select u.healthTipCategoryMaster.categoryId from HealthTipPackageCategories u where u.healthTipPackage.packageId in ?1")
+    @Query("Select u.healthTipCategoryMaster.categoryId from HealthTipPackageCategories u where u.healthTipPackage.packageId in ?1 ORDER BY u.healthTipPackageCategoryId DESC")
     List<Integer> findCategoriesIdsByPackageIds(List<Integer> healthTipPackageIds);
 
     @Query("Select u from HealthTipPackageCategories u where u.healthTipCategoryMaster.categoryId = ?1")
@@ -96,4 +96,10 @@ public interface HealthTipPackageCategoriesRepository extends JpaRepository<Heal
 
     @Query("Select u from HealthTipPackageCategories u where u.healthTipPackage.packageId = ?1")
     List<HealthTipPackageCategories> findByPackageIds(Integer packageIds);
+
+    @Query("Select u from HealthTipPackageCategories u where u.healthTipPackage.packageId = ?1 ORDER BY u.healthTipPackageCategoryId DESC LIMIT 1")
+    HealthTipPackageCategories findByHealthTipPackage(Integer packageId);
+
+    @Query("Select u.healthTipPackage.packageId from HealthTipPackageCategories u where u.healthTipCategoryMaster.categoryId IN ?1 ORDER BY u.healthTipPackageCategoryId DESC")
+    List<Integer> findByCategoriesIds(List<Integer> categoryId);
 }

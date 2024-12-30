@@ -11,29 +11,24 @@ import com.service.mobile.model.*;
 import com.service.mobile.repository.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
-import jakarta.servlet.http.HttpServletRequest;
+import jakarta.persistence.Query;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.autoconfigure.web.format.DateTimeFormatters;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import javax.management.Query;
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.Format;
 import java.text.SimpleDateFormat;
@@ -247,7 +242,7 @@ public class PatientService {
                 ));
             }
         } else {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -302,7 +297,7 @@ public class PatientService {
 
             return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -331,7 +326,7 @@ public class PatientService {
                 ));
             }
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -369,9 +364,9 @@ public class PatientService {
     public ResponseEntity<?> bookDoctor(Locale locale, BookDoctorRequest request) throws JsonProcessingException {
         Users users = usersRepository.findById(request.getUser_id()).orElse(null);
         if (users == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
-                    Constants.UNAUTHORIZED_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
             ));
         } else {
@@ -601,6 +596,8 @@ public class PatientService {
 
     private Orders saveIntoOrdersTable(Users patient, Users doctor, BookDoctorRequest request, Consultation consultation, Float finalAmount, Coupon coupon, Charges charges) {
         Orders order = new Orders();
+        order.setCommissionType(CommissionType.cost);
+        order.setDoctorAmount(finalAmount);
         if(charges != null) {
             order.setCommissionType(charges.getCommissionType());
             order.setCommission(charges.getCommission());
@@ -709,9 +706,9 @@ public class PatientService {
 
     public ResponseEntity<?> applyCouponCode(Locale locale, ApplyCouponCodeRequest request) {
         if (request.getUser_id() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
-                    UNAUTHORIZED_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(UNAUTHORIZED_MSG, null, locale)
             ));
         }
@@ -1002,9 +999,9 @@ public class PatientService {
             dto.setData(data);
             return ResponseEntity.status(HttpStatus.OK).body(dto);
         }else{
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_CODE,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
             ));
         }
@@ -1144,7 +1141,7 @@ public class PatientService {
                 }
             }
         }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
@@ -1247,21 +1244,21 @@ public class PatientService {
     public ResponseEntity<?> cancelHealthTipPackage(Locale locale, CancelHealthTipPackageRequest request) {
         HealthTipPackage healthTipPackages = null;
         if (request.getUser_id() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_CODE,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.UNAUTHORIZED_MSG, null, locale)
             ));
         } else if (request.getPackage_id() == null) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
             ));
         } else if (request.getPurchased_package_user_id() == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED, null, locale)
             ));
         } else {
@@ -1281,13 +1278,13 @@ public class PatientService {
                     ));
                 } else {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                            Constants.UNAUTHORIZED_CODE,
-                            Constants.UNAUTHORIZED_CODE,
+                            NO_CONTENT_FOUNT_CODE,
+                            NO_CONTENT_FOUNT_CODE,
                             messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED, null, locale)
                     ));
                 }
             } else {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                         Constants.NO_RECORD_FOUND_CODE,
                         Constants.BLANK_DATA_GIVEN_CODE,
                         messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
@@ -1297,123 +1294,127 @@ public class PatientService {
     }
 
     public ResponseEntity<?> getHealthTipsList(Locale locale, HealthTipsListRequest request) {
-        Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
-        List<Integer> healthTipPackageIds = new ArrayList<>();
-        if(request.getPackage_id()!=null && request.getPackage_id()!=0){
-            healthTipPackageIds.add(request.getPackage_id());
-        }else{
-            healthTipPackageIds = healthTipPackageUserService.findPackageIdsByUserIdAndExpire(request.getUser_id(),YesNo.No);
+        if (request.getUser_id() == null || request.getPage() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+                    BLANK_DATA_GIVEN,
+                    BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
+            ));
         }
-        if(!healthTipPackageIds.isEmpty()){
-            List<Integer> categoriesIds = healthTipPackageCategoriesRepository.findCategoriesIdsByPackageIds(healthTipPackageIds);
-            if(request.getTitle()==null){
-                request.setTitle("");
-            }
-            Page<HealthTip> healthTips=null;
-            if(request.getPackage_id()!=null && request.getPackage_id()!=0){
-                if(request.getCategory_id()!=null && request.getCategory_id()!=0){
-                    healthTips = healthTipRepository.findByTitlePackageCategories(
-                            request.getTitle(),
-                            categoriesIds,
-                            request.getCategory_id(),
-                            pageable
-                    );
-                }else{
-                    healthTips = healthTipRepository.findByTitleCategories(
-                            request.getTitle(),
-                            categoriesIds,
-                            pageable
-                    );
-                }
-            }else{
-                Integer categoriesId = request.getCategory_id();
-                if(request.getCategory_id()!=null && request.getCategory_id()!=0){
-                    healthTips = healthTipRepository.findByTitleCategorieId(
-                            request.getTitle(),
-                            request.getCategory_id(),
-                            pageable
-                    );
-                }else{
-                    healthTips = healthTipRepository.findByTitleCategories(
-                            request.getTitle(),
-                            categoriesIds,
-                            pageable
-                    );
-                }
-            }
-            List<HealthTipsListResponse> data = new ArrayList<>();
-            if(healthTips!=null){
-                for(HealthTip healthTip:healthTips.getContent()){
-                    HealthTipsListResponse temp = new HealthTipsListResponse();
-                    HealthTipPackageCategories packageCategories = healthTipPackageCategoriesRepository.findByCategoriesId(healthTip.getHealthTipCategory().getCategoryId()).orElse(null);
 
-                    temp.setPackage_id(packageCategories.getHealthTipPackage().getPackageId());
-                    String video = null;
-                    String videoThump = null;
-                    if(healthTip.getVideo()!=null && !healthTip.getVideo().isEmpty()){
-                        HealthTipPackageCategories healthTipPackageCategories = healthTipPackageCategoriesRepository.findByCategoriesId(healthTip.getHealthTipCategory().getCategoryId()).orElse(null);
-                        if(healthTipPackageCategories!=null){
-                            List<HealthTipPackageUser> user = healthTipPackageUserService.findByUserIdAndPackageId(request.getUser_id(),healthTipPackageCategories.getHealthTipPackage().getPackageId());
-                            if(user!=null && !user.isEmpty()){
-                                video = baseUrl + "/video/" +healthTip.getVideo();
-                                videoThump = baseUrl + "/healthTip/" +healthTip.getHealthTipId()+"/thumb/"+healthTip.getVideoThumb();
+        try {
+            List<Integer> healthTipPackageIds = healthTipPackageUserService.findPackageIdsByUserIdAndExpire(request.getUser_id(), YesNo.No);
+
+            if (!healthTipPackageIds.isEmpty()) {
+                List<Integer> categoriesIds = healthTipPackageCategoriesRepository.findCategoriesIdsByPackageIds(healthTipPackageIds);
+
+                StringBuilder sb = new StringBuilder("Select h FROM HealthTip h WHERE h.status = " + Status.A + " AND h.healthTipCategory.categoryId IN :categoriesIds");
+                if (request.getTitle() != null && !request.getTitle().isEmpty()) {
+                    sb.append(" AND h.topic LIKE '%").append(request.getTitle()+"%'");
+                }
+                if (request.getCategory_id() != null) {
+                    sb.append(" AND h.healthTipCategory.categoryId = ").append(request.getCategory_id());
+                }
+                if (request.getPackage_id() != null && request.getPackage_id() != 0) {
+                    healthTipPackageIds = new ArrayList<>();
+                    healthTipPackageIds.add(request.getPackage_id());
+                    categoriesIds = healthTipPackageCategoriesRepository.findCategoriesIdsByPackageIds(healthTipPackageIds);
+                    sb.append(" AND h.healthTipCategory.categoryId IN :categoriesIds");
+                }
+
+                Query query = entityManager.createQuery(sb.toString(), HealthTip.class);
+                query.setParameter("categoriesIds", categoriesIds);
+                List<HealthTip> healthTips = query.getResultList();
+                int total = healthTips.size();
+
+                int page = request.getPage();
+                int pageSize = 5;
+
+                query.setFirstResult(page * pageSize);
+                query.setMaxResults(pageSize);
+
+                healthTips = query.getResultList();
+
+                List<HealthTipsListResponse> data = new ArrayList<>();
+                if (healthTips != null) {
+                    for (HealthTip healthTip : healthTips) {
+                        HealthTipsListResponse temp = new HealthTipsListResponse();
+                        HealthTipPackageCategories packageCategories = healthTipPackageCategoriesRepository.findByCategoriesId(healthTip.getHealthTipCategory().getCategoryId()).orElse(null);
+
+                        if(packageCategories != null){
+                            temp.setPackage_id(packageCategories.getHealthTipPackage().getPackageId());
+                        }
+
+                        String video = null;
+                        String videoThump = null;
+                        if (healthTip.getVideo() != null && !healthTip.getVideo().isEmpty() && packageCategories != null) {
+                            List<HealthTipPackageUser> user = healthTipPackageUserService.findByUserIdAndPackageId(request.getUser_id(), packageCategories.getHealthTipPackage().getPackageId());
+                            if (user != null && !user.isEmpty()) {
+                                if (user.get(0).getIsVideo().equals(YesNo.Yes)) {
+                                    video = baseUrl + "/video/" + healthTip.getVideo();
+                                    videoThump = baseUrl + "/healthTip/" + healthTip.getHealthTipId() + "/thumb/" + healthTip.getVideoThumb();
+                                }
                             }
                         }
-                    }
 
-                    String encodedHtml = "&lt;p&gt;This is an example of &amp;quot;encoded&amp;quot; HTML.&lt;/p&gt;";
-                    String decodedHtml =null;
-                    if(healthTip.getDescription()!=null && !healthTip.getDescription().isEmpty()){
-                        decodedHtml = StringEscapeUtils.unescapeHtml4(healthTip.getDescription());
-                    }
-                    String photo = null;
-                    if(healthTip.getPhoto()!=null && !healthTip.getPhoto().isEmpty()){
-                        photo = baseUrl + "/healthTip/"+healthTip.getHealthTipId()+"/"+healthTip.getPhoto();
-                    }
+                        String encodedHtml = "&lt;p&gt;This is an example of &amp;quot;encoded&amp;quot; HTML.&lt;/p&gt;";
+                        String decodedHtml = null;
+                        if (healthTip.getDescription() != null && !healthTip.getDescription().isEmpty()) {
+                            decodedHtml = StringEscapeUtils.unescapeHtml4(healthTip.getDescription());
+                        }
+                        String photo = null;
+                        if (healthTip.getPhoto() != null && !healthTip.getPhoto().isEmpty()) {
+                            photo = baseUrl + "/healthTip/" + healthTip.getHealthTipId() + "/" + healthTip.getPhoto();
+                        }
 
-                    temp.setName(healthTip.getTopic());
-                    temp.setIs_video((video!=null && !video.isEmpty()));
-                    temp.setVideo(video);
-                    temp.setVideo_thumb(videoThump);
-                    temp.setDescription(decodedHtml);
-                    temp.setDescription_formated(healthTip.getDescription());
-                    temp.setPhoto(photo);
-                    temp.setCategory_name((locale.getLanguage().equalsIgnoreCase("en"))?
-                            packageCategories.getHealthTipCategoryMaster().getName():
-                            packageCategories.getHealthTipCategoryMaster().getNameSl());
-                    temp.setCategory_id(healthTip.getHealthTipCategory().getCategoryId());
-                    temp.setStatus((healthTip.getStatus() == Status.A)?"Active":
-                            (healthTip.getStatus() == Status.I)?"Inactive":"");
-                    temp.setTotal_count(healthTips.getTotalPages());
-                    data.add(temp);
-                }
-                if(data.size()>0){
-                    return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                            Constants.SUCCESS_CODE,
-                            Constants.SUCCESS_CODE,
-                            messageSource.getMessage(Constants.HEALTH_TIP_FOUND_SUCCESSFULLY,null,locale),
-                            data
-                    ));
-                }else{
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
+                        temp.setName(healthTip.getTopic());
+                        temp.setIs_video((video != null && !video.isEmpty()));
+                        temp.setVideo(video);
+                        temp.setVideo_thumb(videoThump);
+                        temp.setDescription(decodedHtml);
+                        temp.setDescription_formated(healthTip.getDescription());
+                        temp.setPhoto(photo);
+                        temp.setCategory_name((locale.getLanguage().equalsIgnoreCase("en")) ?
+                                packageCategories.getHealthTipCategoryMaster().getName() :
+                                packageCategories.getHealthTipCategoryMaster().getNameSl());
+                        temp.setCategory_id(healthTip.getHealthTipCategory().getCategoryId());
+                        temp.setStatus((healthTip.getStatus() == Status.A) ? "Active" :
+                                (healthTip.getStatus() == Status.I) ? "Inactive" : "");
+                        temp.setTotal_count(total);
+                        data.add(temp);
+                    }
+                    if (data.size() > 0) {
+                        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                                Constants.SUCCESS_CODE,
+                                Constants.SUCCESS_CODE,
+                                messageSource.getMessage(Constants.HEALTH_TIP_FOUND_SUCCESSFULLY, null, locale),
+                                data
+                        ));
+                    } else {
+                        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                                Constants.NO_RECORD_FOUND_CODE,
+                                SUCCESS_CODE,
+                                messageSource.getMessage(NO_RECORD_FOUND, null, locale)
+                        ));
+                    }
+                } else {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                            Constants.NO_RECORD_FOUND,
                             Constants.NO_RECORD_FOUND_CODE,
-                            Constants.NO_RECORD_FOUND_CODE,
-                            messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
+                            messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale)
                     ));
                 }
-            }else{
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
-                        Constants.NO_RECORD_FOUND_CODE,
-                        Constants.NO_RECORD_FOUND_CODE,
-                        messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED, null, locale)
                 ));
             }
+        } catch (Exception e) {
+            log.error("Error in get-healthtip-list : {}", e);
+            return null;
         }
-        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                Constants.SUCCESS_CODE,
-                Constants.SUCCESS_CODE,
-                messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED,null,locale)
-        ));
     }
 
     public ResponseEntity<?> healthTipsExport(Locale locale, HealthTipsListRequest request) {
@@ -1478,9 +1479,9 @@ public class PatientService {
                 }
             }
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                Constants.UNAUTHORIZED_CODE,
-                Constants.UNAUTHORIZED_CODE,
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                NO_CONTENT_FOUNT_CODE,
+                NO_CONTENT_FOUNT_CODE,
                 messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_NOT_SUBSCRIBED,null,locale)
         ));
     }
@@ -1512,383 +1513,112 @@ public class PatientService {
     }
 
     public ResponseEntity<?> healthTipPackageHistory(Locale locale, HealthTipPackageHistoryRequest request) {
-        List<HealthTipPackageUser> healthTipPackageUsers = new ArrayList<>();
-        Pageable pageable = PageRequest.of(request.getPage(),10);
-        Long total = 0L;
-        if(request.getPackage_name()==null){request.setPackage_name("");}
-
-        if(request.getCreated_date()!=null){
-            if(request.getType()!=null){
-                if(request.getCategory_id()!=null && request.getCategory_id()!=0){
-                    if(request.getStatus()!=null){
-                        if(request.getStatus().equalsIgnoreCase("Unsubscribed") ||
-                                request.getStatus().equalsIgnoreCase("Cancelled")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByCreatedAtIsCanceledTypePackageNameCategoryIdUserId(
-                                            request.getCreated_date(), YesNo.Yes, request.getType(),
-                                            request.getPackage_name(),  request.getCategory_id(),
-                                            request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else {
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByCreatedAtIsCanceledTypePackageNameCategoryIdUserId(
-                                            request.getCreated_date(), YesNo.No,
-                                            request.getType(), request.getPackage_name(),
-                                            request.getCategory_id(), request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-
-                        }
-                    }
-                    else{
-                        Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByCreatedAtTypePackageNameCategoryIdUserId(
-                                        request.getCreated_date(), request.getType(), request.getPackage_name(),
-                                        request.getCategory_id(),  request.getUser_id(), pageable
-                                );
-                        healthTipPackageUsers = page.getContent();
-                        total = page.getTotalElements();
-                    }
-                }
-                else{
-                    if(request.getStatus()!=null){
-                        if(request.getStatus().equalsIgnoreCase("Unsubscribed") ||
-                                request.getStatus().equalsIgnoreCase("Cancelled")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByCreatedAtIsCanceledTypePackageNameUserId(
-                                            request.getCreated_date(), YesNo.Yes, request.getType(),
-                                            request.getPackage_name(), request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else{
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByCreatedAtIsCanceledTypePackageNameUserId(
-                                            request.getCreated_date(), YesNo.No, request.getType(),
-                                            request.getPackage_name(), request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                    }
-                    else{
-                        Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByCreatedAtTypePackageNameUserId(
-                                        request.getCreated_date(),  request.getType(), request.getPackage_name(),
-                                        request.getUser_id(), pageable
-                                );
-                        healthTipPackageUsers = page.getContent();
-                        total = page.getTotalElements();
-                    }
-                }
-            }else{
-                if(request.getCategory_id()!=null && request.getCategory_id()!=0){
-                    if(request.getStatus()!=null){
-                        if(request.getStatus().equalsIgnoreCase("Unsubscribed")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByCreatedAtIsCanceledTypePackageNameCategoryIdUserId(
-                                            request.getCreated_date(), YesNo.Yes, PackageType.Free,
-                                            request.getPackage_name(), request.getCategory_id(),
-                                            request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else if(request.getStatus().equalsIgnoreCase("Cancelled")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByCreatedAtIsCanceledTypePackageNameCategoryIdUserId(
-                                            request.getCreated_date(), YesNo.Yes,
-                                            PackageType.Paid, request.getPackage_name(),
-                                            request.getCategory_id(), request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else{
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByCreatedAtIsCanceledPackageNameCategoryIdUserId(
-                                            request.getCreated_date(), YesNo.No, request.getPackage_name(),
-                                            request.getCategory_id(), request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                    }else{
-                        Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByCreatedAtPackageNameCategoryIdUserId(
-                                        request.getCreated_date(), request.getPackage_name(), request.getCategory_id(),
-                                        request.getUser_id(), pageable
-                                );
-                        healthTipPackageUsers = page.getContent();
-                        total = page.getTotalElements();
-                    }
-                }else{
-                    if(request.getStatus()!=null){
-                        if(request.getStatus().equalsIgnoreCase("Unsubscribed")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByCreatedAtIsCanceledTypePackageNameCategoryIdUserId(
-                                            request.getCreated_date(), YesNo.Yes, PackageType.Free,
-                                            request.getPackage_name(), request.getCategory_id(), request.getUser_id(),
-                                            pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else if(request.getStatus().equalsIgnoreCase("Cancelled")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByCreatedAtIsCanceledTypePackageNameCategoryIdUserId(
-                                            request.getCreated_date(), YesNo.Yes, PackageType.Paid,
-                                            request.getPackage_name(), request.getCategory_id(),
-                                            request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else{
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByCreatedAtIsCanceledPackageNameCategoryIdUserId(
-                                            request.getCreated_date(), YesNo.No, request.getPackage_name(),
-                                            request.getCategory_id(), request.getUser_id(),
-                                            pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                    }else{
-                        Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByCreatedAtPackageNameCategoryIdUserId(
-                                        request.getCreated_date(), request.getPackage_name(),
-                                        request.getCategory_id(), request.getUser_id(),
-                                        pageable
-                                );
-                        healthTipPackageUsers = page.getContent();
-                        total = page.getTotalElements();
-                    }
-                }
-            }
-        }
-        else{
-            if(request.getType()!=null){
-                if(request.getCategory_id()!=null && request.getCategory_id()!=0){
-                    if(request.getStatus()!=null){
-                        if(request.getStatus().equalsIgnoreCase("Unsubscribed") ||
-                                request.getStatus().equalsIgnoreCase("Cancelled")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByIsCanceledTypePackageNameCategoryIdUserId(
-                                            YesNo.Yes, request.getType(), request.getPackage_name(),
-                                            request.getCategory_id(), request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else{
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByIsCanceledTypePackageNameCategoryIdUserId(
-                                            YesNo.No, request.getType(), request.getPackage_name(),
-                                            request.getCategory_id(), request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-
-                        }
-                    }else{
-                        Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByTypePackageNameCategoryIdUserId(
-                                        request.getType(), request.getPackage_name(), request.getCategory_id(),
-                                        request.getUser_id(), pageable
-                                );
-                        healthTipPackageUsers = page.getContent();
-                        total = page.getTotalElements();
-                    }
-                }
-                else{
-                    if(request.getStatus()!=null){
-                        if(request.getStatus().equalsIgnoreCase("Unsubscribed") ||
-                                request.getStatus().equalsIgnoreCase("Cancelled")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByIsCanceledTypePackageNameUserId(
-                                            YesNo.Yes, request.getType(), request.getPackage_name(),
-                                            request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else{
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByIsCanceledTypePackageNameUserId(
-                                            YesNo.No, request.getType(), request.getPackage_name(),
-                                            request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-
-                        }
-                    }else{
-                        Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByTypePackageNameUserId(
-                                        request.getType(), request.getPackage_name(),
-                                        request.getUser_id(), pageable
-                                );
-                        healthTipPackageUsers = page.getContent();
-                        total = page.getTotalElements();
-                    }
-                }
-            }
-            else{
-                if(request.getCategory_id()!=null && request.getCategory_id()!=0){
-                    if(request.getStatus()!=null){
-                        if(request.getStatus().equalsIgnoreCase("Unsubscribed")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByIsCanceledTypePackageNameCategoryIdUserId(
-                                            YesNo.Yes,
-                                            PackageType.Free,
-                                            request.getPackage_name(),
-                                            request.getCategory_id(),
-                                            request.getUser_id(),
-                                            pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else if(request.getStatus().equalsIgnoreCase("Cancelled")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByIsCanceledTypePackageNameCategoryIdUserId(
-                                            YesNo.Yes,
-                                            PackageType.Paid,
-                                            request.getPackage_name(),
-                                            request.getCategory_id(),
-                                            request.getUser_id(),
-                                            pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else{
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByIsCanceledPackageNameCategoryIdUserId(
-                                            YesNo.No, request.getPackage_name(), request.getCategory_id(),
-                                            request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-
-                        }
-                    }else{
-                        Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByPackageNameCategoryIdUserId(
-                                        request.getPackage_name(), request.getCategory_id(),
-                                        request.getUser_id(), pageable
-                                );
-                        healthTipPackageUsers = page.getContent();
-                        total = page.getTotalElements();
-                    }
-                }
-                else{
-                    if(request.getStatus()!=null){
-                        if(request.getStatus().equalsIgnoreCase("Unsubscribed")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByIsCanceledTypePackageNameUserId(
-                                            YesNo.Yes,
-                                            PackageType.Free,
-                                            request.getPackage_name(),
-                                            request.getUser_id(),
-                                            pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else if(request.getStatus().equalsIgnoreCase("Cancelled")){
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository
-                                    .findByIsCanceledTypePackageNameUserId(
-                                            YesNo.Yes,
-                                            PackageType.Paid,
-                                            request.getPackage_name(),
-                                            request.getUser_id(),
-                                            pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-                        }
-                        else{
-                            Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                    findByIsCanceledPackageNameUserId(
-                                            YesNo.No, request.getPackage_name(), request.getUser_id(), pageable
-                                    );
-                            healthTipPackageUsers = page.getContent();
-                            total = page.getTotalElements();
-
-                        }
-                    }else{
-                        Page<HealthTipPackageUser> page = healthTipPackageUserRepository.
-                                findByPackageNameUserId(
-                                        request.getPackage_name(),
-                                        request.getUser_id(), pageable
-                                );
-                        healthTipPackageUsers = page.getContent();
-                        total = page.getTotalElements();
-                    }
-                }
-            }
-        }
-
-        if(healthTipPackageUsers!=null && !healthTipPackageUsers.isEmpty()){
-            List<HealthTipPackageHistoryResponse> responses = new ArrayList<>();
-            for(HealthTipPackageUser data:healthTipPackageUsers){
-                List<HealthTipPackageCategories> packageCategories = healthTipPackageCategoriesRepository
-                        .findByPackageIds(data.getHealthTipPackage().getPackageId());
-                String categoryName = "";
-                String cancelFlg = "";
-                for(HealthTipPackageCategories hc: packageCategories){
-                    if(locale.getLanguage().equalsIgnoreCase("en")){
-                        categoryName = hc.getHealthTipCategoryMaster().getName();
-                    }else{
-                        categoryName = hc.getHealthTipCategoryMaster().getNameSl();
-                    }
-                }
-                if(data.getIsExpire()==YesNo.Yes){
-                    if(data.getIsCancel()==YesNo.Yes){
-                        if(data.getHealthTipPackage().getType() == PackageType.Paid){
-                            cancelFlg = messageSource.getMessage(Constants.CANCELLED_MSG,null,locale);
-                        }else{
-                            cancelFlg = messageSource.getMessage(Constants.UNSUBSCRIBED_MSG,null,locale);
-                        }
-                    }
-                }else{
-                    cancelFlg = messageSource.getMessage(Constants.ACTIVE_MSG,null,locale);
-                }
-                HealthTipPackageHistoryResponse temp = new HealthTipPackageHistoryResponse();
-
-                temp.setCategory_name(categoryName);
-                temp.setPackage_type(data.getHealthTipPackage().getType());
-                temp.setFrequency(data.getHealthTipPackage().getHealthTipDuration().getDurationType());
-                temp.setPackage_price("USD " + data.getHealthTipPackage().getPackagePrice().toString());
-                temp.setIs_expire(data.getIsExpire());
-                temp.setCancel_flg(cancelFlg);
-                temp.setCreated_at(data.getCreatedAt());
-                temp.setExpired_at(data.getExpiredAt());
-                temp.setTotal_count(total);
-
-                responses.add(temp);
-            }
-
-
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale),
-                    responses
+        if (request.getUser_id() == null || request.getPage() == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(UNAUTHORIZED_MSG, null, locale)
             ));
-        }else{
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-            ));
+        }
+        try {
+            StringBuilder sb = new StringBuilder("Select h From HealthTipPackageUser h WHERE h.user.userId = " + request.getUser_id());
+            if (request.getCreated_date() != null) {
+                sb.append(" AND DATE(h.createdAt) = :date");
+            }
+            if (request.getStatus() != null && !request.getStatus().isEmpty()) {
+                if (request.getStatus().equalsIgnoreCase("Unsubscribed")) {
+                    sb.append(" AND h.isCancel =" + YesNo.Yes + " AND h.healthTipPackage.type = " + PackageType.Free);
+                } else if (request.getStatus().equalsIgnoreCase("Cancelled")) {
+                    sb.append(" AND h.isCancel =" + YesNo.Yes + " AND h.healthTipPackage.type = " + PackageType.Paid);
+                } else {
+                    sb.append(" AND h.isCancel =" + YesNo.No);
+                }
+            }
+            if (request.getType() != null) {
+                sb.append(" AND h.healthTipPackage.type = " + request.getType());
+            }
+            if (request.getPackage_name() != null && !request.getPackage_name().isEmpty()) {
+                sb.append(" AND h.healthTipPackage.packageName LIKE '%" + request.getPackage_name().trim() + "%'");
+            }
+            if (request.getCategory_id() != null && !request.getCategory_id().isEmpty()) {
+                List<Integer> integerList = Arrays.stream(request.getCategory_id().split(","))
+                        .map(Integer::parseInt).toList();
+                List<Integer> catIds = healthTipPackageCategoriesRepository.findByCategoriesIds(integerList);
+                sb.append(" AND h.healthTipPackage.packageId IN :" + catIds);
+            }
+            sb.append(" ORDER BY h.id DESC");
+            Query query = entityManager.createQuery(sb.toString(), HealthTipPackageUser.class);
+            if(request.getCreated_date() != null) query.setParameter("date",request.getCreated_date());
+            List<HealthTipPackageUser> healthTipPackageUsers = query.getResultList();
+            int total = healthTipPackageUsers.size();
+            int page = request.getPage();
+            int pageSize = 10;
+            query.setFirstResult(page * pageSize);
+            query.setMaxResults(pageSize);
+
+            healthTipPackageUsers = query.getResultList();
+
+            if (!healthTipPackageUsers.isEmpty()) {
+                List<HealthTipPackageHistoryResponse> responses = new ArrayList<>();
+                for (HealthTipPackageUser data : healthTipPackageUsers) {
+                    List<HealthTipPackageCategories> packageCategories = healthTipPackageCategoriesRepository
+                            .findByPackageIds(data.getHealthTipPackage().getPackageId());
+                    HealthTipCategoryMaster categoryMaster = healthTipCategoryMasterRepository.findById(packageCategories.get(0).getHealthTipCategoryMaster().getCategoryId()).orElse(null);
+
+                    String categoryName = "";
+                    String cancelFlg = "";
+
+                    if (locale.getLanguage().equalsIgnoreCase("en")) {
+                        categoryName = categoryMaster.getName();
+                    } else {
+                        categoryName = categoryMaster.getNameSl();
+                    }
+
+                    if (data.getIsExpire() == YesNo.Yes) {
+                        if (data.getIsCancel() == YesNo.Yes) {
+                            if (data.getHealthTipPackage().getType() == PackageType.Paid) {
+                                cancelFlg = messageSource.getMessage(Constants.CANCELLED_MSG, null, locale);
+                            } else {
+                                cancelFlg = messageSource.getMessage(Constants.UNSUBSCRIBED_MSG, null, locale);
+                            }
+                        }
+                    } else {
+                        cancelFlg = messageSource.getMessage(Constants.ACTIVE_MSG, null, locale);
+                    }
+                    HealthTipPackageHistoryResponse temp = new HealthTipPackageHistoryResponse();
+
+                    temp.setCategory_name(categoryName);
+                    String freq = data.getHealthTipPackage().getHealthTipDuration().getDurationType().name();
+                    String packageType = data.getHealthTipPackage().getType().name();
+                    temp.setPackage_type(messageSource.getMessage(packageType, null, locale));
+                    temp.setFrequency(messageSource.getMessage(freq, null, locale));
+                    temp.setPackage_price("");
+                    temp.setIs_expire(data.getIsExpire());
+                    temp.setCancel_flg(cancelFlg);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
+                    temp.setCreated_at(formatter.format(data.getCreatedAt()));
+                    temp.setExpired_at(formatter.format(data.getExpiredAt()));
+                    temp.setTotal_count(total);
+
+                    responses.add(temp);
+                }
+
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.HEALTH_TIP_PACKAGE_FETCH_SUCCESSFULLY, null, locale),
+                        responses
+                ));
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale)
+                ));
+            }
+        } catch (Exception e) {
+            log.error("Error while fetching data in Health tip package history : {}", e);
+            return null;
         }
     }
 
@@ -1980,141 +1710,155 @@ public class PatientService {
     }
 
     public ResponseEntity<?> myOrders(Locale locale, HealthTipPackageHistoryRequest request) {
-        Pageable pageable = PageRequest.of(request.getPage(), 10);
-        if(request.getDoctor_name()==null){
-            request.setDoctor_name("");
+        if (request.getUser_id() == null || request.getPage() == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    UNAUTHORIZED_MSG,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(UNAUTHORIZED_MSG, null, locale)
+            ));
         }
-        // Fetch Orders with pagination
-        List<Orders> orders = new ArrayList<>();
-        Long ordersNumber = 0L;
-        if(request.getConsultation_date()!=null){
-            if(request.getCase_id()!=null && request.getCase_id()!=0){
-                Page<Orders> ordersPage = ordersRepository.findByConsultationDateAndCaseIdAndDoctorName(
-                        request.getConsultation_date(),request.getCase_id(),request.getDoctor_name(),pageable);
-                ordersNumber = ordersPage.getTotalElements();
-                orders = ordersPage.getContent();
-            }else{
-                Page<Orders> ordersPage = ordersRepository.findByConsultationDateAndDoctorName(
-                        request.getConsultation_date(),request.getDoctor_name(),pageable);
-                ordersNumber = ordersPage.getTotalElements();
-                orders = ordersPage.getContent();
+        try {
+            StringBuilder sb = getStringBuilder(request);
+            Query query = entityManager.createQuery(sb.toString(), Orders.class);
+
+            query.setParameter("userId", request.getUser_id());
+            if(request.getConsultation_date() != null){
+                query.setParameter("consultationDate", request.getConsultation_date());
             }
-        }else{
-            if(request.getCase_id()!=null && request.getCase_id()!=0){
-                Page<Orders> ordersPage = ordersRepository.findByCaseIdAndDoctorName(
-                        request.getCase_id(),request.getDoctor_name(),pageable);
-                ordersNumber = ordersPage.getTotalElements();
-                orders = ordersPage.getContent();
-            }else{
-                Page<Orders> ordersPage = ordersRepository.findByDoctorName(
-                        request.getDoctor_name(),pageable);
-                ordersNumber = ordersPage.getTotalElements();
-                orders = ordersPage.getContent();
+            if (request.getDoctor_name() != null && !request.getDoctor_name().isEmpty()) {
+                query.setParameter("dn", "%" + request.getDoctor_name() + "%");
             }
-        }
-
-        List<OrderData> orderDataList = new ArrayList<>();
-        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-
-        for (Orders order : orders) {
-            // Get Rating
-            List<ConsultationRating> ratingList = consultationRatingRepository.getByCaseIdAndDoctorId(order.getCaseId().getCaseId(), order.getDoctorId().getUserId());
-            ConsultationRating rating = null;
-            if(!ratingList.isEmpty()){
-                rating = ratingList.get(0);
+            if(request.getCase_id() != null && request.getCase_id() != 0){
+                query.setParameter("caseId", request.getCase_id());
             }
-            // Prepare photo URL
-            String photoPath = "";
-            if (order.getDoctorId().getProfilePicture() != null) {
-                photoPath = baseUrl + "uploaded_file/UserProfile/" +
-                        order.getDoctorId().getUserId() + "/" + order.getDoctorId().getProfilePicture();
+            List<Orders> orders = query.getResultList();
+            Long total = (long) orders.size();
+            // Apply pagination
+            int page = request.getPage();
+            int pageSize = 10;
+            query.setFirstResult(page * pageSize);
+            query.setMaxResults(pageSize);
+
+            orders = query.getResultList();
+
+            List<OrderData> orderDataList = new ArrayList<>();
+            String currentTime = LocalDateTime.now(ZoneId.of(zoneId)).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+
+            for (Orders order : orders) {
+                // Get Rating
+                ConsultationRating rating = consultationRatingRepository.getByCaseIdAndDoctorId(order.getCaseId().getCaseId(), order.getDoctorId().getUserId());
+                // Prepare photo URL
+                String photoPath = "";
+                if (order.getDoctorId().getProfilePicture() != null) {
+                    photoPath = baseUrl + "uploaded_file/UserProfile/" +
+                            order.getDoctorId().getUserId() + "/" + order.getDoctorId().getProfilePicture();
+                }
+
+                // Get Transaction IDs
+                List<WalletTransaction> walletHistories = walletTransactionRepository.findByOrderId(order.getId());
+                String transactionIdString = walletHistories.stream()
+                        .map(WalletTransaction::getTransactionId)
+                        .collect(Collectors.joining(","));
+
+                // Get Consultation Data
+                Consultation consultation = order.getCaseId();
+                SlotMaster slotData = consultation.getSlotId();
+
+                // Prepare Specialization String
+                List<DoctorSpecialization> specializations = doctorSpecializationRepository.findByUserId(order.getDoctorId().getUserId());
+                String specializationString = specializations.stream()
+                        .map(specialization -> specialization.getSpecializationId().getName())
+                        .collect(Collectors.joining(","));
+
+                // Check if rating is allowed
+                boolean isRatingAllowed = false;
+                String finalTime = consultation.getConsultationDate() + " " + (slotData != null ? slotData.getSlotTime() : "");
+                if (currentTime.compareTo(finalTime) < 0 || consultationRatingRepository.countByCaseIdAndPatientId(order.getCaseId().getCaseId(), request.getUser_id()) > 0) {
+                    isRatingAllowed = true;
+                }
+
+                // Prepare PDF URL
+                String pdfUrl = "";
+                if (currentTime.compareTo(finalTime) > 0) {
+                    pdfUrl = baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf";
+                }
+
+                String recConsultationType;
+                if (consultation.getConsultationType().equals(ConsultationType.Paid)) {
+                    recConsultationType = messageSource.getMessage(Constants.PAID_MSG, null, locale);
+                } else {
+                    recConsultationType = messageSource.getMessage(Constants.FREE_MSG, null, locale);
+                }
+
+                // Prepare Response Data
+                OrderData tempData = new OrderData();
+                tempData.setId(order.getId());
+                tempData.setCase_id(order.getCaseId().getCaseId());
+                tempData.setDoctor_id(order.getDoctorId().getUserId());
+                tempData.setPhoto(photoPath);
+                tempData.setTransaction_id(transactionIdString);
+                tempData.setConsultation_date(consultation.getConsultationDate());
+                tempData.setReport_suggested(consultation.getReportSuggested());
+                tempData.setConsultation_type(consultation.getConsultType());
+                tempData.setRec_consultation_type(recConsultationType);
+                tempData.setAdded_type(String.valueOf(consultation.getAddedType()));
+                tempData.setSlot_time(slotData != null ? slotData.getSlotTime() : "");
+                tempData.setSpecialization(specializationString);
+                tempData.setPackage_name(order.getPackageId() != null ? order.getPackageId().getPackageName() : "");
+                tempData.setDoctor_name(order.getDoctorId().getFirstName() + " " + order.getDoctorId().getLastName());
+                tempData.setCreated_at(consultation.getCreatedAt().toString());
+                tempData.setRating(rating != null ? rating.getRating().toString() : "");
+                tempData.setReview(rating != null ? rating.getComment() : "");
+                tempData.setIs_rating(isRatingAllowed ? 1 : 0);
+                tempData.setPdf_url(pdfUrl);
+                tempData.setStatus(order.getCaseId().getRequestType());
+                tempData.setCancel_message(order.getCaseId().getCancelMessage());
+                tempData.setTotal_count(total);
+
+                orderDataList.add(tempData);
             }
 
-            // Get Transaction IDs
-            List<WalletTransaction> walletHistories = walletTransactionRepository.findByOrderId(order.getId());
-            String transactionIdString = walletHistories.stream()
-                    .map(WalletTransaction::getTransactionId)
-                    .collect(Collectors.joining(","));
-
-            // Get Consultation Data
-            Consultation consultation = order.getCaseId();
-            SlotMaster slotData = consultation.getSlotId();
-
-            // Prepare Specialization String
-            List<DoctorSpecialization> specializations = doctorSpecializationRepository.findByUserId(order.getDoctorId().getUserId());
-            String specializationString = specializations.stream()
-                    .map(specialization -> specialization.getSpecializationId().getName())
-                    .collect(Collectors.joining(","));
-
-            // Check if rating is allowed
-            boolean isRatingAllowed = false;
-            String finalTime = consultation.getConsultationDate() + " " + (slotData != null ? slotData.getSlotTime() : "");
-            if (consultationRatingRepository.countByCaseIdAndPatientId(order.getCaseId().getCaseId(), request.getUser_id()) > 0) {
-                isRatingAllowed = true;
-            }
-
-            // Prepare PDF URL
-            String pdfUrl = "";
-            if (currentTime.compareTo(finalTime) > 0) {
-                pdfUrl = baseUrl + "/uploaded_file/pdf/" + order.getCaseId() + "/" + order.getCaseId() + ".pdf";
-            }
-
-            String recConsultationType;
-            if (consultation.getConsultationType().equals(ConsultationType.Paid)) {
-                recConsultationType = messageSource.getMessage(Constants.PAID_MSG,null,locale);
+            // Prepare Response
+            if (!orderDataList.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.ORDERS_FETCH_SUCCESSFULLY, null, locale),
+                        orderDataList
+                ));
             } else {
-                recConsultationType = messageSource.getMessage(Constants.FREE_MSG,null,locale);
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(NO_RECORD_FOUND, null, locale)
+                ));
             }
-
-            // Prepare Response Data
-            OrderData tempData = new OrderData();
-            tempData.setId(order.getId());
-            tempData.setCase_id(order.getCaseId().getCaseId());
-            tempData.setDoctor_id(order.getDoctorId().getUserId());
-            tempData.setPhoto(photoPath);
-            tempData.setTransaction_id(transactionIdString);
-            tempData.setConsultation_date(consultation.getConsultationDate());
-            tempData.setReport_suggested(consultation.getReportSuggested());
-            tempData.setConsultation_type(consultation.getConsultType());
-            tempData.setRec_consultation_type(recConsultationType);
-            tempData.setAdded_type(String.valueOf(consultation.getAddedType()));
-            tempData.setSlot_time(slotData != null ? slotData.getSlotTime() : "");
-            tempData.setSpecialization(specializationString);
-            tempData.setPackage_name(order.getPackageId() != null ? order.getPackageId().getPackageName() : "");
-            tempData.setDoctor_name(order.getDoctorId().getFirstName() + " " + order.getDoctorId().getLastName());
-            tempData.setCreated_at(consultation.getCreatedAt().toString());
-            tempData.setRating(rating != null ? rating.getRating() : 0.0F);
-            tempData.setReview(rating != null ? rating.getComment() : "");
-            tempData.setIs_rating(isRatingAllowed ? 1 : 0);
-            tempData.setPdf_url(pdfUrl);
-            tempData.setStatus(order.getCaseId().getRequestType());
-            tempData.setCancel_message(order.getCaseId().getCancelMessage());
-            tempData.setTotal_count(ordersNumber);
-
-            orderDataList.add(tempData);
-        }
-
-        // Prepare Response
-        if (!orderDataList.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.ORDERS_FETCH_SUCCESSFULLY,null,locale),
-                    orderDataList
-            ));
-        } else {
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
-            ));
+        } catch (Exception e) {
+            log.error("Error in my-orders api : {}", e);
+            return null;
         }
     }
+
+    private StringBuilder getStringBuilder(HealthTipPackageHistoryRequest request) {
+        StringBuilder sb = new StringBuilder("SELECT u FROM Orders u WHERE u.patientId.userId = :userId AND u.caseId.caseId IS NOT NULL ");
+        if(request.getConsultation_date()!=null) {
+            sb.append("AND u.caseId.consultationDate = :consultationDate ");
+        }
+        if(request.getDoctor_name() != null && !request.getDoctor_name().isEmpty()){
+            sb.append("AND (u.doctorId.firstName LIKE :dn OR u.doctorId.lastName LIKE :dn) ");
+        }
+        if(request.getCase_id() != null && request.getCase_id() != 0){
+            sb.append("AND u.caseId.caseId = :caseId ");
+        }
+        sb.append("ORDER BY u.id DESC");
+        return sb;
+    }
+
     public ResponseEntity<?> getResendOTP(Locale locale, ResendOtpRequest request) {
         if(request.getContact_number()==null || request.getContact_number().isEmpty()){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
-                    Constants.UNAUTHORIZED_CODE,
-                    Constants.UNAUTHORIZED_MSG,
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
             ));
         }
@@ -2160,7 +1904,7 @@ public class PatientService {
     public ResponseEntity<?> getTransactionType(String projectBase, Locale locale) {
         List<KeyValueDto> response = new ArrayList<>();
         if(projectBase!=null && projectBase.equalsIgnoreCase("baano")){
-            List<String> sample = List.of("consultation","lab","healthtip");
+            List<String> sample = List.of("all","consultation","lab","healthtip");
             for(String s:sample){
                 try {
                     response.add(new KeyValueDto(
@@ -2169,7 +1913,7 @@ public class PatientService {
                 }catch (Exception e){ log.error(" while fetching language file ERROR:{}",e.getMessage());}
             }
         }else{
-            List<String> sample = List.of("consultation","nurse_on_demand","lab","healthtip");
+            List<String> sample = List.of("all","consultation","nurse_on_demand","lab","healthtip");
             for(String s:sample){
                 try {
                     response.add(new KeyValueDto(

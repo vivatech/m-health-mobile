@@ -97,7 +97,7 @@ public class LabService {
             }
         }
         else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN,
                     messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)

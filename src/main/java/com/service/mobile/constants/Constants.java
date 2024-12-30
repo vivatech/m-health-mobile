@@ -139,4 +139,7 @@ public class Constants {
     public static final String Payment_Type_FREE = "Free";
     public static final String Payment_Failed = "Payment Failed";
     public static final String Status_IN_ACTIVE = "I";
+    public static final String REFUND_TRANSFER = "refund_wallet_to_user";
+    public static final String Transaction_PENDING = "Pending";
+    public static final String General_Practitioner = "general_practitioner";
 }

@@ -226,6 +226,8 @@ public class Constants {
     public static final String CATEGORY_CANNOT_BLANK = "app.category.not.blank";
     public static final String SUB_CATEGORY_CANNOT_BLANK = "app.subcategory.not.blank";
     public static final String PAYMENT_SUCCESS = "app.payment.success";
+    public static final String HEALTH_TIP_PACKAGE_FETCH_SUCCESSFULLY = "app.health.tip.fetch";
+    public static final String NOT_SET = "app.not.set";
     public static final String NURSE_NOT_FOUND_PATIENT_NOD = "app.nurse.not.found.patient.nod";
     public static final String AGENT_NOTIFICATION_FOR_FAILED_NOD = "app.agent.notification.for.failed.nod";
     public static final String SERVICE_NOT_FOUND = "app.service.not.found";

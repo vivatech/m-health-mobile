@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class MyTransactionsResponse {
     private String title;
-    private Integer case_id;
+    private Object case_id;
     private String transaction_id;
     private Object contact_number;
     private String transaction_type;
