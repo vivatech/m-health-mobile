@@ -13,6 +13,7 @@ import com.service.mobile.repository.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -32,6 +33,7 @@ import static com.service.mobile.config.Constants.*;
 import static com.service.mobile.constants.Constants.General_Practitioner;
 
 @Service
+@Slf4j
 public class DoctorService {
 
     @Autowired
@@ -77,6 +79,7 @@ public class DoctorService {
 
 
     public ResponseEntity<?> getDoctorCityList(Locale locale) {
+        Map<String, Object> res = new HashMap<>();
         List<City> cities = usersRepository.getCitiesByUsertype(UserType.Doctor);
         if(!cities.isEmpty()){
             List<CityResponse> responses = new ArrayList<>();

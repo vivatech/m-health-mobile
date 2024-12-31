@@ -85,7 +85,7 @@ public class HealthTipPackageUserService {
         return responses;
     }
 
-    public static String formatExpiryDate(LocalDateTime dateTime) {
+    public String formatExpiryDate(LocalDateTime dateTime) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy HH:mm", Locale.ENGLISH);
         return dateTime.format(formatter);
     }

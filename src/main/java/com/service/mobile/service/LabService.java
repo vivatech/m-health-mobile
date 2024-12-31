@@ -10,17 +10,20 @@ import com.service.mobile.model.LabCategoryMaster;
 import com.service.mobile.model.LabSubCategoryMaster;
 import com.service.mobile.repository.LabCategoryMasterRepository;
 import com.service.mobile.repository.LabSubCategoryMasterRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+
+import static com.service.mobile.config.Constants.NO_CONTENT_FOUNT_CODE;
+import static com.service.mobile.config.Constants.SOMETHING_WENT_WRONG;
 
 @Service
+@Slf4j
 public class LabService {
 
     @Autowired
@@ -34,6 +37,9 @@ public class LabService {
     private LabSubCategoryMasterRepository labSubCategoryMasterRepository;
 
     public ResponseEntity<?> getLabCategoryList(Locale locale) {
+        log.info("Entering into get lab category list api");
+        Map<String, Object> res = new HashMap<>();
+        try{
         List<LabCategoryDto> dtoList = getLabCategoryDtos(locale);
         if(dtoList.size()>0){
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
@@ -47,6 +53,16 @@ public class LabService {
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
                     messageSource.getMessage(Constants.NO_LAB_CATEGORY_NOT_FOUND,null,locale)
+            ));
+        }
+    }catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error found in lab category list api : {}", e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(SOMETHING_WENT_WRONG, null, locale),
+                    res
             ));
         }
     }

@@ -15,6 +15,7 @@ import com.service.mobile.model.SlotType;
 import com.service.mobile.repository.ConsultationRepository;
 import com.service.mobile.repository.OrdersRepository;
 import com.service.mobile.repository.SlotTypeRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -30,12 +31,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 
 @Service
+@Slf4j
 public class ConsultationService {
 
     @Autowired
@@ -62,6 +61,7 @@ public class ConsultationService {
     private String zone;
 
     public ResponseEntity<?> checkOnGoingConsultation(Integer userId, Locale locale) {
+        Map<String, Object> res = new HashMap<>();
         List<SlotType> slotTypeOpt = slotTypeRepository.findByStatus(SlotStatus.active);
 
         Long slotValue = Long.parseLong(slotTypeOpt.get(0).getValue());
@@ -77,7 +77,7 @@ public class ConsultationService {
         );
 
         if (!consultationOpt.isPresent()) {
-            return ResponseEntity.ok(new Response(Constants.SUCCESS_CODE, Constants.SUCCESS_CODE,Constants.SUCCESS, null));
+            return ResponseEntity.ok(new Response(Constants.SUCCESS_CODE, Constants.SUCCESS_CODE,Constants.SUCCESS, res));
         }
 
         Consultation consultation = consultationOpt.get();
@@ -110,6 +110,7 @@ public class ConsultationService {
     }
 
     public ResponseEntity<?> consultations(ConsultationsRequest request, Locale locale) {
+        Map<String, Object> res = new HashMap<>();
         Pageable pageable = PageRequest.of(request.getPage(),5);
         LocalDateTime localDateTime = LocalDateTime.now(ZoneId.of(zone));
         LocalDate date = localDateTime.toLocalDate();
@@ -162,7 +163,8 @@ public class ConsultationService {
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale),
+                    res
             ));
         }
 
@@ -170,6 +172,7 @@ public class ConsultationService {
     }
 
     public ResponseEntity<?> searchConsultations(ConsultationsRequest request, Locale locale) {
+        Map<String, Object> res = new HashMap<>();
         List<Consultation> consultations = consultationRepository.findByPatientIdAndDateOrderByCaseId(request.getUser_id(),request.getDate());
         if(!consultations.isEmpty()){
             List<ConsultationResponse> list = new ArrayList<>();
@@ -203,7 +206,8 @@ public class ConsultationService {
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale),
+                    res
             ));
         }
     }
