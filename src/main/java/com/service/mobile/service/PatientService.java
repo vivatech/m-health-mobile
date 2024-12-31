@@ -1298,8 +1298,9 @@ public class PatientService {
     }
 
     public ResponseEntity<?> getHealthTipsList(Locale locale, HealthTipsListRequest request) {
-        if (request.getUser_id() == null || request.getPage() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response(
+        if (request.getUser_id() == null || request.getUser_id().isEmpty()
+                || request.getUser_id().equals("0")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     BLANK_DATA_GIVEN,
                     BLANK_DATA_GIVEN_CODE,
                     messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
@@ -1307,7 +1308,7 @@ public class PatientService {
         }
 
         try {
-            List<Integer> healthTipPackageIds = healthTipPackageUserService.findPackageIdsByUserIdAndExpire(request.getUser_id(), YesNo.No);
+            List<Integer> healthTipPackageIds = healthTipPackageUserService.findPackageIdsByUserIdAndExpire(Integer.valueOf(request.getUser_id()), YesNo.No);
 
             if (!healthTipPackageIds.isEmpty()) {
                 List<Integer> categoriesIds = healthTipPackageCategoriesRepository.findCategoriesIdsByPackageIds(healthTipPackageIds);
@@ -1316,12 +1317,14 @@ public class PatientService {
                 if (request.getTitle() != null && !request.getTitle().isEmpty()) {
                     sb.append(" AND h.topic LIKE '%").append(request.getTitle()+"%'");
                 }
-                if (request.getCategory_id() != null) {
+                if (request.getCategory_id() != null && !request.getCategory_id().isEmpty()
+                        && !request.getCategory_id().equals("0")) {
                     sb.append(" AND h.healthTipCategory.categoryId = ").append(request.getCategory_id());
                 }
-                if (request.getPackage_id() != null && request.getPackage_id() != 0) {
+                if (request.getPackage_id() != null && !request.getPackage_id().isEmpty()
+                        && !request.getPackage_id().equals("0")) {
                     healthTipPackageIds = new ArrayList<>();
-                    healthTipPackageIds.add(request.getPackage_id());
+                    healthTipPackageIds.add(Integer.valueOf(request.getPackage_id()));
                     categoriesIds = healthTipPackageCategoriesRepository.findCategoriesIdsByPackageIds(healthTipPackageIds);
                     sb.append(" AND h.healthTipCategory.categoryId IN :categoriesIds");
                 }
@@ -1331,13 +1334,10 @@ public class PatientService {
                 List<HealthTip> healthTips = query.getResultList();
                 int total = healthTips.size();
 
-                int page = request.getPage();
+                int page = request.getPage() == null || request.getPage().isEmpty() ? 0 : Integer.valueOf(request.getPage());
                 int pageSize = 5;
 
-                query.setFirstResult(page * pageSize);
-                query.setMaxResults(pageSize);
-
-                healthTips = query.getResultList();
+                healthTips = healthTips.stream().skip((long) page *  pageSize).limit(pageSize).toList();
 
                 List<HealthTipsListResponse> data = new ArrayList<>();
                 if (healthTips != null) {
@@ -1352,7 +1352,7 @@ public class PatientService {
                         String video = null;
                         String videoThump = null;
                         if (healthTip.getVideo() != null && !healthTip.getVideo().isEmpty() && packageCategories != null) {
-                            List<HealthTipPackageUser> user = healthTipPackageUserService.findByUserIdAndPackageId(request.getUser_id(), packageCategories.getHealthTipPackage().getPackageId());
+                            List<HealthTipPackageUser> user = healthTipPackageUserService.findByUserIdAndPackageId(Integer.valueOf(request.getUser_id()), packageCategories.getHealthTipPackage().getPackageId());
                             if (user != null && !user.isEmpty()) {
                                 if (user.get(0).getIsVideo().equals(YesNo.Yes)) {
                                     video = baseUrl + "/video/" + healthTip.getVideo();
@@ -1422,7 +1422,7 @@ public class PatientService {
     }
 
     public ResponseEntity<?> healthTipsExport(Locale locale, HealthTipsListRequest request) {
-        List<Integer> packageIds = healthTipPackageUserRepository.findPackageIdsByUserIdAndExpire(request.getUser_id(), YesNo.No);
+        List<Integer> packageIds = healthTipPackageUserRepository.findPackageIdsByUserIdAndExpire(Integer.valueOf(request.getUser_id()), YesNo.No);
 
         if (packageIds != null && !packageIds.isEmpty()) {
 
@@ -1435,21 +1435,23 @@ public class PatientService {
                     request.setTitle("");
                 }
 
-                if(request.getCategory_id()!=null && request.getCategory_id()!=0){
-                    if(request.getPackage_id()!=null){
+                if(request.getCategory_id() != null && !request.getCategory_id().isEmpty()
+                        && !request.getCategory_id().equals("0")){
+                    if(request.getPackage_id() != null && !request.getPackage_id().isEmpty()
+                            && !request.getPackage_id().equals("0")){
                         List<Integer> templist = new ArrayList<>();
-                        templist.add(request.getPackage_id());
+                        templist.add(Integer.valueOf(request.getPackage_id()));
                         List<Integer> catIds = healthTipPackageCategoriesRepository.findCategoryIdsByPackageIds(templist);
                         healthTips = healthTipRepository.findByCategory(catIds,request.getTitle());
                     }else{
                         List<Integer> templist = new ArrayList<>();
-                        templist.add(request.getCategory_id());
+                        templist.add(Integer.valueOf(request.getCategory_id()));
                         healthTips = healthTipRepository.findByCategory(templist,request.getTitle());
                     }
                 }else{
                     if(request.getPackage_id()!=null){
                         List<Integer> templist = new ArrayList<>();
-                        templist.add(request.getPackage_id());
+                        templist.add(Integer.valueOf(request.getPackage_id()));
                         List<Integer> catIds = healthTipPackageCategoriesRepository.findCategoryIdsByPackageIds(templist);
                         healthTips = healthTipRepository.findByCategory(catIds,request.getTitle());
                     }else{

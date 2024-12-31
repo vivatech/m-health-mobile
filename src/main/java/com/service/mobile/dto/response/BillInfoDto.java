@@ -28,5 +28,5 @@ public class BillInfoDto {
     private List<ReportDto> reportName;
     private Integer reportCharge;
     private Integer extraCharges;
-    private Float total;
+    private Integer total;
 }

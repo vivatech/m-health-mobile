@@ -10,10 +10,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class HealthTipsListRequest {
-    private Integer user_id;
+    private String user_id;
     private String title;
-    private Integer category_id;
-    private Integer package_id;
-    private Integer page=0;
-    private Integer size=5;
+    private String category_id;
+    private String package_id;
+    private String page;
 }

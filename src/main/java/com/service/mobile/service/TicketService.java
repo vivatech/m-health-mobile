@@ -187,8 +187,7 @@ public class TicketService {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                         Constants.NO_CONTENT_FOUNT_CODE,
                         Constants.NO_CONTENT_FOUNT_CODE,
-                        messageSource.getMessage(Constants.ATTACH_FILE_ALLOWED_ONLY,null,locale),
-                        new ArrayList<>()
+                        messageSource.getMessage(Constants.ATTACH_FILE_ALLOWED_ONLY,null,locale)
                 ));
             }
 
@@ -196,8 +195,7 @@ public class TicketService {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                         Constants.NO_CONTENT_FOUNT_CODE,
                         Constants.NO_CONTENT_FOUNT_CODE,
-                        messageSource.getMessage(Constants.SUPPORT_TICKET_CREATED_SUCCESSFULLY,null,locale),
-                        new ArrayList<>()
+                        messageSource.getMessage(Constants.MAXIMIM_PROFILE_PIC_SIZE_EXCIDED,null,locale)
                 ));
             }
         }
@@ -206,7 +204,7 @@ public class TicketService {
         supportTicket.setSupportTicketTitle(request.getSupport_ticket_title());
         supportTicket.setSupportTicketDescription(request.getSupport_ticket_title());
         supportTicket.setSupportTicketStatus(SupportTicketStatus.Open);
-        supportTicket.setSupportTicketCreatedAt(LocalDateTime.now());
+        supportTicket.setSupportTicketCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
         supportTicket.setSupportTicketCreatedBy(request.getUser_id());
         supportTicket = supportTicketRepository.save(supportTicket);
         Integer attachmentId = null;
@@ -214,7 +212,7 @@ public class TicketService {
             Attachment attachment = new Attachment();
             attachment.setAttachmentLabel(request.getFilename().getOriginalFilename());
             attachment.setAttachmentName(UUID.randomUUID().toString() + "." + ext);
-            attachment.setAttachmentType(request.getAttachment_type());
+            attachment.setAttachmentType(request.getAttachment_type() == null || request.getAttachment_type().isEmpty() ? request.getFilename().getContentType() : request.getAttachment_type());
             attachment.setAttachmentStatus(1);
             attachment = attachmentRepository.save(attachment);
             attachmentId = attachment.getAttachmentId();
@@ -235,7 +233,7 @@ public class TicketService {
         supportTicketMsg.setSupportTicketMsgsDetail(request.getSupport_ticket_description());
         supportTicketMsg.setAttachmentId(attachmentId);
         supportTicketMsg.setSupportTicketMsgsCreatedBy(request.getUser_id());
-        supportTicketMsg.setSupportTicketMsgsCreatedAt(LocalDateTime.now());
+        supportTicketMsg.setSupportTicketMsgsCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
         supportTicketMessageRepository.save(supportTicketMsg);
 
         return ResponseEntity.status(HttpStatus.OK).body(new Response(
@@ -317,7 +315,8 @@ public class TicketService {
                 attachment = new Attachment();
                 attachment.setAttachmentLabel(filename);
                 attachment.setAttachmentName(UUID.randomUUID().toString() + "." + ext);
-                attachment.setAttachmentType(request.getAttachment_type() != null ? request.getAttachment_type() : request.getFilename().getContentType());
+                attachment.setAttachmentType(request.getAttachment_type() != null && !request.getAttachment_type().isEmpty()
+                        ? request.getAttachment_type() : request.getFilename().getContentType());
                 attachmentRepository.save(attachment);
 
                 // Save the file to disk
@@ -335,7 +334,7 @@ public class TicketService {
             reply.setSupportTicketMsgsDetail(request.getMessage());
             reply.setAttachmentId(attachment != null ? attachment.getAttachmentId() : null);
             reply.setSupportTicketMsgsCreatedBy(request.getUser_id());
-            reply.setSupportTicketMsgsCreatedAt(LocalDateTime.now());
+            reply.setSupportTicketMsgsCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
             reply = supportTicketMessageRepository.save(reply);
 
             SupportTicketMessage savedReply = reply;

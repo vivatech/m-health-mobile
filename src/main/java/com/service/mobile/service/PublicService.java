@@ -1118,7 +1118,7 @@ public class PublicService {
                 reportNames,
                 diagnosisCost,
                 collectionCharge,
-                totalPrice
+                (int)totalPrice
         );
 
         return response;
