@@ -18,6 +18,7 @@ import com.service.mobile.model.Users;
 import com.service.mobile.repository.AuthKeyRepository;
 import com.service.mobile.repository.UserOTPRepository;
 import com.service.mobile.repository.UsersRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -40,11 +42,14 @@ import static com.service.mobile.config.Constants.*;
 import static com.service.mobile.constants.Constants.Status_IN_ACTIVE;
 
 @Service
+@Slf4j
 public class AuthService {
     @Value("${app.otp.expiry.minutes}")
     private Long expiryTime;
     @Value("${app.fixed.otp}")
     private boolean OTP_FIXED;
+    @Autowired
+    private SMSService smsService;
 
     @Autowired
     private UsersRepository usersRepository;
@@ -62,6 +67,10 @@ public class AuthService {
     private Utility utility;
     @Autowired
     private AuthKeyRepository authKeyRepository;
+    @Value("${app.sms.sent}")
+    private boolean smsSent;
+    @Value("${app.ZoneId}")
+    private String zoneId;
 
     public ResponseEntity<?> actionLogin(MobileReleaseRequest request, Locale locale) {
         if(request.getContact_number() != null && !request.getContact_number().isEmpty()){
@@ -84,7 +93,7 @@ public class AuthService {
                     int otp = OTP_FIXED ? 123456 : random.nextInt(900000) + 100000;
 
                     //save otp into user otp table
-                    saveOtpIntoUserOtpTableAndUsersTable(users, otp);
+                    saveOtpIntoUserOtpTableAndUsersTable(users, otp, locale);
 
                     LoginResponse ress = setLoginResponse();
 
@@ -115,12 +124,12 @@ public class AuthService {
         }
     }
 
-    private void saveOtpIntoUserOtpTableAndUsersTable(Users users, int otp) {
+    private void saveOtpIntoUserOtpTableAndUsersTable(Users users, int otp, Locale locale) {
         UserOTP otps = new UserOTP();
         otps.setOtp(utility.md5Hash(String.valueOf(otp)));
         otps.setIsFrom(Constants.Login);
         otps.setUserId(users.getUserId());
-        otps.setExpiredAt(LocalDateTime.now().plusMinutes(expiryTime));
+        otps.setExpiredAt(LocalDateTime.now(ZoneId.of(zoneId)).plusMinutes(expiryTime));
         otps.setStatus(Constants.STATUS_INACTIVE);
         otps.setType(Constants.PATIENT);
 
@@ -128,8 +137,22 @@ public class AuthService {
 
         //save into users table
         users.setOtp(otp);
-        users.setOtpTime(Timestamp.valueOf(LocalDateTime.now().plusMinutes(expiryTime)));
+        users.setOtpTime(Timestamp.valueOf(LocalDateTime.now(ZoneId.of(zoneId)).plusMinutes(expiryTime)));
         usersRepository.save(users);
+
+        //sending SMS
+        if(smsSent){
+            try {
+                String countryCode = users.getCountryCode() == null || users.getCountryCode().isEmpty() ? "+252" : users.getCountryCode();
+                String number = countryCode + users.getContactNumber();
+                String message = messageSource.getMessage(RESEND_OTP, null, locale);
+                message = message.replace("{0}", String.valueOf(otp));
+                smsService.sendSMS(number, message);
+            }catch (Exception e){
+                e.printStackTrace();
+                log.error("Error found in sms service while sending sms resend otp : {}", e);
+            }
+        }
     }
 
     private LoginResponse setLoginResponse() {

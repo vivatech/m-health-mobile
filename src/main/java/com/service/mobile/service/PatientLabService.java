@@ -398,8 +398,7 @@ public class PatientLabService {
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale),
-                        new ArrayList<>()
+                        messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale)
                 ));
             }
         }

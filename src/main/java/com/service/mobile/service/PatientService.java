@@ -49,6 +49,8 @@ import static com.service.mobile.config.Constants.*;
 @Slf4j
 public class PatientService {
     @Autowired
+    private UserInitiatedRepository userInitiatedRepository;
+    @Autowired
     private UserOTPRepository userOTPRepository;
     @Autowired
     private DoctorSpecializationRepository doctorSpecializationRepository;
@@ -168,6 +170,8 @@ public class PatientService {
     private Integer transactionMode;
     @Value("${app.ZoneId}")
     private String zoneId;
+    @Value("${app.sms.sent}")
+    private boolean smsSent;
 
     public ResponseEntity<?> actionUpdateFullname(UpdateFullNameRequest request, Locale locale) {
         if(request !=null&&request.getUser_id()!=null)
@@ -1835,7 +1839,11 @@ public class PatientService {
             }
         } catch (Exception e) {
             log.error("Error in my-orders api : {}", e);
-            return null;
+            return  ResponseEntity.status(HttpStatus.OK).body(new Response(
+                    Constants.SUCCESS_CODE,
+                    Constants.SUCCESS_CODE,
+                    messageSource.getMessage(NO_RECORD_FOUND, null, locale)
+            ));
         }
     }
 
@@ -1855,51 +1863,92 @@ public class PatientService {
     }
 
     public ResponseEntity<?> getResendOTP(Locale locale, ResendOtpRequest request) {
-        if(request.getContact_number()==null || request.getContact_number().isEmpty()){
+        if (request.getContact_number() == null || request.getContact_number().isEmpty()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     NO_CONTENT_FOUNT_CODE,
                     NO_CONTENT_FOUNT_CODE,
-                    messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
+                    messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND, null, locale)
             ));
         }
-        Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
-        if(users != null){
+        try {
             //generate OTP
             Random random = new Random();
             int otp = OTP_FIXED ? 123456 : random.nextInt(900000) + 100000;
             log.info("OTP : {}", otp);
 
-            //save otp into user otp table
-            saveOtpIntoUserOtpTableAndUsersTable(users, otp);
+            String number = "";
+            Integer id = 0;
+            String isFrom = Login;
+            if (request.getIs_registered() != null && !request.getIs_registered().isEmpty()
+                    && request.getIs_registered().equalsIgnoreCase("No")) {
+                UserInitiated userInitiated = userInitiatedRepository.findByMobileNumber(Integer.valueOf(request.getContact_number()));
+                if (userInitiated == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                            NO_CONTENT_FOUNT_CODE,
+                            NO_CONTENT_FOUNT_CODE,
+                            messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND, null, locale)
+                    ));
+                }
+                number = "+252" + userInitiated.getMobileNumber();
+                id = userInitiated.getId();
+                isFrom = Registration;
+            } else {
+                Users users = usersRepository.findByContactNumber(request.getContact_number()).orElse(null);
+                if (users == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                            NO_CONTENT_FOUNT_CODE,
+                            NO_CONTENT_FOUNT_CODE,
+                            messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND, null, locale)
+                    ));
+                }
+                String countryCode = users.getCountryCode() == null || users.getCountryCode().isEmpty() ? "+252" : users.getCountryCode();
+                number = countryCode + users.getContactNumber();
+                //save into users table
+                users.setOtp(otp);
+                users.setOtpTime(Timestamp.valueOf(LocalDateTime.now(ZoneId.of(zoneId)).plusMinutes(expiryTime)));
+                usersRepository.save(users);
+            }
+            saveOtpIntoUserOtpTableAndUsersTable(id, otp, isFrom, locale, number);
+            Map<String, Object> response = new HashMap<>();
+            response.put("otp", String.valueOf(otp));
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
                     Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.OTP_SEND_SUCCESSFUL,null,locale)
+                    messageSource.getMessage(Constants.OTP_SEND_SUCCESSFUL, null, locale),
+                    response
             ));
-        }
-        else{
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error found in resend otp api :{}", e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(SOMETHING_WENT_WRONG, null, locale)
             ));
         }
     }
-    private void saveOtpIntoUserOtpTableAndUsersTable(Users users, int otp) {
+    private void saveOtpIntoUserOtpTableAndUsersTable(Integer userId, int otp, String isFrom, Locale locale, String numberWithCountryCode) {
         UserOTP otps = new UserOTP();
         otps.setOtp(utility.md5Hash(String.valueOf(otp)));
-        otps.setIsFrom(Constants.Login);
-        otps.setUserId(users.getUserId());
-        otps.setExpiredAt(LocalDateTime.now().plusMinutes(expiryTime));
+        otps.setIsFrom(isFrom);
+        otps.setUserId(userId);
+        otps.setExpiredAt(LocalDateTime.now(ZoneId.of(zoneId)).plusMinutes(expiryTime));
         otps.setStatus(Constants.STATUS_INACTIVE);
         otps.setType(Constants.PATIENT);
 
         userOTPRepository.save(otps);
 
-        //save into users table
-        users.setOtp(otp);
-        users.setOtpTime(Timestamp.valueOf(LocalDateTime.now().plusMinutes(expiryTime)));
-        usersRepository.save(users);
+        //sending SMS
+        if(smsSent){
+            try {
+                String message = messageSource.getMessage(RESEND_OTP, null, locale);
+                message = message.replace("{0}", String.valueOf(otp));
+                smsService.sendSMS(numberWithCountryCode, message);
+            }catch (Exception e){
+                e.printStackTrace();
+                log.error("Error found in sms service while sending sms resend otp : {}", e);
+            }
+        }
     }
     public ResponseEntity<?> getTransactionType(String projectBase, Locale locale) {
         List<KeyValueDto> response = new ArrayList<>();

@@ -25,7 +25,7 @@ public class Constants {
     public static final String USER_NOT_FOUND= "user.not.found";
 
 
-    public static final String OTP_SEND_SUCCESSFUL= "OTP Sent Successfully";
+    public static final String OTP_SEND_SUCCESSFUL= "app.otp.sent.successfully";
 
     /*User type*/
     public static final String PATIENT = "Patient";
@@ -238,4 +238,5 @@ public class Constants {
     public static final String CONFIRM_ONDEMAND_ORDER_NURSE = "app.confirm.ondemand.order.nurse";
     public static final String ORDER_NOTICE_AGENT_NOD = "app.order.notice.agent.nod";
     public static final String RATING_DETAIL_TEXT_NOD = "app.rating.detail.text.nod";
+    public static final String RESEND_OTP = "app.resend.otp";
 }
