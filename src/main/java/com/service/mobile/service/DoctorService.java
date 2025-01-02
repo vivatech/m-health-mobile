@@ -1,6 +1,7 @@
 package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
+import com.service.mobile.customException.MobileServiceExceptionHandler;
 import com.service.mobile.dto.availabiltyDoctorDto.DoctorAvailabilityRequest;
 import com.service.mobile.dto.dto.*;
 import com.service.mobile.dto.enums.*;
@@ -13,7 +14,9 @@ import com.service.mobile.repository.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -22,6 +25,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
@@ -82,9 +86,12 @@ public class DoctorService {
         Map<String, Object> res = new HashMap<>();
         List<City> cities = usersRepository.getCitiesByUsertype(UserType.Doctor);
         if(!cities.isEmpty()){
-            List<CityResponse> responses = new ArrayList<>();
+            List<Map<String, Object>> responses = new ArrayList<>();
             for(City c:cities){
-                responses.add(new CityResponse(c.getId(),c.getName(),null));
+                Map<String, Object> response =  new HashMap<>();
+                response.put("id", c.getId());
+                response.put("name", c.getName());
+                responses.add(response);
             }
             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                     Constants.SUCCESS_CODE,
@@ -265,10 +272,13 @@ public class DoctorService {
         SearchDocResponse response = new SearchDocResponse();
         response.setProfile_picture(u.getProfilePicture() == null || u.getProfilePicture().isEmpty()
                 ? "" : baseUrl + "uploaded_file/UserProfile/" + u.getUserId() +"/" + u.getProfilePicture());
+
+        //language
         if(u.getLanguageFluency() != null && !u.getLanguageFluency().isEmpty()){
             List<Integer> langs = Arrays.stream(u.getLanguageFluency().split(",")).map(Integer::parseInt).toList();
             response.setLanguages(languageRepository.findLanguages(langs));
         }
+        else response.setLanguages(new ArrayList<>());
 
         Long sum = consultationRatingRepository.findSumByDoctorId(u.getUserId());
         Long count = consultationRatingRepository.findCountByDoctorId(u.getUserId());
@@ -321,141 +331,153 @@ public class DoctorService {
     }
 
 
-    public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, DoctorAvailabilityRequest request) {
-        //new-order-date
-        LocalDate newOrderDate = LocalDate.parse("2020-09-29");
-        Users slot_type_id = usersRepository.findById(Integer.parseInt(request.getDoctor_id())).orElse(null);
-        String dayName = request.getDate().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH).toLowerCase();
-        List<SlotMaster> slotListing = slotMasterRepository.findBySlotTypeIdAndSlotDay(slot_type_id.getSlotTypeId(),dayName);
+    public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, @Valid DoctorAvailabilityRequest request) {
+        log.info("Entering into doctor-availability-latest-list : {}", request);
+        try {
+            //new-order-date
+            LocalDate newOrderDate = LocalDate.parse("2020-09-29");
+            Users doctor = usersRepository.findById(Integer.parseInt(request.getDoctor_id())).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
+            String dayName = request.getDate().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH).toLowerCase();
+            List<SlotMaster> slotListing = slotMasterRepository.findBySlotTypeIdAndSlotDay(doctor.getSlotTypeId(), dayName);
 
 
-        List<Consultation> constantsList = consultationRepository.findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
-                RequestType.Book,newOrderDate, Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()), ConsultationType.Paid,request.getDate()
-        );
-        Consultation last_consult_data = (constantsList.isEmpty())?null:constantsList.get(0);
-
-        ConsultationType consultation_type = ConsultationType.Paid;
-
-        FeeType type = FeeType.visit;
-        if(request.getConsult_type().equalsIgnoreCase("video")){
-            type = FeeType.call;
-        }
-
-        List<Charges> doctorchargesList = chargesRepository.findByUserIdAndConsultantType(Integer.parseInt(request.getDoctor_id()),type);
-        Charges doctorcharges = (doctorchargesList.isEmpty())?null:doctorchargesList.get(0);
-
-        String rem_cnt_msg = "";
-        if(last_consult_data!=null){
-            GlobalConfiguration free_cnt = globalConfigurationRepository.findByKey("NO_OF_FREE_BOOKING");
-            GlobalConfiguration free_days = globalConfigurationRepository.findByKey("DAYS_FOR_FREE_BOOKING");
-
-            LocalDate last_free_date = last_consult_data.getConsultationDate().plusDays(Integer.parseInt(free_cnt.getValue()));
-            SlotMaster timeslot = last_consult_data.getSlotId();
-            LocalTime time_array = LocalTime.parse(timeslot.getSlotTime());
-            LocalDateTime sconsultant_date = last_consult_data.getConsultationDate().atTime(time_array);
-
-            Long free_consult_cnt = consultationRepository.countByPatientIdAndDoctorIdCreatedAtAndConstaitionTypeConsultTypeAndConstationDate(
-                    Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()),newOrderDate,
-                    ConsultationType.Free,last_consult_data.getConsultType(),sconsultant_date
-                    );
-            Long rem_cnt = Long.valueOf(free_cnt.getValue()) - free_consult_cnt;
-            if(rem_cnt>0){
-                rem_cnt_msg = "(You have "+rem_cnt+" Free booking(s) for "+last_consult_data.getConsultType()+" till "+last_free_date+" )";
-            }
-        }
-
-        Map<String, List<SlotResponse>> slotArray = new LinkedHashMap<>();
-        slotArray.put("Morning", new ArrayList<>());
-        slotArray.put("Afternoon", new ArrayList<>());
-        slotArray.put("Evening", new ArrayList<>());
-
-
-        for (SlotMaster slot : slotListing) {
-            Long available_count = doctorAvailabilityRepository.countBySlotIdAndDoctorId(slot.getSlotId(), Integer.parseInt(request.getDoctor_id()));
-
-            Long check_consultant_count = consultationRepository.countBySlotIdAndDoctorIdConsultationDate(
-                    slot.getSlotId(),Integer.parseInt(request.getDoctor_id()),  request.getDate());
-
-            List<Consultation> consultantInfoList = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(
-                    Integer.parseInt(request.getDoctor_id()), slot.getSlotId(),request.getDate(), RequestType.Cancel);
-
-            Consultation consultantInfo = (consultantInfoList.isEmpty())?null:constantsList.get(0);
-
-            String userIdInSlot = consultantInfo != null ? consultantInfo.getPatientId().toString() : "";
-            Integer caseId = consultantInfo != null ? consultantInfo.getCaseId() : null;
-
-            LocalDateTime consultantDateTime = LocalDateTime.of(request.getDate(), slot.getSlotStartTime());
-
-            LocalDateTime currentDateTime = LocalDateTime.now();
-
-            Long diff = Math.abs(java.time.Duration.between(consultantDateTime, currentDateTime).toMinutes());
-
-            Integer timeLimit = Integer.parseInt(globalConfigurationRepository.findByKey("CANCEL_CONSULT_PATIENT").getValue());
-
-            Integer isCancel = (timeLimit <= diff) && (consultantInfo != null && consultantInfo.getRequestType() == RequestType.Book && consultantDateTime.isAfter(currentDateTime)) ? 1 : 0;
-
-            if (check_consultant_count > 0 || currentDateTime.isAfter(consultantDateTime)) {
-                available_count = 0L;
-            }
-
-            String status;
-            if (available_count > 0) {
-                status = "Available";
-            } else {
-                status = "Not Available";
-            }
-
-            SlotResponse finalArray = new SlotResponse(
-                    slot.getSlotId(),
-                    slot.getSlotDay(),
-                    slot.getSlotTime(),
-                    userIdInSlot,
-                    caseId,
-                    status,
-                    isCancel,
-                    consultantInfo != null ? consultantInfo.getRequestType().name() : "",
-                    consultation_type.name(),
-                    last_consult_data != null ? last_consult_data.getConsultType() : "",
-                    slot.getSlotStartTime().format(DateTimeFormatter.ofPattern("hh:mm a"))
+            List<Consultation> constantsList = consultationRepository.findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
+                    RequestType.Book, newOrderDate, Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()), ConsultationType.Paid, request.getDate()
             );
+            Consultation last_consult_data = (constantsList.isEmpty()) ? null : constantsList.get(0);
 
-            String slotTime = getSlotTime(slot.getSlotStartTime());
+            ConsultationType consultation_type = ConsultationType.Paid;
 
-            if (status.equals("Available") && slotTime != null) {
-                slotArray.get(slotTime).add(finalArray);
+            FeeType type = FeeType.visit;
+            if (request.getConsult_type().equalsIgnoreCase("video")) {
+                type = FeeType.call;
             }
+
+            List<Charges> doctorchargesList = chargesRepository.findByUserIdAndConsultantType(Integer.parseInt(request.getDoctor_id()), type);
+            Charges doctorcharges = (doctorchargesList.isEmpty()) ? null : doctorchargesList.get(0);
+
+            String rem_cnt_msg = "";
+            if (last_consult_data != null) {
+                GlobalConfiguration free_cnt = globalConfigurationRepository.findByKey("NO_OF_FREE_BOOKING");
+                GlobalConfiguration free_days = globalConfigurationRepository.findByKey("DAYS_FOR_FREE_BOOKING");
+
+                LocalDate last_free_date = last_consult_data.getConsultationDate().plusDays(Integer.parseInt(free_cnt.getValue()));
+                SlotMaster timeslot = last_consult_data.getSlotId();
+                LocalTime time_array = LocalTime.parse(timeslot.getSlotTime());
+                LocalDateTime sconsultant_date = last_consult_data.getConsultationDate().atTime(time_array);
+
+                Long free_consult_cnt = consultationRepository.countByPatientIdAndDoctorIdCreatedAtAndConstaitionTypeConsultTypeAndConstationDate(
+                        Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()), newOrderDate,
+                        ConsultationType.Free, last_consult_data.getConsultType(), sconsultant_date
+                );
+                Long rem_cnt = Long.valueOf(free_cnt.getValue()) - free_consult_cnt;
+                if (rem_cnt > 0) {
+                    rem_cnt_msg = "(You have " + rem_cnt + " Free booking(s) for " + last_consult_data.getConsultType() + " till " + last_free_date + " )";
+                }
+            }
+
+            Map<String, List<SlotResponse>> slotArray = new LinkedHashMap<>();
+            slotArray.put("Morning", new ArrayList<>());
+            slotArray.put("Afternoon", new ArrayList<>());
+            slotArray.put("Evening", new ArrayList<>());
+
+
+            for (SlotMaster slot : slotListing) {
+                Long available_count = doctorAvailabilityRepository.countBySlotIdAndDoctorId(slot.getSlotId(), Integer.parseInt(request.getDoctor_id()));
+
+                Long check_consultant_count = consultationRepository.countBySlotIdAndDoctorIdConsultationDate(
+                        slot.getSlotId(), Integer.parseInt(request.getDoctor_id()), request.getDate());
+
+                List<Consultation> consultantInfoList = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(
+                        Integer.parseInt(request.getDoctor_id()), slot.getSlotId(), request.getDate(), RequestType.Cancel);
+
+                Consultation consultantInfo = (consultantInfoList.isEmpty()) ? null : constantsList.get(0);
+
+                String userIdInSlot = consultantInfo != null ? consultantInfo.getPatientId().toString() : "";
+                Integer caseId = consultantInfo != null ? consultantInfo.getCaseId() : null;
+
+                LocalDateTime consultantDateTime = LocalDateTime.of(request.getDate(), slot.getSlotStartTime());
+
+                LocalDateTime currentDateTime = LocalDateTime.now();
+
+                Long diff = Math.abs(java.time.Duration.between(consultantDateTime, currentDateTime).toMinutes());
+
+                Integer timeLimit = Integer.parseInt(globalConfigurationRepository.findByKey("CANCEL_CONSULT_PATIENT").getValue());
+
+                Integer isCancel = (timeLimit <= diff) && (consultantInfo != null && consultantInfo.getRequestType() == RequestType.Book && consultantDateTime.isAfter(currentDateTime)) ? 1 : 0;
+
+                if (check_consultant_count > 0 || currentDateTime.isAfter(consultantDateTime)) {
+                    available_count = 0L;
+                }
+
+                String status;
+                if (available_count > 0) {
+                    status = "Available";
+                } else {
+                    status = "Not Available";
+                }
+
+                SlotResponse finalArray = new SlotResponse(
+                        slot.getSlotId(),
+                        slot.getSlotDay(),
+                        slot.getSlotTime(),
+                        userIdInSlot,
+                        caseId,
+                        status,
+                        isCancel,
+                        consultantInfo != null ? consultantInfo.getRequestType().name() : "",
+                        consultation_type.name(),
+                        last_consult_data != null ? last_consult_data.getConsultType() : "",
+                        slot.getSlotStartTime().format(DateTimeFormatter.ofPattern("hh:mm a"))
+                );
+
+                String slotTime = getSlotTime(slot.getSlotStartTime());
+
+                if (status.equals("Available") && slotTime != null) {
+                    slotArray.get(slotTime).add(finalArray);
+                }
+            }
+
+            // Sorting slots and preparing the response
+
+            int morningSlotCount = slotArray.get("Morning").size();
+            int afternoonSlotCount = slotArray.get("Afternoon").size();
+            int eveningSlotCount = slotArray.get("Evening").size();
+
+            double paymentRate = Double.parseDouble(globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE").getValue());
+
+            double finalConsultFee = doctorcharges != null ? doctorcharges.getFinalConsultationFees() : 0.0;
+            String doctorFinalConsultFee = finalConsultFee > 0 ? "USD " + finalConsultFee : "Free";
+            String doctorFinalConsultSlsh = finalConsultFee > 0 ? "SLSH " + (finalConsultFee * paymentRate) : "Free";
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "200");
+            response.put("message", "Availability found successfully");
+            response.put("totalSlot", morningSlotCount + afternoonSlotCount + eveningSlotCount);
+            response.put("final_consultation_fees", doctorFinalConsultFee);
+            response.put("amount_slsh", doctorFinalConsultSlsh);
+            response.put("price_usd", finalConsultFee);
+            response.put("price_slsh", finalConsultFee * paymentRate);
+            response.put("morningSlotCount", morningSlotCount);
+            response.put("afternoonSlotCount", afternoonSlotCount);
+            response.put("eveningSlotCount", eveningSlotCount);
+            response.put("rem_cnt_msg", rem_cnt_msg);
+            response.put("data", slotArray);
+
+
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    response
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error found in doctor -availability latest list api : {}", e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(SOMETHING_WENT_WRONG, null, locale),
+                    null
+            ));
         }
-
-        // Sorting slots and preparing the response
-
-        int morningSlotCount = slotArray.get("Morning").size();
-        int afternoonSlotCount = slotArray.get("Afternoon").size();
-        int eveningSlotCount = slotArray.get("Evening").size();
-
-        double paymentRate = Double.parseDouble(globalConfigurationRepository.findByKey("WAAFI_PAYMENT_RATE").getValue());
-
-        double finalConsultFee = doctorcharges != null ? doctorcharges.getFinalConsultationFees() : 0.0;
-        String doctorFinalConsultFee = finalConsultFee > 0 ? "USD " + finalConsultFee : "Free";
-        String doctorFinalConsultSlsh = finalConsultFee > 0 ? "SLSH " + (finalConsultFee * paymentRate) : "Free";
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "200");
-        response.put("message", "Availability found successfully");
-        response.put("totalSlot", morningSlotCount + afternoonSlotCount + eveningSlotCount);
-        response.put("final_consultation_fees", doctorFinalConsultFee);
-        response.put("amount_slsh", doctorFinalConsultSlsh);
-        response.put("price_usd", finalConsultFee);
-        response.put("price_slsh", finalConsultFee * paymentRate);
-        response.put("morningSlotCount", morningSlotCount);
-        response.put("afternoonSlotCount", afternoonSlotCount);
-        response.put("eveningSlotCount", eveningSlotCount);
-        response.put("rem_cnt_msg", rem_cnt_msg);
-        response.put("data", slotArray);
-
-
-        return ResponseEntity.status(HttpStatus.OK).body(
-                response
-        );
     }
 
 
@@ -596,41 +618,66 @@ public class DoctorService {
     }
 
     public ResponseEntity<?> getReview(Locale locale, GetReviewRequest request) {
-        Pageable pageable = PageRequest.of(request.getPage(),10);
-        Page<ConsultationRating> consultationRatings = consultationRatingRepository.findByDoctorIdApproveOrderIdDesc(request.getDoctor_id(),pageable);
-        if(!consultationRatings.getContent().isEmpty()){
-            List<GetReviewResponse> responses = new ArrayList<>();
-            for(ConsultationRating rating:consultationRatings.getContent()){
-                String file = baseUrl+"/uploaded_file/no-image-found.png";
-                if(rating.getPatientId()!=null &&
-                        rating.getPatientId().getProfilePicture()!=null &&
-                            !rating.getPatientId().getProfilePicture().isEmpty()){
-                    file = baseUrl + "/uploaded_file/UserProfile/"+ rating.getPatientId().getUserId() + "/" + rating.getPatientId().getProfilePicture();
-                }
-                GetReviewResponse dto = new GetReviewResponse();
-
-                dto.setComment(rating.getComment());
-                dto.setName((rating.getPatientId()!=null)?rating.getPatientId().getFirstName() + " "+rating.getPatientId().getLastName():null);
-                dto.setRating(rating.getRating());
-                dto.setCreated_at(rating.getCreatedAt());
-                dto.setFile_url(file);
-                dto.setTotal_count(consultationRatings.getTotalElements());
-
-                responses.add(dto);
-
+        log.info("Entering into getReview api : {} ", request);
+        try {
+            if (StringUtils.isEmpty(request.getUser_id()) || StringUtils.isEmpty(request.getDoctor_id())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                        NO_CONTENT_FOUNT_CODE,
+                        NO_CONTENT_FOUNT_CODE,
+                        messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
+                ));
             }
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.REVIEW_FOUND_SUCCESSFULLY,null,locale),
-                    responses
-            ));
-        }else{
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
+            int page = StringUtils.isEmpty(request.getPage()) ? 0 : Integer.parseInt(request.getPage());
+            int doctorId = Integer.parseInt(request.getDoctor_id());
+            Pageable pageable = PageRequest.of(page, 10);
+            Page<ConsultationRating> consultationRatings = consultationRatingRepository.findByDoctorIdApproveOrderIdDesc(doctorId, pageable);
+            if (!consultationRatings.getContent().isEmpty()) {
+                List<GetReviewResponse> responses = new ArrayList<>();
+                for (ConsultationRating rating : consultationRatings.getContent()) {
+                    GetReviewResponse dto = getGetReviewResponse(rating, consultationRatings);
+
+                    responses.add(dto);
+                }
+
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.REVIEW_FOUND_SUCCESSFULLY, null, locale),
+                        responses
+                ));
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                        Constants.SUCCESS_CODE,
+                        Constants.SUCCESS_CODE,
+                        messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale)
+                ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error found in review api : {} ",e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(SOMETHING_WENT_WRONG, null, locale)
             ));
         }
+    }
+
+    private GetReviewResponse getGetReviewResponse(ConsultationRating rating, Page<ConsultationRating> consultationRatings) {
+        String file = baseUrl + "/uploaded_file/no-image-found.png";
+        if (rating.getPatientId() != null &&
+                rating.getPatientId().getProfilePicture() != null &&
+                !rating.getPatientId().getProfilePicture().isEmpty()) {
+            file = baseUrl + "/uploaded_file/UserProfile/" + rating.getPatientId().getUserId() + "/" + rating.getPatientId().getProfilePicture();
+        }
+        GetReviewResponse dto = new GetReviewResponse();
+
+        dto.setComment(rating.getComment());
+        dto.setName((rating.getPatientId() != null) ? rating.getPatientId().getFirstName() + " " + rating.getPatientId().getLastName() : null);
+        dto.setRating(rating.getRating());
+        dto.setCreated_at(rating.getCreatedAt());
+        dto.setFile_url(file);
+        dto.setTotal_count(consultationRatings.getTotalElements());
+        return dto;
     }
 }

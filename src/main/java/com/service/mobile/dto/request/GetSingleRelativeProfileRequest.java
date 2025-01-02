@@ -12,12 +12,12 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GetSingleRelativeProfileRequest {
-    private Integer user_id;
-    private Integer doctor_id;
-    private Integer case_id;
+    private String user_id;
+    private String doctor_id;
+    private String case_id;
     private LocalDate newOrderDate;
-    private Integer category_id;
-    private Integer subcategory_id;
+    private String category_id;
+    private String subcategory_id;
     private String cancel_message;
     private Byte id;
 }

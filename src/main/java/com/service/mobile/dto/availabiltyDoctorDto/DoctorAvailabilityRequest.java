@@ -1,11 +1,9 @@
 package com.service.mobile.dto.availabiltyDoctorDto;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
-import com.service.mobile.dto.enums.FeeType;
-import lombok.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
@@ -15,6 +13,8 @@ import java.time.LocalDate;
 public class DoctorAvailabilityRequest {
     private String user_id;
     private String doctor_id;
+
+    @NotNull(message = "Date is required")
     private LocalDate date;
     private String consult_type;
 }

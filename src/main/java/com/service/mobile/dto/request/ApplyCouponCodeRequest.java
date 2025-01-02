@@ -11,8 +11,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ApplyCouponCodeRequest {
-    private Integer user_id;
+    private String user_id;
     private String coupon_code;
-    private CouponCategory category;
-    private Float price;
+    private String category;
+    private String price;
 }

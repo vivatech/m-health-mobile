@@ -186,4 +186,8 @@ public class Users {
     private String isInternational;
     @Column(name = "classification")
     private String classification;
+
+    public String getFullName(){
+        return (this.getFirstName() + " " + this.getLastName()).trim();
+    }
 }

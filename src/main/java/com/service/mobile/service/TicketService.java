@@ -1,6 +1,7 @@
 package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
+import com.service.mobile.customException.MobileServiceExceptionHandler;
 import com.service.mobile.dto.dto.SupportTicketMessageDTO;
 import com.service.mobile.dto.enums.SupportTicketStatus;
 import com.service.mobile.dto.request.*;
@@ -20,6 +21,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -177,71 +179,83 @@ public class TicketService {
     }
 
     public ResponseEntity<?> createSupportTicket(CreateSupportTicketsRequest request, Locale locale) throws IOException {
+        log.info("Entering into create support ticket api : {}", request);
+        Map<String, Object> res = new HashMap<>();
+        try {
 
-        String ext = "";
-        if (request.getFilename() != null && !request.getFilename().isEmpty()) {
-            String filename = request.getFilename().getOriginalFilename();
-            ext = filename.substring(filename.lastIndexOf(".") + 1);
-            List<String> ALLOWED_EXTENSIONS = List.of("gif", "png", "jpg", "jpeg", "doc", "pdf", "docx");
-            if (!ALLOWED_EXTENSIONS.contains(ext.toLowerCase())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        messageSource.getMessage(Constants.ATTACH_FILE_ALLOWED_ONLY,null,locale)
-                ));
+            String ext = "";
+            if (request.getFilename() != null && !request.getFilename().isEmpty()) {
+                String filename = request.getFilename().getOriginalFilename();
+                assert filename != null;
+                ext = filename.substring(filename.lastIndexOf(".") + 1);
+                List<String> ALLOWED_EXTENSIONS = List.of("gif", "png", "jpg", "jpeg", "doc", "pdf", "docx");
+                if (!ALLOWED_EXTENSIONS.contains(ext.toLowerCase())) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            messageSource.getMessage(Constants.ATTACH_FILE_ALLOWED_ONLY, null, locale)
+                    ));
+                }
+
+                if (request.getFilename().getSize() > MAX_FILE_SIZE) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            messageSource.getMessage(Constants.MAXIMIM_PROFILE_PIC_SIZE_EXCIDED, null, locale)
+                    ));
+                }
             }
 
-            if (request.getFilename().getSize() > MAX_FILE_SIZE) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        messageSource.getMessage(Constants.MAXIMIM_PROFILE_PIC_SIZE_EXCIDED,null,locale)
-                ));
+            SupportTicket supportTicket = new SupportTicket();
+            supportTicket.setSupportTicketTitle(request.getSupport_ticket_title());
+            supportTicket.setSupportTicketDescription(request.getSupport_ticket_title());
+            supportTicket.setSupportTicketStatus(SupportTicketStatus.Open);
+            supportTicket.setSupportTicketCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
+            supportTicket.setSupportTicketCreatedBy(Integer.parseInt(request.getUser_id()));
+            supportTicket = supportTicketRepository.save(supportTicket);
+            Integer attachmentId = null;
+            if (request.getFilename() != null && !request.getFilename().isEmpty()) {
+                Attachment attachment = new Attachment();
+                attachment.setAttachmentLabel(request.getFilename().getOriginalFilename());
+                attachment.setAttachmentName(UUID.randomUUID().toString() + "." + ext);
+                attachment.setAttachmentType(request.getAttachment_type() == null || request.getAttachment_type().isEmpty()
+                        ? request.getFilename().getContentType() : request.getAttachment_type());
+                attachment.setAttachmentStatus(1);
+                attachment = attachmentRepository.save(attachment);
+                attachmentId = attachment.getAttachmentId();
+                supportTicket.setAttachmentId(attachment.getAttachmentId());
+
+                String uploadsDir = path_to_uploads_dir + "/Support_Ticket/" + supportTicket.getSupportTicketId();
+                Files.createDirectories(Paths.get(uploadsDir));
+                Files.copy(request.getFilename().getInputStream(), Paths.get(uploadsDir, attachment.getAttachmentName()));
+
+                attachment.setAttachmentPath(uploadsDir + File.separator + attachment.getAttachmentName());
+                attachmentRepository.save(attachment);
             }
+
+            supportTicket = supportTicketRepository.save(supportTicket);
+
+            SupportTicketMessage supportTicketMsg = new SupportTicketMessage();
+            supportTicketMsg.setSupportTicket(supportTicket);
+            supportTicketMsg.setSupportTicketMsgsDetail(request.getSupport_ticket_description());
+            supportTicketMsg.setAttachmentId(attachmentId);
+            supportTicketMsg.setSupportTicketMsgsCreatedBy(Integer.parseInt(request.getUser_id()));
+            supportTicketMsg.setSupportTicketMsgsCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
+            supportTicketMessageRepository.save(supportTicketMsg);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", Constants.SUCCESS_CODE);
+            response.put("message", messageSource.getMessage(Constants.SUPPORT_TICKET_CREATED_SUCCESSFULLY, null, locale));
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error found in create ticket api : {}", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.SOMETHING_WENT_WRONG, null, locale)
+            ));
         }
-
-        SupportTicket supportTicket = new SupportTicket();
-        supportTicket.setSupportTicketTitle(request.getSupport_ticket_title());
-        supportTicket.setSupportTicketDescription(request.getSupport_ticket_title());
-        supportTicket.setSupportTicketStatus(SupportTicketStatus.Open);
-        supportTicket.setSupportTicketCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
-        supportTicket.setSupportTicketCreatedBy(request.getUser_id());
-        supportTicket = supportTicketRepository.save(supportTicket);
-        Integer attachmentId = null;
-        if (request.getFilename() != null && !request.getFilename().isEmpty()) {
-            Attachment attachment = new Attachment();
-            attachment.setAttachmentLabel(request.getFilename().getOriginalFilename());
-            attachment.setAttachmentName(UUID.randomUUID().toString() + "." + ext);
-            attachment.setAttachmentType(request.getAttachment_type() == null || request.getAttachment_type().isEmpty() ? request.getFilename().getContentType() : request.getAttachment_type());
-            attachment.setAttachmentStatus(1);
-            attachment = attachmentRepository.save(attachment);
-            attachmentId = attachment.getAttachmentId();
-            supportTicket.setAttachmentId(attachment.getAttachmentId());
-
-            String uploadsDir = path_to_uploads_dir + "/Support_Ticket/"+supportTicket.getSupportTicketId();
-            Files.createDirectories(Paths.get(uploadsDir));
-            Files.copy(request.getFilename().getInputStream(), Paths.get(uploadsDir, attachment.getAttachmentName()));
-
-            attachment.setAttachmentPath(uploadsDir + File.separator + attachment.getAttachmentName());
-            attachmentRepository.save(attachment);
-        }
-
-        supportTicket = supportTicketRepository.save(supportTicket);
-
-        SupportTicketMessage supportTicketMsg = new SupportTicketMessage();
-        supportTicketMsg.setSupportTicket(supportTicket);
-        supportTicketMsg.setSupportTicketMsgsDetail(request.getSupport_ticket_description());
-        supportTicketMsg.setAttachmentId(attachmentId);
-        supportTicketMsg.setSupportTicketMsgsCreatedBy(request.getUser_id());
-        supportTicketMsg.setSupportTicketMsgsCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
-        supportTicketMessageRepository.save(supportTicketMsg);
-
-        return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                Constants.SUCCESS_CODE,
-                Constants.SUCCESS_CODE,
-                messageSource.getMessage(Constants.SUPPORT_TICKET_CREATED_SUCCESSFULLY,null,locale),
-                new ArrayList<>()
-        ));
     }
 
     public ResponseEntity<?> viewReplyMessage(ViewReplyMessageRequest request, Locale locale) {
@@ -298,23 +312,35 @@ public class TicketService {
     }
 
     public ResponseEntity<?> replySupportTicket(ReplySupportTicketRequest request, Locale locale) throws IOException {
-        SupportTicket supportTicket = supportTicketRepository.findById(request.getSupport_ticket_id()).orElse(null);
-        if (supportTicket!=null) {
-            Attachment attachment = null;
+        log.info("Entering into reply ticket request api : {}", request);
+        Map<String, Object> res = new HashMap<>();
+        try{
+            SupportTicket supportTicket = supportTicketRepository.findById(Integer.parseInt(request.getSupport_ticket_id())).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.SUPPORT_TICKET_NOT_FOUND, null, locale)));
 
+            //check file condition
+            Attachment attachment = null;
             if (request.getFilename() != null && !request.getFilename().isEmpty()) {
                 String filename = request.getFilename().getOriginalFilename();
+                assert filename != null;
                 String ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
                 if (!Arrays.asList("gif", "png", "jpg", "jpeg", "doc", "pdf", "docx").contains(ext)) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Attached files allowed only");
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            messageSource.getMessage(Constants.ATTACH_FILE_ALLOWED_ONLY, null, locale)
+                    ));
                 }
-                if (request.getFilename().getSize() > 10485760) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Cannot upload file larger than 10 MB");
+                if (request.getFilename().getSize() > MAX_FILE_SIZE) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            Constants.NO_CONTENT_FOUNT_CODE,
+                            messageSource.getMessage(Constants.CANNOT_UPLOAD_TEN_MB, null, locale)
+                    ));
                 }
 
                 attachment = new Attachment();
                 attachment.setAttachmentLabel(filename);
-                attachment.setAttachmentName(UUID.randomUUID().toString() + "." + ext);
+                attachment.setAttachmentName(UUID.randomUUID() + "." + ext);
                 attachment.setAttachmentType(request.getAttachment_type() != null && !request.getAttachment_type().isEmpty()
                         ? request.getAttachment_type() : request.getFilename().getContentType());
                 attachmentRepository.save(attachment);
@@ -333,18 +359,22 @@ public class TicketService {
             reply.setSupportTicket(supportTicket);
             reply.setSupportTicketMsgsDetail(request.getMessage());
             reply.setAttachmentId(attachment != null ? attachment.getAttachmentId() : null);
-            reply.setSupportTicketMsgsCreatedBy(request.getUser_id());
+            reply.setSupportTicketMsgsCreatedBy(Integer.parseInt(request.getUser_id()));
             reply.setSupportTicketMsgsCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
             reply = supportTicketMessageRepository.save(reply);
 
             SupportTicketMessage savedReply = reply;
             Optional<Users> userOpt = usersRepository.findById(savedReply.getSupportTicketMsgsCreatedBy());
-            if (!userOpt.isPresent()) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("User not found");
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Response(
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        Constants.NO_CONTENT_FOUNT_CODE,
+                        messageSource.getMessage(Constants.USER_NOT_FOUND, null, locale)
+                ));
             }
 
             Users user = userOpt.get();
-            String photoPath = attachment != null ? "BASE_URL" + "uploaded_file/Support_Ticket/" + request.getSupport_ticket_id() + "/" + attachment.getAttachmentName() : "";
+            String photoPath = attachment != null ? baseUrl + "uploaded_file/Support_Ticket/" + request.getSupport_ticket_id() + "/" + attachment.getAttachmentName() : "";
 
             SupportTicketReplyResponseDTO responseDTO = new SupportTicketReplyResponseDTO();
             responseDTO.setId(savedReply.getSupportTicketMsgsId());
@@ -362,19 +392,19 @@ public class TicketService {
                     messageSource.getMessage(Constants.SUPPORT_TICKET_REPLYED_SUCCESS,null,locale),
                     responseDTO
             ));
-        }else{
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.NO_RECORD_FOUND_CODE,
-                    messageSource.getMessage(Constants.SUPPORT_TICKET_NOT_FOUND,null,locale)
+                    messageSource.getMessage(Constants.SOMETHING_WENT_WRONG,null,locale)
             ));
         }
     }
 
-    public ResponseEntity<?> changeSupportTicketStatus(ChangeSupportTicketStatusRequest request, Locale locale) {
-        SupportTicket ticket = supportTicketRepository.findById(request.getSupport_ticket_id()).orElse(null);
+    public ResponseEntity<Response> changeSupportTicketStatus(ChangeSupportTicketStatusRequest request, Locale locale) {
+        SupportTicket ticket = supportTicketRepository.findById(Integer.valueOf(request.getSupport_ticket_id())).orElseThrow(null);
         if(ticket!=null){
-            ticket.setSupportTicketStatus(request.getStatus());
+            ticket.setSupportTicketStatus(SupportTicketStatus.valueOf(request.getStatus()));
             ticket.setSupportTicketUpdatedAt(LocalDateTime.now());
             supportTicketRepository.save(ticket);
             return ResponseEntity.status(HttpStatus.OK).body(new Response(

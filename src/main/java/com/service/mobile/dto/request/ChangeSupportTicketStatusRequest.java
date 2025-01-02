@@ -11,7 +11,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ChangeSupportTicketStatusRequest {
-    private Integer user_id;
-    private Integer support_ticket_id;
-    private SupportTicketStatus status;
+    private String user_id;
+    private String  support_ticket_id;
+    private String  status;
 }

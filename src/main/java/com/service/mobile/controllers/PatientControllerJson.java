@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.io.IOException;
 import java.util.Locale;
 
@@ -56,7 +57,7 @@ public class PatientControllerJson {
                                                        Locale locale,
                                                        @RequestBody UpdateFullNameRequest request
     ) {
-        return patientService.checkUserHealthTipPackage(locale,request.getUser_id());
+        return patientService.checkUserHealthTipPackage(locale, request.getUser_id());
     }
 
     @PostMapping(path = "/get-profile", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -64,7 +65,7 @@ public class PatientControllerJson {
                                         Locale locale,
                                         @RequestBody UpdateFullNameRequest request
     ) {
-        return publicService.getProfile(locale,request.getUser_id());
+        return publicService.getProfile(locale, request.getUser_id());
     }
 
     @PostMapping(path = "/edit-profile", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -136,16 +137,8 @@ public class PatientControllerJson {
     @PostMapping(path= "/get-balance", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> getBalance(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                               Locale locale,
-                                        @RequestBody HealthTipPackageListRequest request) {
-        if(request.getUser_id()!=null && request.getUser_id()!=0){
-            return patientService.getBalance(locale,request.getUser_id());
-        }else{
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
-            ));
-        }
+                                        @RequestBody AddRatingRequest request) {
+        return patientService.getBalance(locale, Integer.parseInt(request.getUser_id()));
     }
 
     @PostMapping(path = "/healthtip-package-booking", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -200,7 +193,7 @@ public class PatientControllerJson {
     @PostMapping(path="/add-rating", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> addRating(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                      Locale locale,
-                                                     @RequestBody AddRatingRequest request) {
+                                       @Valid @RequestBody AddRatingRequest request) {
         return patientService.addRating(locale,request);
     }
 

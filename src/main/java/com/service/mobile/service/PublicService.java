@@ -2,6 +2,7 @@ package com.service.mobile.service;
 
 import com.service.mobile.config.Constants;
 import com.service.mobile.config.PaymentOptionConfig;
+import com.service.mobile.customException.MobileServiceExceptionHandler;
 import com.service.mobile.dto.MessageService;
 import com.service.mobile.dto.OfferInformationDTO;
 import com.service.mobile.dto.dto.*;
@@ -12,6 +13,7 @@ import com.service.mobile.model.*;
 import com.service.mobile.model.State;
 import com.service.mobile.repository.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -363,59 +365,50 @@ public class PublicService {
         return null;
     }
 
-    public ResponseEntity<?> getProfile(Locale locale, Integer userId) {
-        if (userId!=null && userId!=0) {
-            Users users = usersRepository.findById(userId).orElse(null);
-            if(users!=null){
-                String photoPath = users.getProfilePicture() != null ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
-                String countryName = (users.getCountry()!=null)?users.getCountry().getName():"";
-                State state = null;
-                if(users.getState()!=null && users.getState()!=0){
-                    state = stateRepository.findById(users.getState()).orElse(null);
-                }
-                City city = null;
-                if(users.getCity()!=null && users.getCity()!=0){
-                    city = cityRepository.findById(users.getCity()).orElse(null);
-                }
-                String stateName = (state!=null)?state.getName():"";
-                String cityName = (city!=null)?city.getName():"";
-
-                ProfileDto profile = new ProfileDto();
-                profile.setFirst_name(users.getFirstName());
-                profile.setLast_name(users.getLastName());
-                profile.setFullName(users.getFirstName()+" "+users.getLastName());
-                profile.setEmail((users.getEmail()!=null)?users.getEmail():"");
-                profile.setContact_number(users.getContactNumber());
-                profile.setPhoto(photoPath);
-                profile.setCountry(countryName);
-                profile.setCountry_code(users.getCountryCode());
-                profile.setState(stateName);
-                profile.setCity(cityName);
-                profile.setResidence_address(users.getResidenceAddress());
-                profile.setDob(users.getDob());
-                profile.setGender(users.getGender());
-
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
-                        profile
-                ));
-
-            }else{
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
-                ));
-            }
-        }else{
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+    public ResponseEntity<?> getProfile(Locale locale, String userId) {
+        int user_id = Integer.parseInt(userId);
+        if (StringUtils.isEmpty(userId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
             ));
         }
+        Users users = usersRepository.findById(user_id).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.USER_NOT_FOUND, null, locale)));
+        String photoPath = !StringUtils.isEmpty(users.getProfilePicture()) ? baseUrl+"uploaded_file/UserProfile/" + users.getUserId() + "/" + users.getProfilePicture() : "";
+        String countryName = (users.getCountry()!=null)?users.getCountry().getName():"";
+        State state = null;
+        if(users.getState()!=null && users.getState()!=0){
+            state = stateRepository.findById(users.getState()).orElse(null);
+        }
+        City city = null;
+        if(users.getCity()!=null && users.getCity()!=0){
+            city = cityRepository.findById(users.getCity()).orElse(null);
+        }
+        String stateName = (state!=null)?state.getName():"";
+        String cityName = (city!=null)?city.getName():"";
+
+        ProfileDto profile = new ProfileDto();
+        profile.setFirst_name(users.getFirstName());
+        profile.setLast_name(users.getLastName());
+        profile.setFullName(users.getFirstName()+" "+users.getLastName());
+        profile.setEmail((users.getEmail()!=null)?users.getEmail():"");
+        profile.setContact_number(users.getContactNumber());
+        profile.setPhoto(photoPath);
+        profile.setCountry(countryName);
+        profile.setCountry_code(users.getCountryCode());
+        profile.setState(stateName);
+        profile.setCity(cityName);
+        profile.setResidence_address(users.getResidenceAddress());
+        profile.setDob(users.getDob());
+        profile.setGender(users.getGender());
+
+        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
+                profile
+        ));
     }
 
     public ResponseEntity<?> getStateList(Locale locale) {

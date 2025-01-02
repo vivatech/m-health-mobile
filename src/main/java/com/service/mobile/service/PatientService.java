@@ -3,6 +3,7 @@ package com.service.mobile.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.service.mobile.config.Constants;
 import com.service.mobile.config.Utility;
+import com.service.mobile.customException.MobileServiceExceptionHandler;
 import com.service.mobile.dto.dto.*;
 import com.service.mobile.dto.enums.*;
 import com.service.mobile.dto.request.*;
@@ -12,7 +13,9 @@ import com.service.mobile.repository.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -177,7 +180,7 @@ public class PatientService {
         if(request !=null&&request.getUser_id()!=null)
 
         {
-            Users user = usersRepository.findById(request.getUser_id()).orElse(null);
+            Users user = usersRepository.findById(Integer.parseInt(request.getUser_id())).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
 
             if (user != null) {
                 user.setFirstName(splitName(request.getFullName())[0]);
@@ -188,7 +191,7 @@ public class PatientService {
 
                     if (promoCodeUser != null) {
                         UsersCreatedWithPromoCode userWithPromoCode = new UsersCreatedWithPromoCode();
-                        userWithPromoCode.setUserId(request.getUser_id());
+                        userWithPromoCode.setUserId(Integer.parseInt(request.getUser_id()));
                         userWithPromoCode.setCreatedBy(promoCodeUser.getUserId());
                         usersCreatedWithPromoCodeRepository.save(userWithPromoCode);
 
@@ -211,7 +214,7 @@ public class PatientService {
 
                 String authKey = generateRandomString();
                 AuthKey authModel = new AuthKey();
-                authModel.setUserId(request.getUser_id());
+                authModel.setUserId(Integer.parseInt(request.getUser_id()));
                 authModel.setAuthKey(authKey);
                 authModel.setDeviceToken(request.getDevice_token());
                 authModel.setLoginType(user.getType());
@@ -282,7 +285,7 @@ public class PatientService {
 
         if (request.getUser_id() != null) {
             String lang = locale.getLanguage();
-            List<ActiveHealthTipsPackageResponse> packageData = healthTipPackageUserService.getActiveHealthTipsPackage(request.getUser_id(),lang);
+            List<ActiveHealthTipsPackageResponse> packageData = healthTipPackageUserService.getActiveHealthTipsPackage(Integer.parseInt(request.getUser_id()),lang);
 
             if (!packageData.isEmpty()) {
                 response = new Response(
@@ -310,10 +313,11 @@ public class PatientService {
     }
 
 
-    public ResponseEntity<?> checkUserHealthTipPackage(Locale locale, Integer userId) {
-        if (userId!=null && userId!=0) {
-            List<Integer> healthTipPackageUsers = healthTipPackageUserService.getIdByUserIdAndExpiery(userId, YesNo.No);
-            if (healthTipPackageUsers.size()>0) {
+    public ResponseEntity<?> checkUserHealthTipPackage(Locale locale, String userId) {
+        int user_id = Integer.parseInt(userId);
+        if (!StringUtils.isEmpty(userId)) {
+            List<Integer> healthTipPackageUsers = healthTipPackageUserService.getIdByUserIdAndExpiery(user_id, YesNo.No);
+            if (!healthTipPackageUsers.isEmpty()) {
 
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
                         Constants.SUCCESS_CODE,
@@ -709,22 +713,22 @@ public class PatientService {
     }
 
     public ResponseEntity<?> applyCouponCode(Locale locale, ApplyCouponCodeRequest request) {
-        if (request.getUser_id() == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+        if (request.getUser_id() == null || request.getUser_id().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
                     NO_CONTENT_FOUNT_CODE,
-                    messageSource.getMessage(UNAUTHORIZED_MSG, null, locale)
+                    messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
             ));
         }
         if (request.getCoupon_code() == null || request.getCoupon_code().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     NO_CONTENT_FOUNT_CODE,
                     NO_CONTENT_FOUNT,
                     messageSource.getMessage(PLEASE_ENTER_COUPON_CODE, null, locale)
             ));
         }
         try {
-            CouponCodeResponseDTO data = publicService.checkPromoCode(request.getUser_id(), request.getCategory(), request.getPrice(), request.getCoupon_code(), locale);
+            CouponCodeResponseDTO data = publicService.checkPromoCode(Integer.valueOf(request.getUser_id()), CouponCategory.valueOf(request.getCategory()), Float.valueOf(request.getPrice()), request.getCoupon_code(), locale);
 
             if (data.getStatus().equalsIgnoreCase("success")) {
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
@@ -991,8 +995,10 @@ public class PatientService {
     }
 
     public ResponseEntity<?> getBalance(Locale locale, Integer userId) {
-        Users users = usersRepository.findById(userId).orElse(null);
-        if(users!=null){
+        log.info("Entering into get-balance api : {}",userId);
+        Map<String, Object> res = new HashMap<>();
+        try{
+            Users users = usersRepository.findById(userId).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
             BalanceResponseDTO dto = new BalanceResponseDTO();
             dto.setMessage(messageSource.getMessage(Constants.BALANCE_GET_SUCCESSFULLY,null,locale));
             dto.setStatus(Constants.SUCCESS_CODE);
@@ -1002,11 +1008,12 @@ public class PatientService {
             String[] data = {currencySymbolFdj};
             dto.setData(data);
             return ResponseEntity.status(HttpStatus.OK).body(dto);
-        }else{
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     NO_CONTENT_FOUNT_CODE,
                     NO_CONTENT_FOUNT_CODE,
-                    messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
+                    messageSource.getMessage(SOMETHING_WENT_WRONG,null,locale),
+                    res
             ));
         }
     }
@@ -1629,36 +1636,62 @@ public class PatientService {
     }
 
     public ResponseEntity<?> addRating(Locale locale, AddRatingRequest request) {
-        List<ConsultationRating> ratings = consultationRatingRepository.getByCaseId(request.getCase_id());
-        if (!ratings.isEmpty()) {
-            for(ConsultationRating r:ratings){
-                r.setComment(request.getComment());
-                r.setRating(request.getRating());
-                r.setUpdatedAt(LocalDateTime.now());
-                consultationRatingRepository.save(r);
+        Map<String, Object> res = new HashMap<>();
+        try {
+            log.info("Entering into add rating api : {}", request);
+            if (request.getUser_id() == null || request.getUser_id().isEmpty() ||
+                    request.getDoctor_id() == null || request.getDoctor_id().isEmpty() ||
+                    request.getCase_id() == null || request.getCase_id().isEmpty() ||
+                    request.getComment() == null || request.getComment().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                        FAIL,
+                        NO_CONTENT_FOUNT_CODE,
+                        messageSource.getMessage(BLANK_DATA_GIVEN, null, locale),
+                        res
+                ));
             }
-        } else {
-            ConsultationRating raiting = new ConsultationRating();
-            Users u = usersRepository.findById(request.getUser_id()).orElse(null);
-            Users doctor = usersRepository.findById(request.getDoctor_id()).orElse(null);
-            if(u!=null && doctor!=null){
-                raiting.setPatientId(u);
-                raiting.setDoctorId(doctor);
-                raiting.setStatus(ConsultationStatus.Pending);
-                raiting.setRating(request.getRating() != null ? request.getRating() : 0.00f);
-                raiting.setComment(request.getComment());
-                raiting.setCaseId(request.getCase_id());
-                raiting.setCreatedAt(LocalDateTime.now());
-                raiting.setUpdatedAt(LocalDateTime.now());
+            List<ConsultationRating> ratings = consultationRatingRepository.getByCaseId(Integer.valueOf(request.getCase_id()));
+            if (!ratings.isEmpty()) {
+                for (ConsultationRating r : ratings) {
+                    r.setComment(request.getComment());
+                    r.setRating(StringUtils.isEmpty(request.getRating()) ? 0.00f
+                            : Float.parseFloat(request.getRating()));
+                    r.setUpdatedAt(LocalDateTime.now(ZoneId.of(zoneId)));
+                    consultationRatingRepository.save(r);
+                }
+            } else {
+                ConsultationRating rating = new ConsultationRating();
+                Users patient = usersRepository.findById(Integer.valueOf(request.getUser_id())).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
+                Users doctor = usersRepository.findById(Integer.valueOf(request.getDoctor_id())).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
+                if (patient != null && doctor != null) {
+                    rating.setPatientId(patient);
+                    rating.setDoctorId(doctor);
+                    rating.setStatus(ConsultationStatus.Pending);
+                    rating.setRating(StringUtils.isEmpty(request.getRating()) ? 0.00f
+                            : Float.parseFloat(request.getRating()));
+                    rating.setComment(request.getComment());
+                    rating.setCaseId(Integer.valueOf(request.getCase_id()));
+                    rating.setCreatedAt(LocalDateTime.now(ZoneId.of(zoneId)));
+                    rating.setUpdatedAt(LocalDateTime.now(ZoneId.of(zoneId)));
 
-                consultationRatingRepository.save(raiting);
+                    consultationRatingRepository.save(rating);
+                }
             }
+            Response response = new Response();
+            response.setCode(Constants.SUCCESS_CODE);
+            response.setStatus(Constants.SUCCESS_CODE);
+            response.setMessage(messageSource.getMessage(Constants.RATING_ADDED, null, locale));
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error found in add rating api : {}", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    BLANK_DATA_GIVEN_CODE,
+                    BLANK_DATA_GIVEN_CODE,
+                    messageSource.getMessage(SOMETHING_WENT_WRONG, null, locale),
+                    res
+            ));
         }
-        Response response = new Response();
-        response.setCode(Constants.SUCCESS_CODE);
-        response.setStatus(Constants.SUCCESS_CODE);
-        response.setMessage(messageSource.getMessage(Constants.RATING_ADDED,null,locale));
-        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getSloats(Locale locale, GetSloatsRequest request) {

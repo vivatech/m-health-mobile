@@ -12,7 +12,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ConsultationsRequest {
-    private Integer user_id;
-    private Integer page;
-    private LocalDate date;
+    private String user_id;
+    private String page;
+    private String date;
 }

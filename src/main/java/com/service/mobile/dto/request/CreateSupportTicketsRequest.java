@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateSupportTicketsRequest {
-    private Integer user_id;
+    private String user_id;
     private String support_ticket_title;
     private String support_ticket_description;
     private String attachment_type;

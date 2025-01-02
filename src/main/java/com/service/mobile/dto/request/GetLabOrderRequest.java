@@ -12,8 +12,8 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GetLabOrderRequest {
-    private Integer user_id;
-    private LocalDate from_date;
-    private LocalDate to_date;
-    private Integer page;
+    private String user_id;
+    private String from_date;
+    private String to_date;
+    private String page;
 }

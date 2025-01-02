@@ -10,7 +10,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GetReviewRequest {
-    private Integer user_id;
-    private Integer page;
-    private Integer doctor_id;
+    private String user_id;
+    private String page;
+    private String doctor_id;
 }

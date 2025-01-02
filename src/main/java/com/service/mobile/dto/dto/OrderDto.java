@@ -15,7 +15,7 @@ import java.util.Map;
 @NoArgsConstructor
 public class OrderDto {
     private Integer order_id;
-    private Float order_amount;
+    private Integer order_amount;
     private String sample_collection_mode;
     private OrderStatus status;
     private Integer case_id;
@@ -23,7 +23,7 @@ public class OrderDto {
     private OrderDetailsDto orderDetails;
     private String lab_name;
     private String doc_prescription;
-    private LocalDateTime created_at;
+    private String created_at;
     private String refund_status;
     private Long total_count;
 }

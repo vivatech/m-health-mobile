@@ -11,8 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReplySupportTicketRequest {
-    private Integer user_id;
-    private Integer support_ticket_id;
+    private String user_id;
+    private String support_ticket_id;
     private String message;
     private String attachment_type ;
     private MultipartFile filename;

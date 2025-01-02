@@ -31,7 +31,7 @@ public class DoctorController {
     public ResponseEntity<?> viewProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                              Locale locale,
                                          @ModelAttribute GetSingleRelativeProfileRequest request) {
-        return doctorService.viewProfile(locale,request.getDoctor_id());
+        return doctorService.viewProfile(locale, Integer.parseInt(request.getDoctor_id()));
     }
 
     @PostMapping(path = "/get-review", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})

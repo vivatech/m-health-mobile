@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.io.IOException;
 import java.util.Locale;
 
@@ -185,7 +186,7 @@ public class PatientController {
     @PostMapping(path="/add-rating", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> addRating(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                                      Locale locale,
-                                                     @ModelAttribute AddRatingRequest request) {
+                                        @Valid @ModelAttribute AddRatingRequest request) {
         return patientService.addRating(locale,request);
     }
 

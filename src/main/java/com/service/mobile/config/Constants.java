@@ -239,4 +239,6 @@ public class Constants {
     public static final String ORDER_NOTICE_AGENT_NOD = "app.order.notice.agent.nod";
     public static final String RATING_DETAIL_TEXT_NOD = "app.rating.detail.text.nod";
     public static final String RESEND_OTP = "app.resend.otp";
+    public static final String CONSULTATION_NOT_FOUND = "app.consultation.not.found";
+    public static final String CANNOT_UPLOAD_TEN_MB = "app.cannot.upload_ten_mb";
 }

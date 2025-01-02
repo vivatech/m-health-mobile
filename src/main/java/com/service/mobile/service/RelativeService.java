@@ -2,6 +2,7 @@ package com.service.mobile.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.service.mobile.config.Constants;
+import com.service.mobile.customException.MobileServiceExceptionHandler;
 import com.service.mobile.dto.dto.UserRelativeDto;
 import com.service.mobile.dto.enums.*;
 import com.service.mobile.dto.request.CreateRelativeProfileRequest;
@@ -10,13 +11,13 @@ import com.service.mobile.dto.response.Response;
 import com.service.mobile.model.*;
 import com.service.mobile.repository.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -29,7 +30,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -159,7 +159,7 @@ public class RelativeService {
                 Files.createDirectories(uploadPath);
             }
 
-            String filename = StringUtils.cleanPath(file.getOriginalFilename());
+            String filename = StringUtils.isEmpty(file.getOriginalFilename()) ? "New_File" : file.getOriginalFilename();
             Path filePath = uploadPath.resolve(filename);
             Files.copy(file.getInputStream(), filePath);
             return filename;
@@ -263,9 +263,18 @@ public class RelativeService {
     }
 
     public ResponseEntity<?> cancelConsultation(Locale locale, GetSingleRelativeProfileRequest request) throws JsonProcessingException {
+        log.info("Entering into cancel consultation api : {}",request);
+        if(StringUtils.isEmpty(request.getUser_id()) || StringUtils.isEmpty(request.getCase_id()) || StringUtils.isEmpty(request.getCancel_message())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale),
+                    null
+            ));
+        }
         try {
             String timeLimit = globalConfigurationRepository.findByKey("CANCEL_CONSULT_PATIENT").getValue();
-            Consultation consultation = consultationRepository.findById(request.getCase_id()).orElse(null);
+            Consultation consultation = consultationRepository.findById(Integer.valueOf(request.getCase_id())).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.CONSULTATION_NOT_FOUND, null, locale)));
             if (consultation != null) {
                 SlotMaster slot = consultation.getSlotId();
                 String[] timeArray = slot.getSlotTime().split(":");
@@ -312,14 +321,14 @@ public class RelativeService {
                                     messageSource.getMessage(Constants.CANCEL_REQUEST_CANT_BLANK, null, locale)
                             ));
                         }
-                        Users users = usersRepository.findById(request.getUser_id()).orElse(null);
+                        Users users = usersRepository.findById(Integer.parseInt(request.getUser_id())).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.USER_NOT_FOUND, null, locale)));
                         if (users != null) {
                             if (consultation.getPaymentMethod() != null && (
                                     consultation.getPaymentMethod().equalsIgnoreCase("waafi") ||
                                             consultation.getPaymentMethod().equalsIgnoreCase("zaad") ||
                                             consultation.getPaymentMethod().equalsIgnoreCase("evc")
                             )) {
-                                Orders orders = ordersRepository.findByCaseId(request.getCase_id());
+                                Orders orders = ordersRepository.findByCaseId(Integer.parseInt(request.getCase_id()));
                                 WalletTransaction exitsTransaction = walletTransactionRepository.findByOrderIdAndServiceType(orders.getId());
                                 WalletTransaction transaction = createWalletTransactionEntry(orders, exitsTransaction);
 
@@ -410,7 +419,11 @@ public class RelativeService {
             }
         } catch (Exception e) {
             log.error("Error while cancel-consultation : {}",e);
-            return null;
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.SOMETHING_WENT_WRONG, null, locale)
+            ));
         }
     }
 
