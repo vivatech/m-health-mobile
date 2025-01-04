@@ -11,11 +11,14 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class EditProfileRequest {
-    private	Integer user_id;
+    private	String user_id;
     private String fullName;
     private String email;
     private String gender;
     private String residence_address;
-    private Integer city_id;
-    private LocalDate dob;
+    private String city_id;
+    private String dob;
+    private String contact_number;
+    private String country_id;
+    private String state_id;
 }

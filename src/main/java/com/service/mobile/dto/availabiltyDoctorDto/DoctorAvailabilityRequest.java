@@ -13,8 +13,6 @@ import java.time.LocalDate;
 public class DoctorAvailabilityRequest {
     private String user_id;
     private String doctor_id;
-
-    @NotNull(message = "Date is required")
-    private LocalDate date;
+    private String date;
     private String consult_type;
 }

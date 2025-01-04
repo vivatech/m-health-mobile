@@ -11,6 +11,6 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UpdatePictureRequest {
-    private Integer user_id;
+    private String user_id;
     private MultipartFile profile_picture ;
 }

@@ -11,6 +11,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DiscountDetailsDTO {
+    private String message;
+    private String status;
     private String discount_amount_with_currency;
     private String discount_amount_with_usd_currency;
     private String discount_amount_with_slsh_currency;

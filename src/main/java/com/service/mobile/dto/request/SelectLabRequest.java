@@ -10,6 +10,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SelectLabRequest {
-    private Integer user_id;
-    private Integer case_id;
+    private String user_id;
+    private String case_id;
 }

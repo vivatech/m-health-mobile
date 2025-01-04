@@ -239,18 +239,7 @@ public class RelativeService {
         List<UserRelative> relatives = userRelativeRepository.findAll();
         List<UserRelativeDto> list = new ArrayList<>();
         for(UserRelative data:relatives){
-            UserRelativeDto dto = new UserRelativeDto();
-            dto.setId(data.getId());
-            dto.setUser_id(data.getUserId());
-            dto.setName(data.getName());
-            dto.setDob(data.getDob());
-            dto.setRelation_with_patient(data.getRelationWithPatient());
-            dto.setStatus(data.getStatus());
-            dto.setCreated_by(data.getCreatedBy());
-            dto.setCreated_at(data.getCreatedAt());
-            dto.setUpdated_at(data.getUpdatedAt());
-            String profile = baseUrl+"/uploaded_file/relatives/"+data.getId()+"/"+data.getProfilePicture();
-            dto.setProfile_picture(profile);
+            UserRelativeDto dto = getUserRelativeDto(data);
 
             list.add(dto);
         }
@@ -260,6 +249,22 @@ public class RelativeService {
                 messageSource.getMessage(Constants.SUCCESS_MESSAGE,null,locale),
                 list
         ));
+    }
+
+    private UserRelativeDto getUserRelativeDto(UserRelative data) {
+        UserRelativeDto dto = new UserRelativeDto();
+        dto.setId(data.getId());
+        dto.setUser_id(data.getUserId());
+        dto.setName(data.getName());
+        dto.setDob(data.getDob());
+        dto.setRelation_with_patient(data.getRelationWithPatient());
+        dto.setStatus(data.getStatus());
+        dto.setCreated_by(data.getCreatedBy());
+        dto.setCreated_at(data.getCreatedAt());
+        dto.setUpdated_at(data.getUpdatedAt());
+        String profile = baseUrl+"/uploaded_file/relatives/"+ data.getId()+"/"+ data.getProfilePicture();
+        dto.setProfile_picture(profile);
+        return dto;
     }
 
     public ResponseEntity<?> cancelConsultation(Locale locale, GetSingleRelativeProfileRequest request) throws JsonProcessingException {

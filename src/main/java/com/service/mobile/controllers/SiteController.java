@@ -102,7 +102,7 @@ public class SiteController {
                                         Locale locale,
                                         @ModelAttribute UpdatePictureRequest request
     ) {
-        return publicService.activities(locale, request.getUser_id());
+        return publicService.activities(locale, Integer.parseInt(request.getUser_id()));
     }
 
     @GetMapping("/get-consult-type")
@@ -123,7 +123,7 @@ public class SiteController {
                                           Locale locale,
                                           @ModelAttribute UpdatePictureRequest request
     ) {
-        return orderService.recentOrders(locale,request.getUser_id());
+        return orderService.recentOrders(locale, request.getUser_id());
     }
 
     @GetMapping("/get-state-list")

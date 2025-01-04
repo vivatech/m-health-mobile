@@ -109,7 +109,7 @@ public class DoctorService {
     }
 
     public ResponseEntity<?> searchDoctor(Locale locale, SearchDoctorRequest request) {
-        if(request.getUser_id() == null || request.getPage() == null){
+        if(StringUtils.isEmpty(request.getUser_id())){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                     Constants.BLANK_DATA_GIVEN_CODE,
                     Constants.BLANK_DATA_GIVEN_CODE,
@@ -129,13 +129,13 @@ public class DoctorService {
 
         //availability
         List<RequestType> type = Arrays.asList(RequestType.Book, RequestType.Inprocess, RequestType.Pending);
-        if(request.getAvailability() != null && request.getAvailability() != 0){
-            if(request.getAvailability() == 1){
+        if(!StringUtils.isEmpty(request.getAvailability())){
+            if(request.getAvailability().equals("1") || request.getAvailability().equals("01")){
                 DayOfWeek dayOfWeek = dateTime.toLocalDate().getDayOfWeek();
                 dayName = new String[]{dayOfWeek.toString().toLowerCase()};
                 daySlots = slotMasterRepository.findBySlotDayAndSlotStartTime(dayName, time, startDate, type);
             }
-            else if(request.getAvailability() == 2){
+            else if(request.getAvailability().equals("2") || request.getAvailability().equals("02")){
                 endDate = dateTime.toLocalDate().plusDays(1);
                 startDate = dateTime.toLocalDate().plusDays(1);
                 DayOfWeek dayOfWeek = dateTime.toLocalDate().plusDays(1).getDayOfWeek();
@@ -153,16 +153,16 @@ public class DoctorService {
             //Since no data in database regarding this filter
         }
         //clinic id
-        if(request.getClinic_id() != null && !request.getClinic_id().isEmpty()){
-            sb.append(" AND u.hospitalId = "+request.getClinic_id());
+        if(!StringUtils.isEmpty(request.getClinic_id())){
+            sb.append(" AND u.hospitalId = "+ Integer.parseInt(request.getClinic_id()));
         }
         //consult type
-        if(request.getConsult_type() != null && !request.getConsult_type().isEmpty()){
+        if(!StringUtils.isEmpty(request.getConsult_type())){
             if(request.getConsult_type().equalsIgnoreCase("video")){
-                sb.append(" AND u.hasDoctorVideo IN ('video','both')");
+                sb.append(" AND u.hasDoctorVideo IN ('video','both') ");
             }
             else if(request.getConsult_type().equalsIgnoreCase("visit")){
-                sb.append(" AND u.hasDoctorVideo IN ('visit','both')");
+                sb.append(" AND u.hasDoctorVideo IN ('visit','both') ");
             }
         }
 
@@ -178,56 +178,54 @@ public class DoctorService {
         }
 
         //international or not
-        if(request.getIs_international() != null && !request.getIs_international().isEmpty()){
-            if(request.getIs_international().equalsIgnoreCase("Yes")){
-                sb.append(" AND u.isInternational = 'Yes'");
-                sb.append(" AND u.hasDoctorVideo IN ('video','both')");
-            }else sb.append(" AND u.isInternational = 'No' ");
-        }
-        else sb.append(" AND u.isInternational = 'No' ");
+        String international = "No";
+        if(!StringUtils.isEmpty(request.getIs_international())
+                && request.getIs_international().equalsIgnoreCase("Yes"))
+            international = "Yes";
+        sb.append(" AND u.isInternational = '" + international + "' ");
 
         //specialization
-        if(request.getSpecialization_id() != null && !request.getSpecialization_id().isEmpty()){
+        if(!StringUtils.isEmpty(request.getSpecialization_id())){
             //getting userIds from specialization
             sb.append(" AND u.userId IN (SELECT ds.userId.userId FROM DoctorSpecialization ds WHERE ds.userId.doctorClassification != 'general_practitioner' AND ds.specializationId.id IN (:sId)) ");
         }
 
         //doctor name
-        if(request.getDoctor_name() != null && !request.getDoctor_name().isEmpty()){
+        if(!StringUtils.isEmpty(request.getDoctor_name())){
             sb.append(" AND (u.firstName like '%" + request.getDoctor_name().trim()
                     + "%' OR u.lastName like '%" + request.getDoctor_name().trim() + "%') ");
         }
 
         //fees
-        if(request.getFees() != null && !request.getFees().isEmpty()){
+        if(!StringUtils.isEmpty(request.getFees())){
             String[] fees = request.getFees().split(",");
             sb.append(" AND u.userId IN (SELECT ch.userId FROM Charges ch WHERE ch.finalConsultationFees >= "+ Float.valueOf(fees[0]) + " AND ch.finalConsultationFees <= "+ Float.valueOf(fees[1])+") ");
         }
         //fee type -> call or visit
-        if(request.getFee_type() != null && !request.getFee_type().isEmpty()){
+        if(!StringUtils.isEmpty(request.getFee_type())){
             sb.append( " AND u.userId IN (SELECT ch.userId FROM Charges ch WHERE ch.feeType IN ("+FeeType.valueOf(request.getFee_type())+")) ");
         }
 
         //city id
-        if(request.getCity_id() != null){
-            sb.append(" AND u.city = "+request.getCity_id());
+        if(!StringUtils.isEmpty(request.getCity_id())){
+            sb.append(" AND u.city = "+ Integer.parseInt(request.getCity_id()));
         }
 
         //hospital id
-        if(request.getHospital_id() != null && !request.getHospital_id().isEmpty()){
+        if(!StringUtils.isEmpty(request.getHospital_id())){
             sb.append(" AND u.hospitalId IN (:hId) ");
         }
 
         //language fluency
-        if(request.getLanguage_fluency() != null){
+        if(!StringUtils.isEmpty(request.getLanguage_fluency())){
             sb.append(" AND FIND_IN_SET(" + request.getLanguage_fluency()+", u.languageFluency) > 0 ");
         }
 
         //sort by
-        if(request.getSort_by() != null){
-            if(request.getSort_by() == 01)
+        if(!StringUtils.isEmpty(request.getSort_by())){
+            if(request.getSort_by().equals("1") || request.getSort_by().equals("01"))
                 sb.append(" ORDER BY u.experience DESC ");
-            else if(request.getSort_by() == 02)
+            else if(request.getSort_by().equals("2") || request.getSort_by().equals("02"))
                 sb.append(" GROUP BY u.userId ORDER BY SUM(CASE WHEN cr.doctorId.userId = u.userId THEN cr.rating ELSE 0 END) DESC");
         }
         else{
@@ -236,23 +234,25 @@ public class DoctorService {
 
         Query query = entityManager.createQuery(sb.toString(), Users.class);
 
-        if(request.getSpecialization_id() != null && !request.getSpecialization_id().isEmpty()){
-            query.setParameter("sId", request.getSpecialization_id());
+        if(!StringUtils.isEmpty(request.getSpecialization_id())){
+            List<Integer> sp = Arrays.stream(request.getSpecialization_id().split(","))
+                    .map(Integer::parseInt).toList();
+            query.setParameter("sId", sp);
         }
-        if(request.getHospital_id() != null && !request.getHospital_id().isEmpty()){
-            query.setParameter("hId", request.getHospital_id());
+        if(!StringUtils.isEmpty(request.getHospital_id())){
+            query.setParameter("hId", Integer.parseInt(request.getHospital_id()));
         }
-        if(request.getAvailability() != null){
+        if(!StringUtils.isEmpty(request.getAvailability())){
             query.setParameter("daySlots", daySlots);
         }
-        if(request.getIs_enterprise() != null && !request.getIs_enterprise().isEmpty()){
+        if(!StringUtils.isEmpty(request.getIs_enterprise())){
             query.setParameter("enterpriseNumbers", enterpriseNumbers);
         }
 
         List<Users> users = query.getResultList();
         int total = users.size();
 
-        users = users.stream().skip((request.getPage() == null ? 0 : request.getPage()) * 10).limit(10).toList();
+        users = users.stream().skip((StringUtils.isEmpty(request.getPage()) ? 0 : Integer.parseInt(request.getPage())) * 10L).limit(10).toList();
 
         int maxFee = (int)chargesRepository.findMaxConsultationFee().floatValue();
         List<SearchDocResponse> responseList = new ArrayList<>();
@@ -274,7 +274,7 @@ public class DoctorService {
                 ? "" : baseUrl + "uploaded_file/UserProfile/" + u.getUserId() +"/" + u.getProfilePicture());
 
         //language
-        if(u.getLanguageFluency() != null && !u.getLanguageFluency().isEmpty()){
+        if(!StringUtils.isEmpty(u.getLanguageFluency())){
             List<Integer> langs = Arrays.stream(u.getLanguageFluency().split(",")).map(Integer::parseInt).toList();
             response.setLanguages(languageRepository.findLanguages(langs));
         }
@@ -288,10 +288,12 @@ public class DoctorService {
         //charges
         Map<String, String> formattedCharges = new HashMap<>();
         List<Charges> charges = chargesRepository.findByUserId(u.getUserId());
-        for (Charges charge : charges) {
-            if (charge.getFinalConsultationFees() > 0) {
-                String formattedFee = currencySymbol + String.format("%.2f", charge.getFinalConsultationFees());
-                formattedCharges.put(charge.getFeeType().name(), formattedFee);
+        if(!charges.isEmpty()) {
+            for (Charges charge : charges) {
+                if (charge.getFinalConsultationFees() > 0) {
+                    String formattedFee = currencySymbol + String.format("%.2f", charge.getFinalConsultationFees());
+                    formattedCharges.put(charge.getFeeType().name(), formattedFee);
+                }
             }
         }
         formattedCharges.putIfAbsent("visit", "free");
@@ -300,7 +302,7 @@ public class DoctorService {
 
         //specialization
         String speciality = null;
-        if(u.getDoctorClassification() != null && !u.getDoctorClassification().isEmpty()){
+        if(!StringUtils.isEmpty(u.getDoctorClassification())){
             if(u.getDoctorClassification().equalsIgnoreCase(General_Practitioner))
             speciality = messageSource.getMessage(General_Practitioner, null, locale);
         }
@@ -331,18 +333,26 @@ public class DoctorService {
     }
 
 
-    public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, @Valid DoctorAvailabilityRequest request) {
+    public ResponseEntity<?> doctorAvailabilityListLatest(Locale locale, DoctorAvailabilityRequest request) {
         log.info("Entering into doctor-availability-latest-list : {}", request);
+        if(StringUtils.isEmpty(request.getUser_id()) || StringUtils.isEmpty(request.getDate())
+            || StringUtils.isEmpty(request.getDoctor_id()) || StringUtils.isEmpty(request.getConsult_type())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
+            ));
+        }
         try {
             //new-order-date
             LocalDate newOrderDate = LocalDate.parse("2020-09-29");
             Users doctor = usersRepository.findById(Integer.parseInt(request.getDoctor_id())).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
-            String dayName = request.getDate().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH).toLowerCase();
+            String dayName = LocalDate.parse(request.getDate()).getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH).toLowerCase();
             List<SlotMaster> slotListing = slotMasterRepository.findBySlotTypeIdAndSlotDay(doctor.getSlotTypeId(), dayName);
 
 
             List<Consultation> constantsList = consultationRepository.findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
-                    RequestType.Book, newOrderDate, Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()), ConsultationType.Paid, request.getDate()
+                    RequestType.Book, newOrderDate, Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()), ConsultationType.Paid, LocalDate.parse(request.getDate())
             );
             Consultation last_consult_data = (constantsList.isEmpty()) ? null : constantsList.get(0);
 
@@ -363,14 +373,12 @@ public class DoctorService {
 
                 LocalDate last_free_date = last_consult_data.getConsultationDate().plusDays(Integer.parseInt(free_cnt.getValue()));
                 SlotMaster timeslot = last_consult_data.getSlotId();
-                LocalTime time_array = LocalTime.parse(timeslot.getSlotTime());
-                LocalDateTime sconsultant_date = last_consult_data.getConsultationDate().atTime(time_array);
 
                 Long free_consult_cnt = consultationRepository.countByPatientIdAndDoctorIdCreatedAtAndConstaitionTypeConsultTypeAndConstationDate(
                         Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()), newOrderDate,
-                        ConsultationType.Free, last_consult_data.getConsultType(), sconsultant_date
+                        ConsultationType.Free, last_consult_data.getConsultType(), last_consult_data.getConsultationDate()
                 );
-                Long rem_cnt = Long.valueOf(free_cnt.getValue()) - free_consult_cnt;
+                long rem_cnt = Long.parseLong(free_cnt.getValue()) - free_consult_cnt;
                 if (rem_cnt > 0) {
                     rem_cnt_msg = "(You have " + rem_cnt + " Free booking(s) for " + last_consult_data.getConsultType() + " till " + last_free_date + " )";
                 }
@@ -381,28 +389,34 @@ public class DoctorService {
             slotArray.put("Afternoon", new ArrayList<>());
             slotArray.put("Evening", new ArrayList<>());
 
-
             for (SlotMaster slot : slotListing) {
+                String[] timeArray = slot.getSlotTime().split(":");
+                LocalTime time = LocalTime.parse(timeArray[0] + ":" + timeArray[1] + ":00");
+                if(LocalDate.parse(request.getDate()).equals(LocalDate.now(ZoneId.of(zone)))
+                        && time.isBefore(LocalTime.now(ZoneId.of(zone)))) {
+                    continue;
+                }
+
                 Long available_count = doctorAvailabilityRepository.countBySlotIdAndDoctorId(slot.getSlotId(), Integer.parseInt(request.getDoctor_id()));
 
                 Long check_consultant_count = consultationRepository.countBySlotIdAndDoctorIdConsultationDate(
-                        slot.getSlotId(), Integer.parseInt(request.getDoctor_id()), request.getDate());
+                        slot.getSlotId(), Integer.parseInt(request.getDoctor_id()), LocalDate.parse(request.getDate()));
 
                 List<Consultation> consultantInfoList = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(
-                        Integer.parseInt(request.getDoctor_id()), slot.getSlotId(), request.getDate(), RequestType.Cancel);
+                        Integer.parseInt(request.getDoctor_id()), slot.getSlotId(), LocalDate.parse(request.getDate()), RequestType.Cancel);
 
                 Consultation consultantInfo = (consultantInfoList.isEmpty()) ? null : constantsList.get(0);
 
                 String userIdInSlot = consultantInfo != null ? consultantInfo.getPatientId().toString() : "";
-                Integer caseId = consultantInfo != null ? consultantInfo.getCaseId() : null;
+                Object caseId = consultantInfo != null ? consultantInfo.getCaseId() : "";
 
-                LocalDateTime consultantDateTime = LocalDateTime.of(request.getDate(), slot.getSlotStartTime());
+                LocalDateTime consultantDateTime = LocalDateTime.of(LocalDate.parse(request.getDate()), time);
 
-                LocalDateTime currentDateTime = LocalDateTime.now();
+                LocalDateTime currentDateTime = LocalDateTime.now(ZoneId.of(zone));
 
-                Long diff = Math.abs(java.time.Duration.between(consultantDateTime, currentDateTime).toMinutes());
+                long diff = Math.abs(java.time.Duration.between(consultantDateTime, currentDateTime).toMinutes());
 
-                Integer timeLimit = Integer.parseInt(globalConfigurationRepository.findByKey("CANCEL_CONSULT_PATIENT").getValue());
+                int timeLimit = Integer.parseInt(globalConfigurationRepository.findByKey("CANCEL_CONSULT_PATIENT").getValue());
 
                 Integer isCancel = (timeLimit <= diff) && (consultantInfo != null && consultantInfo.getRequestType() == RequestType.Book && consultantDateTime.isAfter(currentDateTime)) ? 1 : 0;
 
@@ -428,10 +442,10 @@ public class DoctorService {
                         consultantInfo != null ? consultantInfo.getRequestType().name() : "",
                         consultation_type.name(),
                         last_consult_data != null ? last_consult_data.getConsultType() : "",
-                        slot.getSlotStartTime().format(DateTimeFormatter.ofPattern("hh:mm a"))
+                        time.format(DateTimeFormatter.ofPattern("HH:mm a")).toUpperCase()
                 );
 
-                String slotTime = getSlotTime(slot.getSlotStartTime());
+                String slotTime = getSlotTime(time);
 
                 if (status.equals("Available") && slotTime != null) {
                     slotArray.get(slotTime).add(finalArray);
@@ -451,8 +465,8 @@ public class DoctorService {
             String doctorFinalConsultSlsh = finalConsultFee > 0 ? "SLSH " + (finalConsultFee * paymentRate) : "Free";
 
             Map<String, Object> response = new HashMap<>();
-            response.put("status", "200");
-            response.put("message", "Availability found successfully");
+            response.put("status", SUCCESS_CODE);
+            response.put("message", messageSource.getMessage(Constants.AVAILABILITY_FOUND, null, locale));
             response.put("totalSlot", morningSlotCount + afternoonSlotCount + eveningSlotCount);
             response.put("final_consultation_fees", doctorFinalConsultFee);
             response.put("amount_slsh", doctorFinalConsultSlsh);
@@ -499,122 +513,124 @@ public class DoctorService {
     }
 
     public ResponseEntity<?> viewProfile(Locale locale,Integer doctorId) {
-        Users doctor = usersRepository.findById(doctorId).orElse(null);
-        if(doctor!=null){
-            String photo = "";
-            if(doctor.getProfilePicture()!=null && !doctor.getProfilePicture().isEmpty()){
-                photo = baseUrl + "uploaded_file/UserProfile/" + doctor.getUserId() + "/" + doctor.getProfilePicture();
-            }
-            List<DoctorSpecialization> specialization = doctorSpecializationRepository.findByUserId(doctor.getUserId());
-            List<Charges> charges = chargesRepository.findByUserId(doctor.getUserId());
-            Double raiting = consultationRatingRepository.sumRatingsByDoctorId(doctor.getUserId());
-            Long raitingCount = consultationRatingRepository.countApprovedRatingsByDoctorId(doctor.getUserId());
-            Double finalCount = (raitingCount!=null && raitingCount!=0)?raiting/raitingCount:0;
-            String specsFinalString = "";
-            if(doctor.getDoctorClassification()!=null &&
-                    doctor.getDoctorClassification().equalsIgnoreCase("general_practitioner")){
-                    specsFinalString = messageSource.getMessage(Constants.GENRAL_PRACTITIONER,null,locale);
-            }else{
-                for(DoctorSpecialization docSpec :specialization){
-                    specsFinalString = specsFinalString + docSpec.getSpecializationId().getName()+",";
-                }
-            }
-            String[] languageIds  = doctor.getLanguageFluency().split(",");
-            String languageName = "";
-            if(languageIds.length>0) {
-                for (String i : languageIds) {
-                    Language language = languageRepository.findById(Integer.valueOf(i)).orElse(null);
-                    if (language != null) languageName += language.getName() + ",";
-                }
-                languageName = languageName.substring(0, languageName.length()-1);
-            }
-
-            List<ConsultationRating> consultationRatings = consultationRatingRepository.getByDoctorIdActive(doctorId);
-            Long totalConsultCount = consultationRatingRepository.countByDoctorIdAll(doctorId);
-            List<CommentsDto> commentsDtos = new ArrayList<>();
-            if(!consultationRatings.isEmpty()){
-                for(ConsultationRating r:consultationRatings){
-                    String fileUrl = baseUrl + "/uploaded_file/no-image-found.png";
-                    if(r.getPatientId().getProfilePicture()!=null && !r.getPatientId().getProfilePicture().isEmpty()){
-                        fileUrl = baseUrl + "/uploaded_file/UserProfile/"+r.getPatientId().getUserId()+"/"+r.getPatientId().getProfilePicture();
-                    }
-                    DateTimeFormatter spaceFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    String dateTimeFromSpace = spaceFormatter.format(r.getCreatedAt());
-                    CommentsDto dto = new CommentsDto();
-                    dto.setComment(r.getComment());
-                    dto.setName(r.getPatientId().getFirstName()+" "+r.getPatientId().getLastName());
-                    dto.setRating((int)r.getRating().floatValue());
-                    dto.setCreated_at(dateTimeFromSpace);
-                    dto.setFile_url(fileUrl);
-                    dto.setTotal_count(totalConsultCount);
-
-                    commentsDtos.add(dto);
-                }
-            }
-
-            Map<String, Float> chargesMap = new HashMap<>();
-            ViewProfileResponse dto = new ViewProfileResponse();
-            if (charges != null && !charges.isEmpty()) {
-                for (Charges charge : charges) {
-                    if(charge.getFeeType().name().equalsIgnoreCase("call")){
-                        dto.setCall_commission((int)charge.getCommission().floatValue());
-                        dto.setCall_consultation_fees((int)charge.getConsultationFees().floatValue());
-                        dto.setCall_final_consultation_fees((int)charge.getFinalConsultationFees().floatValue());
-                    }else if(charge.getFeeType().name().equalsIgnoreCase("visit")){
-                        dto.setVisit_commission((int)charge.getCommission().floatValue());
-                        dto.setVisit_consultation_fees((int)charge.getConsultationFees().floatValue());
-                        dto.setVisit_final_consultation_fees((int)charge.getFinalConsultationFees().floatValue());
-                    }
-                }
-            }
-
-            dto.setFirst_name(doctor.getFirstName());
-            dto.setLast_name(doctor.getLastName());
-            dto.setEmail(doctor.getEmail());
-            dto.setContact_number(doctor.getContactNumber());
-            dto.setPhoto(photo);
-            State state = null;
-            if(doctor.getState()!=null && doctor.getState()!=0){
-                state = stateRepository.findById(doctor.getState()).orElse(null);
-            }
-            City city = null;
-            if(doctor.getCity()!=null && doctor.getCity()!=0){
-                city = cityRepository.findById(doctor.getCity()).orElse(null);
-            }
-            dto.setCountry(
-                    (doctor.getCountry()!=null)
-                            ?doctor.getCountry().getName():"");
-            dto.setState(
-                    (state!=null)
-                            ?state.getName():"");
-            dto.setCity(
-                    (city!=null)
-                            ?city.getName():"");
-            dto.setHospital_address(doctor.getHospitalAddress());
-            dto.setResidence_address(doctor.getResidenceAddress());
-            dto.setProfessional_identification_number(doctor.getProfessionalIdentificationNumber());
-            dto.setRating(finalCount);
-            dto.setExtra_activities(doctor.getExtraActivities());
-            dto.setAbout_me(doctor.getAboutMe());
-            dto.setLanguage(languageName);
-            dto.setReview(commentsDtos);
-            dto.setGender(doctor.getGender());
-            dto.setExperience(doctor.getExperience());
-            dto.setSpcialization(specsFinalString);
-
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.PROFILE_FETCH_SUCCESSFULLY,null,locale),
-                    dto
-            ));
-        }else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.NO_RECORD_FOUND_CODE,
-                    messageSource.getMessage(Constants.NO_RECORD_FOUND,null,locale)
-            ));
+        Users doctor = usersRepository.findById(doctorId).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
+        String photo = "";
+        if(!StringUtils.isEmpty(doctor.getProfilePicture())){
+            photo = baseUrl + "uploaded_file/UserProfile/" + doctor.getUserId() + "/" + doctor.getProfilePicture();
         }
+
+        List<DoctorSpecialization> specialization = doctorSpecializationRepository.findByUserId(doctor.getUserId());
+        List<Charges> charges = chargesRepository.findByUserId(doctor.getUserId());
+        Double raiting = consultationRatingRepository.sumRatingsByDoctorId(doctor.getUserId());
+        Long raitingCount = consultationRatingRepository.countApprovedRatingsByDoctorId(doctor.getUserId());
+        Double finalCount = (raitingCount!=null && raitingCount!=0)?raiting/raitingCount:0;
+        String specsFinalString = "";
+        if(!StringUtils.isEmpty(doctor.getDoctorClassification()) &&
+                doctor.getDoctorClassification().equalsIgnoreCase("general_practitioner")){
+            specsFinalString = messageSource.getMessage(Constants.GENRAL_PRACTITIONER,null,locale);
+        }
+        else{
+            if(!specialization.isEmpty()) {
+                for (DoctorSpecialization docSpec : specialization) {
+                    specsFinalString = specsFinalString + docSpec.getSpecializationId().getName() + ",";
+                }
+            }
+        }
+        String[] languageIds  = StringUtils.isEmpty(doctor.getLanguageFluency()) ? null : doctor.getLanguageFluency().split(",");
+        String languageName = "";
+        if(languageIds != null && languageIds.length>0) {
+            for (String i : languageIds) {
+                Language language = languageRepository.findById(Integer.valueOf(i)).orElse(null);
+                if (language != null) languageName += language.getName() + ",";
+            }
+            languageName = languageName.substring(0, languageName.length()-1);
+        }
+
+        List<ConsultationRating> consultationRatings = consultationRatingRepository.getByDoctorIdActive(doctorId);
+        Long totalConsultCount = consultationRatingRepository.countByDoctorIdAll(doctorId);
+        List<CommentsDto> commentsDtos = new ArrayList<>();
+
+        if(!consultationRatings.isEmpty()){
+            for(ConsultationRating r:consultationRatings){
+                CommentsDto dto = getCommentsDto(r, totalConsultCount);
+
+                commentsDtos.add(dto);
+            }
+        }
+
+        Map<String, Float> chargesMap = new HashMap<>();
+        ViewProfileResponse dto = new ViewProfileResponse();
+        if (!charges.isEmpty()) {
+            for (Charges charge : charges) {
+                if(charge.getFeeType() != null && charge.getFeeType().name().equalsIgnoreCase("call")){
+                    dto.setCall_commission(charge.getCommission() == null ? null : (int)charge.getCommission().floatValue());
+                    dto.setCall_consultation_fees((int)charge.getConsultationFees().floatValue());
+                    dto.setCall_final_consultation_fees(charge.getFinalConsultationFees() == null ? null : (int)charge.getFinalConsultationFees().floatValue());
+                }else if(charge.getFeeType() != null && charge.getFeeType().name().equalsIgnoreCase("visit")){
+                    dto.setVisit_commission(charge.getCommission() == null ? null : (int)charge.getCommission().floatValue());
+                    dto.setVisit_consultation_fees((int)charge.getConsultationFees().floatValue());
+                    dto.setVisit_final_consultation_fees(charge.getFinalConsultationFees() == null ? null : (int)charge.getFinalConsultationFees().floatValue());
+                }
+            }
+        }
+
+        dto.setFirst_name(doctor.getFirstName());
+        dto.setLast_name(doctor.getLastName());
+        dto.setEmail(doctor.getEmail());
+        dto.setContact_number(doctor.getContactNumber());
+        dto.setPhoto(photo);
+        State state = null;
+        if(doctor.getState()!=null && doctor.getState()!=0){
+            state = stateRepository.findById(doctor.getState()).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(NO_STATE_FOUND, null, locale)));
+        }
+        City city = null;
+        if(doctor.getCity()!=null && doctor.getCity()!=0){
+            city = cityRepository.findById(doctor.getCity()).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(NO_CITY_FOUND, null, locale)));
+        }
+        dto.setCountry(
+                (doctor.getCountry()!=null)
+                        ?doctor.getCountry().getName():"");
+        dto.setState(
+                (state!=null)
+                        ?state.getName():"");
+        dto.setCity(
+                (city!=null)
+                        ?city.getName():"");
+        dto.setHospital_address(doctor.getHospitalAddress());
+        dto.setResidence_address(doctor.getResidenceAddress());
+        dto.setProfessional_identification_number(doctor.getProfessionalIdentificationNumber());
+        dto.setRating(finalCount);
+        dto.setExtra_activities(doctor.getExtraActivities());
+        dto.setAbout_me(doctor.getAboutMe());
+        dto.setLanguage(languageName);
+        dto.setReview(commentsDtos);
+        dto.setGender(doctor.getGender());
+        dto.setExperience(doctor.getExperience());
+        dto.setSpcialization(specsFinalString);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.PROFILE_FETCH_SUCCESSFULLY,null,locale),
+                dto
+        ));
+    }
+
+    private CommentsDto getCommentsDto(ConsultationRating r, Long totalConsultCount) {
+        String fileUrl = baseUrl + "/uploaded_file/no-image-found.png";
+        if(r.getPatientId().getProfilePicture()!=null && !r.getPatientId().getProfilePicture().isEmpty()){
+            fileUrl = baseUrl + "/uploaded_file/UserProfile/"+ r.getPatientId().getUserId()+"/"+ r.getPatientId().getProfilePicture();
+        }
+//                DateTimeFormatter spaceFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+//                String dateTimeFromSpace = spaceFormatter.format();
+        CommentsDto dto = new CommentsDto();
+        dto.setComment(r.getComment());
+        dto.setName(r.getPatientId() == null ? "" : r.getPatientId().getFullName());
+        dto.setRating(r.getRating() == null ? 0 : (int) r.getRating().floatValue());
+        dto.setCreated_at(r.getCreatedAt().toString().replace("T", ""));
+        dto.setFile_url(fileUrl);
+        dto.setTotal_count(totalConsultCount);
+        return dto;
     }
 
     public ResponseEntity<?> getReview(Locale locale, GetReviewRequest request) {

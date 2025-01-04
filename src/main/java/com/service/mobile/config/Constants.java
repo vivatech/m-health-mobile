@@ -241,4 +241,6 @@ public class Constants {
     public static final String RESEND_OTP = "app.resend.otp";
     public static final String CONSULTATION_NOT_FOUND = "app.consultation.not.found";
     public static final String CANNOT_UPLOAD_TEN_MB = "app.cannot.upload_ten_mb";
+    public static final String MARKETING_USER_NOTIFICATION = "MARKETING_USER_NOTIFICATION";
+    public static final String AVAILABILITY_FOUND = "app.availability.found";
 }

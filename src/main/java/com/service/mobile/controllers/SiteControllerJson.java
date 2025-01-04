@@ -56,15 +56,14 @@ public class SiteControllerJson {
                                         Locale locale,
                                         @RequestBody UpdatePictureRequest request
     ) {
-        return publicService.activities(locale, request.getUser_id());
+        return publicService.activities(locale, Integer.parseInt(request.getUser_id()));
     }
 
     @PostMapping(path = "/recent-orders", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> recentOrders(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                           Locale locale,
-                                          @RequestBody UpdatePictureRequest request
-    ) {
-        return orderService.recentOrders(locale,request.getUser_id());
+                                          @RequestBody UpdatePictureRequest request) {
+        return orderService.recentOrders(locale, request.getUser_id());
     }
 
     @PostMapping(path = "/update-profile-picture", consumes = {MediaType.APPLICATION_JSON_VALUE}) //in post man post method is written

@@ -44,7 +44,7 @@ public class PatientController {
 
     @PostMapping(path="/update-fullname", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<?> actionUpdateFullName(@ModelAttribute UpdateFullNameRequest request,@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
-        return patientService.actionUpdateFullname(request,locale);
+        return patientService.actionUpdateFullName(request,locale);
     }
 
     @PostMapping(path="/get-active-healthtips-package", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})

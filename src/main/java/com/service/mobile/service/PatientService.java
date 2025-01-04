@@ -13,18 +13,14 @@ import com.service.mobile.repository.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
-import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.autoconfigure.web.format.DateTimeFormatters;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -176,90 +172,76 @@ public class PatientService {
     @Value("${app.sms.sent}")
     private boolean smsSent;
 
-    public ResponseEntity<?> actionUpdateFullname(UpdateFullNameRequest request, Locale locale) {
-        if(request !=null&&request.getUser_id()!=null)
-
-        {
-            Users user = usersRepository.findById(Integer.parseInt(request.getUser_id())).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
-
-            if (user != null) {
-                user.setFirstName(splitName(request.getFullName())[0]);
-                user.setLastName(splitName(request.getFullName())[1]);
-
-                if (request.getPromo_code_of() != null && !request.getPromo_code_of().isEmpty()) {
-                    UsersPromoCode promoCodeUser = usersPromoCodeRepository.findByPromoCode(request.getPromo_code_of());
-
-                    if (promoCodeUser != null) {
-                        UsersCreatedWithPromoCode userWithPromoCode = new UsersCreatedWithPromoCode();
-                        userWithPromoCode.setUserId(Integer.parseInt(request.getUser_id()));
-                        userWithPromoCode.setCreatedBy(promoCodeUser.getUserId());
-                        usersCreatedWithPromoCodeRepository.save(userWithPromoCode);
-
-                        // Send notification SMS
-                        Users marketingUser = usersRepository.findById(promoCodeUser.getUserId()).orElse(null);
-                        if (marketingUser != null) {
-                            String smsNumber = marketingUser.getCountryCode() + marketingUser.getContactNumber();
-                            String notificationMsg = smsService.getValue("MARKETING_USER_NOTIFICATION");
-                            notificationMsg = notificationMsg.replace("{PATIENT_NAME}", user.getFirstName() + " " + user.getLastName());
-                            notificationMsg = notificationMsg.replace("{NAME}", marketingUser.getFirstName() + " " + marketingUser.getLastName());
-
-                            if (isDevelopmentEnvironment!=null && !isDevelopmentEnvironment) {
-                                smsService.sendSMS(smsNumber, notificationMsg);
-                            } else {
-                                logSMS(notificationMsg);
-                            }
-                        }
-                    }
-                }
-
-                String authKey = generateRandomString();
-                AuthKey authModel = new AuthKey();
-                authModel.setUserId(Integer.parseInt(request.getUser_id()));
-                authModel.setAuthKey(authKey);
-                authModel.setDeviceToken(request.getDevice_token());
-                authModel.setLoginType(user.getType());
-                authModel.setCreatedDate(new Date());
-                authKeyRepository.save(authModel);
-
-                GlobalConfiguration signalingServer = globalConfigurationRepository.findByKey("SIGNALING_SERVER");
-                GlobalConfiguration verificationToken = globalConfigurationRepository.findByKey("VERIFICATION_TOKEN");
-                GlobalConfiguration turnUsername = globalConfigurationRepository.findByKey("TURN_USERNAME");
-                GlobalConfiguration turnPassword = globalConfigurationRepository.findByKey("TURN_PASSWORD");
-
-                Response res = new Response();
-                UpdateFullnameResponse response = new UpdateFullnameResponse(
-                        request.getUser_id().toString(), authKey, user.getType().toString(),
-                        "", user.getFirstName() + " " + user.getLastName(), user.getFirstName(), user.getLastName(),
-                        user.getEmail(), user.getContactNumber(), signalingServer.getValue(), verificationToken.getValue(),
-                        turnUsername.getValue(), turnPassword.getValue(), user.getGender(), user.getDob().toString(), user.getResidenceAddress()
-                );
-                res = new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS,null,locale),
-                        response
-                );
-                return ResponseEntity.ok(res);
-
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
-                        Constants.NO_RECORD_FOUND_CODE,
-                        Constants.NO_RECORD_FOUND_CODE,
-                        messageSource.getMessage(Constants.MOBILE_USER_NOT_FOUND,null,locale)
-                ));
-            }
-        } else {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+    public ResponseEntity<?> actionUpdateFullName(UpdateFullNameRequest request, Locale locale) {
+        log.info("Entering into update full name api : {}", request);
+        if(StringUtils.isEmpty(request.getUser_id()) || StringUtils.isEmpty(request.getFullName())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
             ));
         }
-    }
 
-    private String[] splitName(String fullName) {
-        String[] parts = fullName.split(" ", 2);
-        return new String[]{parts[0], parts.length > 1 ? parts[1] : null};
+        Users user = usersRepository.findById(Integer.parseInt(request.getUser_id())).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(USER_NOT_FOUND, null, locale)));
+        String[] fullName = request.getFullName().trim().split(" ");
+        user.setFirstName(fullName[0]);
+        user.setLastName(fullName.length > 1 ? fullName[1] : "");
+
+        if (!StringUtils.isEmpty(request.getPromo_code_of())) {
+            UsersPromoCode promoCodeUser = usersPromoCodeRepository.findByPromoCode(request.getPromo_code_of());
+            if (promoCodeUser != null) {
+                UsersCreatedWithPromoCode userWithPromoCode = new UsersCreatedWithPromoCode();
+                userWithPromoCode.setUserId(Integer.parseInt(request.getUser_id()));
+                userWithPromoCode.setCreatedBy(promoCodeUser.getUserId());
+                usersCreatedWithPromoCodeRepository.save(userWithPromoCode);
+
+                // Send notification SMS
+                Users marketingUser = usersRepository.findById(promoCodeUser.getUserId()).orElse(null);
+                if (marketingUser != null) {
+                    String smsNumber = StringUtils.isEmpty(marketingUser.getCountryCode()) ? "" : marketingUser.getCountryCode() + marketingUser.getContactNumber();
+
+                    //notification message
+                    String notificationMsg = messageSource.getMessage("MARKETING_USER_NOTIFICATION", null, locale);
+                    notificationMsg = notificationMsg.replace("{0}", user.getFullName());
+                    notificationMsg = notificationMsg.replace("{1}", marketingUser.getFullName());
+
+                    if (smsSent) {
+                        smsService.sendSMS(smsNumber, notificationMsg);
+                    }
+                }
+            }
+        }
+        String authKey = generateRandomString();
+        AuthKey authModel = new AuthKey();
+        authModel.setUserId(Integer.parseInt(request.getUser_id()));
+        authModel.setAuthKey(authKey);
+        authModel.setDeviceToken(StringUtils.isEmpty(request.getDevice_token()) ? "" : request.getDevice_token());
+        authModel.setLoginType(user.getType());
+        authModel.setCreatedDate(new Date());
+        authKeyRepository.save(authModel);
+
+        GlobalConfiguration signalingServer = globalConfigurationRepository.findByKey("SIGNALING_SERVER");
+        GlobalConfiguration verificationToken = globalConfigurationRepository.findByKey("VERIFICATION_TOKEN");
+        GlobalConfiguration turnUsername = globalConfigurationRepository.findByKey("TURN_USERNAME");
+        GlobalConfiguration turnPassword = globalConfigurationRepository.findByKey("TURN_PASSWORD");
+
+        Response res = new Response();
+        UpdateFullnameResponse response = new UpdateFullnameResponse(
+                request.getUser_id(), authKey, user.getType().toString(),
+                "", user.getFullName(), user.getFirstName(), user.getLastName(),
+                user.getEmail(), user.getContactNumber(), signalingServer == null ? "" : signalingServer.getValue()
+                , verificationToken == null ? "" : verificationToken.getValue(),
+                turnUsername == null ? "" : turnUsername.getValue(),
+                turnPassword == null ? "" : turnPassword.getValue(),
+                user.getGender(), user.getDob().toString().replace("T", ""), user.getResidenceAddress(), user.getCity()
+        );
+        res = new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.USER_LOGIN_IS_SUCCESS,null,locale),
+                response
+        );
+        return ResponseEntity.ok(res);
     }
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -713,14 +695,16 @@ public class PatientService {
     }
 
     public ResponseEntity<?> applyCouponCode(Locale locale, ApplyCouponCodeRequest request) {
-        if (request.getUser_id() == null || request.getUser_id().isEmpty()) {
+        log.info("Entering into apply coupon code api : {}", request);
+        Map<String, Object> res = new HashMap<>();
+        if (StringUtils.isEmpty(request.getUser_id())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     Constants.UNAUTHORIZED_MSG,
                     NO_CONTENT_FOUNT_CODE,
                     messageSource.getMessage(BLANK_DATA_GIVEN, null, locale)
             ));
         }
-        if (request.getCoupon_code() == null || request.getCoupon_code().isEmpty()) {
+        if (StringUtils.isEmpty(request.getCoupon_code())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     NO_CONTENT_FOUNT_CODE,
                     NO_CONTENT_FOUNT,
@@ -728,7 +712,9 @@ public class PatientService {
             ));
         }
         try {
-            CouponCodeResponseDTO data = publicService.checkPromoCode(Integer.valueOf(request.getUser_id()), CouponCategory.valueOf(request.getCategory()), Float.valueOf(request.getPrice()), request.getCoupon_code(), locale);
+            CouponCodeResponseDTO data = publicService.checkPromoCode(Integer.valueOf(request.getUser_id()),
+                    CouponCategory.valueOf(request.getCategory()),
+                    Float.valueOf(request.getPrice()), request.getCoupon_code(), locale);
 
             if (data.getStatus().equalsIgnoreCase("success")) {
                 return ResponseEntity.status(HttpStatus.OK).body(new Response(
@@ -738,15 +724,20 @@ public class PatientService {
                         data.getData()
                 ));
             } else {
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
                         Constants.NO_CONTENT_FOUNT_CODE,
                         Constants.NO_CONTENT_FOUNT_CODE,
-                        data.getMessage()
+                        data.getMessage(),
+                        res
                 ));
             }
         } catch (Exception e) {
             log.error("Error in coupon code : {}", e);
-            return null;
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    NO_CONTENT_FOUNT_CODE,
+                    NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(SOMETHING_WENT_WRONG,null, locale)
+            ));
         }
     }
 

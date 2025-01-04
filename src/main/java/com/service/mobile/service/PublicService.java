@@ -458,61 +458,50 @@ public class PublicService {
     }
 
     public ResponseEntity<?> editProfile(Locale locale, EditProfileRequest request) {
-        if (request.getUser_id() != null && request.getUser_id() > 0 &&
-                request.getFullName()!=null && !request.getFullName().isEmpty() &&
-                request.getEmail()!=null && !request.getEmail().isEmpty() &&
-                request.getGender()!=null && !request.getGender().isEmpty() &&
-                request.getResidence_address()!=null && !request.getResidence_address().isEmpty() &&
-                request.getDob() != null
-                && request.getCity_id() != null && request.getCity_id() > 0) {
-            Users user = usersRepository.findById(request.getUser_id()).orElse(null);
-            if(user!=null){
-                user.setUserId(request.getUser_id());
-
-                String[] name = request.getFullName().split(" ");
-                StringBuilder lastName = new StringBuilder();
-                String firstName = "";
-                if(name.length > 1) {
-                    firstName = name[0];
-                    for (int i = 1; i < name.length; i++) lastName.append(" ").append(name[i]);
-                }
-                else firstName = name[0];
-
-                user.setFirstName(firstName);
-                user.setLastName(lastName.toString());
-                user.setEmail(request.getEmail());
-                user.setGender(request.getGender());
-                user.setResidenceAddress(request.getResidence_address());
-                user.setDob(request.getDob());
-                user.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
-                City city = cityRepository.findById(request.getCity_id()).orElse(null);
-                if(city != null) {
-                    user.setCity(city.getId());
-                    user.setState(city.getState().getId());
-                    user.setCountry(city.getState().getCountry());
-//                    user.setCountryCode(String.valueOf(city.getState().getCountry().getPhoneCode()));
-                }
-                usersRepository.save(user);
-                return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                        Constants.SUCCESS_CODE,
-                        Constants.SUCCESS_CODE,
-                        messageSource.getMessage(Constants.PATIENT_UPDATED_SUCCESSFULLY,null,locale),
-                        null
-                ));
-            }else{
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        Constants.NO_CONTENT_FOUNT_CODE,
-                        messageSource.getMessage(Constants.UNAUTHORIZED_MSG,null,locale)
-                ));
-            }
-        }else{
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.BLANK_DATA_GIVEN_CODE,
-                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN,null,locale)
+        if (StringUtils.isEmpty(request.getUser_id()) || StringUtils.isEmpty(request.getFullName())
+                || StringUtils.isEmpty(request.getEmail()) || StringUtils.isEmpty(request.getResidence_address())
+                || StringUtils.isEmpty(request.getCity_id()) || StringUtils.isEmpty(request.getState_id())
+                || StringUtils.isEmpty(request.getGender()) || StringUtils.isEmpty(request.getCountry_id())
+                || StringUtils.isEmpty(request.getDob())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.BLANK_DATA_GIVEN, null, locale)
             ));
         }
+        Users user = usersRepository.findById(Integer.parseInt(request.getUser_id())).orElseThrow(
+                ()-> new MobileServiceExceptionHandler(
+                        messageSource.getMessage(Constants.USER_NOT_FOUND, null, locale)));
+
+        String[] name = request.getFullName().split(" ");
+        StringBuilder lastName = new StringBuilder();
+        String firstName = "";
+        if(name.length > 1) {
+            firstName = name[0];
+            for (int i = 1; i < name.length; i++) lastName.append(" ").append(name[i]);
+        }
+        else firstName = name[0];
+        user.setFirstName(firstName);
+        user.setLastName(lastName.toString());
+        user.setEmail(request.getEmail());
+        user.setGender(request.getGender());
+        user.setResidenceAddress(request.getResidence_address());
+        user.setDob(LocalDate.parse(request.getDob()));
+        user.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
+
+        City city = cityRepository.findById(Integer.parseInt(request.getCity_id())).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.NO_CITY_FOUND, null, locale)));
+        State state = stateRepository.findById(Integer.parseInt(request.getState_id())).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.NO_STATE_FOUND, null, locale)));
+        Country country = countryRepository.findById(Integer.parseInt(request.getCountry_id())).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.NO_COUNTRY_FOUND, null, locale)));
+
+        user.setCity(city.getId());
+        user.setState(state.getId());
+        user.setCountry(country);
+        usersRepository.save(user);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("status", Constants.SUCCESS_CODE);
+        response.put("message", messageSource.getMessage(Constants.PATIENT_UPDATED_SUCCESSFULLY,null,locale));
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     public ResponseEntity<?> getLanguage(Locale locale) {
@@ -671,41 +660,42 @@ public class PublicService {
 
         // Simulate fetching Coupon from the database
         List<Coupon> checkCouponList = couponRepository.findByCouponCodeAndCategoryAndStatus(couponCode, category,1);
-        Coupon checkCoupon = (checkCouponList.size()>0)?checkCouponList.get(0):null;
+        Coupon checkCoupon = (!checkCouponList.isEmpty())?checkCouponList.get(0):null;
         if (checkCoupon==null) {
             response.setStatus("error");
             response.setMessage(messageSource.getMessage(Constants.COUPIN_CODE_INVALID,null,locale));
         } else if (checkCoupon.getNumberOfUsed() > checkCoupon.getOfferForNumberOfUsers()) {
             response.setStatus("error");
             response.setMessage(messageSource.getMessage(Constants.COUPIN_CODE_REACHED_LIMIT,null,locale));
-        } else if (checkCoupon.getEndDate().isBefore(LocalDateTime.now())) {
+        } else if (checkCoupon.getEndDate().isBefore(LocalDateTime.now(ZoneId.of(zone)))) {
             response.setStatus("error");
             response.setMessage(messageSource.getMessage(Constants.COUPIN_CODE_REACHED_LIMIT,null,locale));
         } else {
             //check if user avail this offer or not
             List<UsersUsedCouponCode> usersUsedCouponCode = usersUsedCouponCodeRepository.findByUserIdAndCouponId(userId,checkCoupon.getId());
-            boolean hasUserUsedCoupon = usersUsedCouponCode.size()>0;
+            boolean hasUserUsedCoupon = !usersUsedCouponCode.isEmpty();
 
             if (hasUserUsedCoupon) {
                 response.setStatus("info");
                 response.setMessage(messageSource.getMessage(Constants.AVAILABLE_OFFER_MESSAGE,null,locale));
             } else {
-                Float currentAmount = price;
                 Float discountAmount = 0.0f;
 
-                calculateDiscountAmount(checkCoupon, currentAmount);
+                calculateDiscountAmount(checkCoupon, price);
                 String discountAmountWithCurrency = formatDiscountAmount(discountAmount, currencySymbol);
-                String discountAmountWithSlshCurrency = formatDiscountAmount(discountAmount * PaymentRate, currencySymbol);
+                String discountAmountWithSlshCurrency = formatDiscountAmount(discountAmount * PaymentRate, "");
 
+                discountDetails.setStatus("success");
                 discountDetails.setDiscount_amount_with_currency(discountAmountWithCurrency);
                 discountDetails.setDiscount_amount_with_usd_currency(discountAmountWithCurrency);
-                discountDetails.setDiscount_amount_with_slsh_currency(discountAmountWithSlshCurrency);
+                discountDetails.setDiscount_amount_with_slsh_currency("SLSH "+ discountAmountWithSlshCurrency);
                 discountDetails.setAlert_msg_usd("process_payment_of " + discountAmountWithCurrency);
                 discountDetails.setAlert_msg_slsh("process_payment_of " + discountAmountWithSlshCurrency);
                 discountDetails.setDiscount_amount_slsh(discountAmount * PaymentRate);
                 discountDetails.setDiscount_amount(discountAmount);
                 discountDetails.setType(checkCoupon.getType());
                 discountDetails.setCoupon_id(checkCoupon.getId());
+                discountDetails.setMessage(messageSource.getMessage(Constants.COUPON_CODE_SUCCESS_MESSAGE,null,locale));
 
                 response.setStatus("success");
                 response.setMessage(messageSource.getMessage(Constants.COUPON_CODE_SUCCESS_MESSAGE,null,locale));

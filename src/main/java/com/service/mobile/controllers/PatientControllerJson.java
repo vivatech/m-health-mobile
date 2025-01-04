@@ -44,7 +44,7 @@ public class PatientControllerJson {
 
     @PostMapping(path="/update-fullname", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> actionUpdateFullName(@RequestBody UpdateFullNameRequest request,@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale) {
-        return patientService.actionUpdateFullname(request,locale);
+        return patientService.actionUpdateFullName(request,locale);
     }
 
     @PostMapping(path="/get-active-healthtips-package", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -71,8 +71,7 @@ public class PatientControllerJson {
     @PostMapping(path = "/edit-profile", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> editProfile(@RequestHeader(name = "X-localization", required = false,defaultValue = "so")
                                         Locale locale,
-                                         @RequestBody EditProfileRequest request
-                                         ) {
+                                         @RequestBody EditProfileRequest request) {
         return publicService.editProfile(locale,request);
     }
 

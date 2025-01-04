@@ -341,7 +341,7 @@ public class TicketService {
                 attachment = new Attachment();
                 attachment.setAttachmentLabel(filename);
                 attachment.setAttachmentName(UUID.randomUUID() + "." + ext);
-                attachment.setAttachmentType(request.getAttachment_type() != null && !request.getAttachment_type().isEmpty()
+                attachment.setAttachmentType(!StringUtils.isEmpty(request.getAttachment_type())
                         ? request.getAttachment_type() : request.getFilename().getContentType());
                 attachmentRepository.save(attachment);
 
@@ -351,7 +351,7 @@ public class TicketService {
                 Files.write(path, request.getFilename().getBytes());
             }
 
-            if (request.getMessage() == null || request.getMessage().isEmpty()) {
+            if (StringUtils.isEmpty(request.getMessage())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Reply message cannot be blank");
             }
 
@@ -402,22 +402,22 @@ public class TicketService {
     }
 
     public ResponseEntity<Response> changeSupportTicketStatus(ChangeSupportTicketStatusRequest request, Locale locale) {
-        SupportTicket ticket = supportTicketRepository.findById(Integer.valueOf(request.getSupport_ticket_id())).orElseThrow(null);
-        if(ticket!=null){
-            ticket.setSupportTicketStatus(SupportTicketStatus.valueOf(request.getStatus()));
-            ticket.setSupportTicketUpdatedAt(LocalDateTime.now());
-            supportTicketRepository.save(ticket);
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.SUPPORT_TICKET_UPDATED_SUCCESS,null,locale)
-            ));
-        }else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Response(
-                    Constants.NO_RECORD_FOUND_CODE,
-                    Constants.NO_RECORD_FOUND_CODE,
-                    messageSource.getMessage(Constants.SUPPORT_TICKET_NOT_FOUND,null,locale)
+        log.info("Entering into change support ticket status api : {}", request);
+        if(StringUtils.isEmpty(request.getSupport_ticket_id()) || StringUtils.isEmpty(request.getStatus())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    Constants.NO_CONTENT_FOUNT_CODE,
+                    messageSource.getMessage(Constants.SOMETHING_WENT_WRONG, null, locale)
             ));
         }
+        SupportTicket ticket = supportTicketRepository.findById(Integer.valueOf(request.getSupport_ticket_id())).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.SUPPORT_TICKET_NOT_FOUND, null, locale)));
+        ticket.setSupportTicketStatus(SupportTicketStatus.valueOf(request.getStatus()));
+        ticket.setSupportTicketUpdatedAt(LocalDateTime.now(ZoneId.of(zone)));
+        supportTicketRepository.save(ticket);
+        return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                Constants.SUCCESS_CODE,
+                Constants.SUCCESS_CODE,
+                messageSource.getMessage(Constants.SUPPORT_TICKET_UPDATED_SUCCESS,null,locale)
+        ));
     }
 }
