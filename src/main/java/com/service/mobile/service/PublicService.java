@@ -693,7 +693,7 @@ public class PublicService {
                 discountDetails.setAlert_msg_slsh("process_payment_of " + discountAmountWithSlshCurrency);
                 discountDetails.setDiscount_amount_slsh(discountAmount * PaymentRate);
                 discountDetails.setDiscount_amount(discountAmount);
-                discountDetails.setType(checkCoupon.getType());
+                discountDetails.setType(checkCoupon.getType().name());
                 discountDetails.setCoupon_id(checkCoupon.getId());
                 discountDetails.setMessage(messageSource.getMessage(Constants.COUPON_CODE_SUCCESS_MESSAGE,null,locale));
 

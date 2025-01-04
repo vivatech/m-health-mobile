@@ -346,7 +346,7 @@ public class TicketService {
                 attachmentRepository.save(attachment);
 
                 // Save the file to disk
-                Path path = Paths.get(path_to_uploads_dir + request.getSupport_ticket_id() + "/" + attachment.getAttachmentName());
+                Path path = Paths.get(path_to_uploads_dir + "/" + request.getSupport_ticket_id() + "/" + attachment.getAttachmentName());
                 Files.createDirectories(path.getParent());
                 Files.write(path, request.getFilename().getBytes());
             }

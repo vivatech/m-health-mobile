@@ -20,6 +20,6 @@ public class DiscountDetailsDTO {
     private String alert_msg_slsh;
     private Float discount_amount_slsh;
     private Float discount_amount;
-    private OfferType type;
+    private String type;
     private Integer coupon_id;
 }
