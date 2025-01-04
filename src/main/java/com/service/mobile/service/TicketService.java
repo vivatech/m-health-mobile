@@ -393,6 +393,8 @@ public class TicketService {
                     responseDTO
             ));
         }catch (Exception e){
+            e.printStackTrace();
+            log.error("Error found in reply support ticket api : {}", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     Constants.NO_RECORD_FOUND_CODE,
                     Constants.NO_RECORD_FOUND_CODE,
