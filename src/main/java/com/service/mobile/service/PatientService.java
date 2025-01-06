@@ -1058,7 +1058,7 @@ public class PatientService {
                         if(couponCodeId!=null && couponCodeId!=0){
                             coupon = couponRepository.findById(couponCodeId).orElse(null);
                         }
-                        if(couponCodeResponse.getData().getType()==OfferType.FREE){
+                        if(OfferType.valueOf(couponCodeResponse.getData().getType()).equals(OfferType.FREE)){
                             paymentMethod = "free";
                         }
                     }
