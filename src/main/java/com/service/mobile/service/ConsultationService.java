@@ -241,7 +241,7 @@ public class ConsultationService {
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
                         messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale),
-                        res
+                        new ArrayList<>()
                 ));
             }
         } catch (Exception e) {

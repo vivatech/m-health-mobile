@@ -414,7 +414,7 @@ public class PatientLabService {
         if(!StringUtils.isEmpty(caseId)){
             consultation = consultationRepository.findById(Integer.parseInt(caseId)).orElse(null);
         }
-        ConsultDetailSummaryDto response = null;
+        ConsultDetailSummaryDto response = new ConsultDetailSummaryDto();
         if(consultation!=null){
             response.setCase_id(consultation.getCaseId());
             String[] explode = consultation.getSlotId().getSlotTime().split(":");
