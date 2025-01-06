@@ -458,7 +458,7 @@ public class PublicService {
 
     public ResponseEntity<?> editProfile(Locale locale, EditProfileRequest request) {
         if (StringUtils.isEmpty(request.getUser_id()) || StringUtils.isEmpty(request.getFullName())
-                || StringUtils.isEmpty(request.getEmail()) || StringUtils.isEmpty(request.getResidence_address())
+                || StringUtils.isEmpty(request.getResidence_address())
                 || StringUtils.isEmpty(request.getCity_id()) || StringUtils.isEmpty(request.getState_id())
                 || StringUtils.isEmpty(request.getGender()) || StringUtils.isEmpty(request.getCountry_id())
                 || StringUtils.isEmpty(request.getDob())){

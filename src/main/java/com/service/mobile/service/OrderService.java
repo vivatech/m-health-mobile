@@ -15,6 +15,7 @@ import com.service.mobile.model.PackageUser;
 import com.service.mobile.model.Users;
 import com.service.mobile.repository.ConsultationRepository;
 import com.service.mobile.repository.OrdersRepository;
+import com.service.mobile.repository.SlotTypeRepository;
 import com.service.mobile.repository.UsersRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -36,6 +37,8 @@ import java.util.*;
 @Service
 @Slf4j
 public class OrderService {
+    @Autowired
+    private SlotTypeRepository slotTypeRepository;
 
     @Autowired
     private MessageSource messageSource;
@@ -57,6 +60,11 @@ public class OrderService {
     @Value("${app.ZoneId}")
     private String zoneId;
 
+    @Value("${app.slot.type}")
+    private Integer slotType;
+    @Value("${app.slot.minutes}")
+    private String slotMinutes;
+
     @Autowired
     private OrdersRepository ordersRepository;
 
@@ -77,8 +85,12 @@ public class OrderService {
 
         if(!consultations.isEmpty()){
             for (Consultation consultation : consultations) {
+                int slotTypeId = consultation.getDoctorId().getSlotTypeId() != null
+                        ? consultation.getDoctorId().getSlotTypeId() : slotType;
+                String minutes = slotTypeRepository.findMinutesBySlotType(slotTypeId);
                 if (consultation.getConsultationDate().isEqual(LocalDate.now(ZoneId.of(zoneId)))
                             && consultation.getSlotId().getSlotStartTime()
+                        .plusMinutes(Integer.parseInt(minutes == null ? slotMinutes : minutes))
                             .isBefore(LocalTime.now(ZoneId.of(zoneId)))) {
 
                 } else {

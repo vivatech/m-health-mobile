@@ -30,6 +30,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -65,33 +66,36 @@ public class ConsultationService {
         log.info("Entering into check on going consultation api : {}", user_id);
         try {
             int userId = Integer.parseInt(user_id);
-            List<SlotType> slotTypeOpt = slotTypeRepository.findByStatus(SlotStatus.active);
-
-            long slotValue = Long.parseLong(slotTypeOpt.get(0).getValue());
             LocalTime consultationStartTime = LocalTime.now(ZoneId.of(zone));
-            LocalTime consultationEndTime = LocalTime.now(ZoneId.of(zone)).plusMinutes(slotValue);
 
             LocalDate currentDate = LocalDate.now(ZoneId.of(zone));
-            List<RequestType> requestType = List.of(RequestType.Book, RequestType.Pending);
-            Consultation consultationOpt = consultationRepository.findUpcomingConsultationForPatient(
-                    userId, requestType,
-                    consultationStartTime,
-                    consultationEndTime, currentDate
-            );
 
-            if (consultationOpt == null) {
+            List<Consultation> consultationList = consultationRepository.findUpcomingConsultationForPatient(userId, currentDate);
+
+            if (consultationList.isEmpty()) {
                 return ResponseEntity.ok(new Response(Constants.SUCCESS_CODE, Constants.SUCCESS_CODE, Constants.SUCCESS, null));
             }
 
-            Orders orderDetail = ordersRepository.findByCaseId(consultationOpt.getCaseId());
-            CheckOnGoingConsultationDto responseDTO = getCheckOnGoingConsultationDto(orderDetail, consultationOpt);
+            for(Consultation c : consultationList){
+                String[] timeArray = c.getSlotId().getSlotTime().split(":");
+                LocalTime st = LocalTime.parse(timeArray[0]+":"+timeArray[1]);
+                LocalTime et = LocalTime.parse(timeArray[2]+":"+timeArray[3]);
 
-            return ResponseEntity.status(HttpStatus.OK).body(new Response(
-                    Constants.SUCCESS_CODE,
-                    Constants.SUCCESS_CODE,
-                    messageSource.getMessage(Constants.SUCCESS, null, locale),
-                    responseDTO
-            ));
+                if((consultationStartTime.equals(st) || consultationStartTime.isAfter(st))
+                        && (consultationStartTime.isBefore(et) || consultationStartTime.equals(et))){
+
+                    Orders orderDetail = ordersRepository.findByCaseId(c.getCaseId());
+                    CheckOnGoingConsultationDto responseDTO = getCheckOnGoingConsultationDto(orderDetail, c);
+
+                    return ResponseEntity.status(HttpStatus.OK).body(new Response(
+                            Constants.SUCCESS_CODE,
+                            Constants.SUCCESS_CODE,
+                            messageSource.getMessage(Constants.SUCCESS_MESSAGE, null, locale),
+                            responseDTO
+                    ));
+                }
+            }
+            return ResponseEntity.ok(new Response(Constants.SUCCESS_CODE, Constants.SUCCESS_CODE, Constants.SUCCESS, null));
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Error found in on going consultation : {}", e);
@@ -179,7 +183,7 @@ public class ConsultationService {
                         Constants.SUCCESS_CODE,
                         Constants.SUCCESS_CODE,
                         messageSource.getMessage(Constants.NO_RECORD_FOUND, null, locale),
-                        res
+                        new ArrayList<>()
                 ));
             }
         } catch (Exception e) {
@@ -217,6 +221,12 @@ public class ConsultationService {
                     dto.setProfile_pic((consultation.getDoctorId().getProfilePicture() != null && !consultation.getDoctorId().getProfilePicture().isEmpty())
                             ? baseUrl + "uploaded_file/UserProfile/" + consultation.getDoctorId().getUserId() + "/" + consultation.getDoctorId().getProfilePicture() : "");
                     dto.setTotal_count((long) consultations.size());
+                    ClinicInformation clinic = null;
+                    if (consultation.getConsultType().equalsIgnoreCase("visit") ||
+                            consultation.getConsultType().equalsIgnoreCase("clinic visit")) {
+                        clinic = publicService.getClinicInformation(consultation.getDoctorId().getHospitalId());
+                    }
+                    dto.setClinic(clinic);
 
                     list.add(dto);
                 }

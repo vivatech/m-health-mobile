@@ -378,11 +378,14 @@ public class PatientLabService {
             }
             List<GetLabDto> labList = publicService.getLabInfo(labcatIds);
             List<LabsDto> labs = new ArrayList<>();
-            for (GetLabDto labDto : labList) {
-                LabsDto temp = new LabsDto();
-                temp.setId(labDto.getUser_id());
-                temp.setName(labDto.getClinic_name());
-                labs.add(temp);
+
+            if(!labList.isEmpty()) {
+                for (GetLabDto labDto : labList) {
+                    LabsDto temp = new LabsDto();
+                    temp.setId(labDto.getUser_id());
+                    temp.setName(labDto.getClinic_name());
+                    labs.add(temp);
+                }
             }
 
             ConsultDetailSummaryDto summary = consultDetailSummary(request.getCase_id());
@@ -411,16 +414,16 @@ public class PatientLabService {
         if(!StringUtils.isEmpty(caseId)){
             consultation = consultationRepository.findById(Integer.parseInt(caseId)).orElse(null);
         }
-        ConsultDetailSummaryDto response = new ConsultDetailSummaryDto();
+        ConsultDetailSummaryDto response = null;
         if(consultation!=null){
             response.setCase_id(consultation.getCaseId());
             String[] explode = consultation.getSlotId().getSlotTime().split(":");
             response.setTime(explode[0]+":"+explode[1]+"-"+explode[2]+":"+explode[3]);
             response.setDate(consultation.getConsultationDate());
             response.setDoctor_name(consultation.getDoctorId().getFirstName()+ " "+consultation.getDoctorId().getLastName());
-            LabOrders labOrders = labOrdersRepository.findByConsultationId(consultation.getCaseId()).get(0);
-            if(labOrders != null){
-                response.setStatus(labOrders.getPaymentStatus().name());
+            List<LabOrders> labOrders = labOrdersRepository.findByConsultationId(consultation.getCaseId());
+            if(!labOrders.isEmpty()){
+                response.setStatus(labOrders.get(0).getPaymentStatus().name());
             }else response.setStatus("New");
         }
         return response;
@@ -930,9 +933,9 @@ public class PatientLabService {
         int subCategoryId = Integer.parseInt(request.getSubcategory_id());
         int caseId = Integer.parseInt(request.getCase_id());
 
-        if(!StringUtils.isEmpty(request.getCase_id())){
-            if(!StringUtils.isEmpty(request.getCategory_id())){
-                if(!StringUtils.isEmpty(request.getSubcategory_id())){
+        if(!StringUtils.isEmpty(request.getCase_id()) && !request.getCase_id().equalsIgnoreCase("0")){
+            if(!StringUtils.isEmpty(request.getCategory_id()) && !request.getCategory_id().equalsIgnoreCase("0")){
+                if(!StringUtils.isEmpty(request.getSubcategory_id()) && !request.getSubcategory_id().equalsIgnoreCase("0")){
                     consultations = labConsultationRepository.findByPatientIdCaseIdCategoryIdSubCategoryId(
                             userId, caseId, categoryId, subCategoryId);
                 }else{
@@ -940,7 +943,7 @@ public class PatientLabService {
                             userId, caseId, userId);
                 }
             }else{
-                if(!StringUtils.isEmpty(request.getSubcategory_id())){
+                if(!StringUtils.isEmpty(request.getSubcategory_id()) && !request.getSubcategory_id().equalsIgnoreCase("0")){
                     consultations = labConsultationRepository.findByPatientIdCaseIdSubCategoryId(userId, caseId, subCategoryId);
                 }else{
                     consultations = labConsultationRepository.findByPatientIdCaseId(userId, caseId);
@@ -948,14 +951,14 @@ public class PatientLabService {
             }
         }
         else{
-            if(!StringUtils.isEmpty(request.getCategory_id())){
-                if(!StringUtils.isEmpty(request.getSubcategory_id())){
+            if(!StringUtils.isEmpty(request.getCategory_id()) && !request.getCategory_id().equalsIgnoreCase("0")){
+                if(!StringUtils.isEmpty(request.getSubcategory_id()) && !request.getSubcategory_id().equalsIgnoreCase("0")){
                     consultations = labConsultationRepository.findByPatientIdCategoryIdSubCategoryId(userId, categoryId, subCategoryId);
                 }else{
                     consultations = labConsultationRepository.findByPatientIdCategoryId(userId, categoryId);
                 }
             }else{
-                if(!StringUtils.isEmpty(request.getSubcategory_id())){
+                if(!StringUtils.isEmpty(request.getSubcategory_id()) && !request.getSubcategory_id().equalsIgnoreCase("0")){
                     consultations = labConsultationRepository.findByPatientIdSubCategoryId(userId, subCategoryId);
                 }else{
                     consultations = labConsultationRepository.findByPatientId(userId);

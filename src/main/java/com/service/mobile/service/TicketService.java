@@ -351,13 +351,9 @@ public class TicketService {
                 Files.write(path, request.getFilename().getBytes());
             }
 
-            if (StringUtils.isEmpty(request.getMessage())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Reply message cannot be blank");
-            }
-
             SupportTicketMessage reply = new SupportTicketMessage();
             reply.setSupportTicket(supportTicket);
-            reply.setSupportTicketMsgsDetail(request.getMessage());
+            reply.setSupportTicketMsgsDetail(StringUtils.isEmpty(request.getMessage()) ? null : request.getMessage());
             reply.setAttachmentId(attachment != null ? attachment.getAttachmentId() : null);
             reply.setSupportTicketMsgsCreatedBy(Integer.parseInt(request.getUser_id()));
             reply.setSupportTicketMsgsCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
