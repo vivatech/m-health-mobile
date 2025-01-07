@@ -353,7 +353,7 @@ public class TicketService {
 
             SupportTicketMessage reply = new SupportTicketMessage();
             reply.setSupportTicket(supportTicket);
-            reply.setSupportTicketMsgsDetail(StringUtils.isEmpty(request.getMessage()) ? null : request.getMessage());
+            reply.setSupportTicketMsgsDetail(StringUtils.isEmpty(request.getMessage()) ? "" : request.getMessage());
             reply.setAttachmentId(attachment != null ? attachment.getAttachmentId() : null);
             reply.setSupportTicketMsgsCreatedBy(Integer.parseInt(request.getUser_id()));
             reply.setSupportTicketMsgsCreatedAt(LocalDateTime.now(ZoneId.of(zone)));
