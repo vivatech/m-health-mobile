@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -15,6 +16,6 @@ import java.util.List;
 public class LabReportsByCaseIdResponse {
     private String doctor_name;
     private Integer case_id;
-    private LocalDate consultation_date;
+    private Date consultation_date;
     private List<LabReportsByCaseIdReportResponse> reports;
 }

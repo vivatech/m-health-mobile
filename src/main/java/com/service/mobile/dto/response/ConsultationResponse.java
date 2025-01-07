@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Date;
 import java.time.LocalDate;
 
 @Setter
@@ -23,7 +24,7 @@ public class ConsultationResponse {
     private String consult_type;
     private ConsultationType consultation_type;
     private AddedType added_type;
-    private LocalDate date;
+    private Date date;
     private String time;
     private String charges;
     private RequestType status;

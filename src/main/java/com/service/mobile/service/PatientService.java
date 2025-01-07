@@ -366,20 +366,19 @@ public class PatientService {
                     && request.getConsult_type() != null && !request.getConsult_type().isEmpty()) {
 
                 //Check weather doctor already consult with any other patient with given slots and time
-                Consultation consultation = publicService.checkRealTimeBooking(request.getSlot_id(), request.getDate(), request.getDoctor_id());
+                Consultation consultation = publicService.checkRealTimeBooking(request.getSlot_id(), LocalDate.parse(request.getDate()), request.getDoctor_id());
                 //Check weather patient already consult with any other doctor with given slots and time
-                Consultation patient = publicService.checkClientBooking(request.getSlot_id(), request.getDate(), request.getUser_id());
+                Consultation patient = publicService.checkClientBooking(request.getSlot_id(), LocalDate.parse(request.getDate()), request.getUser_id());
                 Users doctor = usersRepository.findById(request.getDoctor_id()).orElse(null);
-                SlotMaster slotMaster = slotMasterRepository.findById(request.getSlot_id()).orElse(null);
+                SlotMaster slotMaster = slotMasterRepository.findById(request.getSlot_id()).orElseThrow(() -> new MobileServiceExceptionHandler(messageSource.getMessage(SLOT_ID_REQUIRED, null, locale)));
                 if (consultation == null){
                     if (patient == null) {
                         LocalDate currentDate = LocalDate.now();
                         ZoneId somaliaZoneId = ZoneId.of(zoneId);
                         LocalTime currentTime = LocalTime.now(somaliaZoneId);
 
-                        List<Consultation> consultations = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(request.getDoctor_id(), request.getSlot_id(), RequestType.Book, request.getDate());
-                        if (currentDate.isAfter(request.getDate()) ||
-                                (currentDate.isEqual(request.getDate()) && currentTime.isAfter(slotMaster.getSlotStartTime()))) {
+                        List<Consultation> consultations = consultationRepository.findByDoctorIdAndSlotIdAndRequestTypeAndDate(request.getDoctor_id(), request.getSlot_id(), RequestType.Book, LocalDate.parse(request.getDate()));
+                        if (currentDate.isAfter(LocalDate.parse(request.getDate())) || currentTime.isAfter(slotMaster.getSlotStartTime())) {
                             return ResponseEntity.status(HttpStatus.OK).body(new Response(
                                     Constants.NO_CONTENT_FOUNT_CODE,
                                     Constants.NO_CONTENT_FOUNT_CODE,
@@ -423,7 +422,7 @@ public class PatientService {
                             Consultation response = new Consultation();
                             response.setPatientId(users);
                             response.setDoctorId(doctor);
-                            response.setConsultationDate(request.getDate());
+                            response.setConsultationDate(java.sql.Date.valueOf(request.getDate()));
                             response.setConsultType(request.getConsult_type());
                             response.setSlotId(slotMaster);
                             response.setMessage(request.getMessage());

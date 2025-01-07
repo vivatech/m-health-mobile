@@ -283,7 +283,7 @@ public class RelativeService {
             if (consultation != null) {
                 SlotMaster slot = consultation.getSlotId();
                 String[] timeArray = slot.getSlotTime().split(":");
-                LocalDateTime consultationDateTime = LocalDateTime.of(consultation.getConsultationDate(), LocalTime.parse(timeArray[0] + ":" + timeArray[1] + ":00"));
+                LocalDateTime consultationDateTime = LocalDateTime.of(consultation.getConsultationDate().toLocalDate(), LocalTime.parse(timeArray[0] + ":" + timeArray[1] + ":00"));
                 LocalDateTime now = LocalDateTime.now(ZoneId.of(zone));
 
                 long minutesDifference = ChronoUnit.MINUTES.between(now, consultationDateTime);
@@ -300,14 +300,14 @@ public class RelativeService {
                         LocalDate newOrderDate = request.getNewOrderDate();
                         List<Consultation> last_consult_datas = consultationRepository.findByRequestTypeAndCreatedAtAndPatientIdAndDoctorIdAndConstaitionTypeAndConstationDate(
                                 RequestType.Book, request.getNewOrderDate(), consultation.getPatientId().getUserId(), consultation.getDoctorId().getUserId(),
-                                ConsultationType.Paid, consultation.getConsultationDate()
+                                ConsultationType.Paid, consultation.getConsultationDate().toLocalDate()
                         );
                         if (!last_consult_datas.isEmpty()) {
                             Consultation last_consult_data = last_consult_datas.get(0);
 
                             free_consult_cnt = consultationRepository.countByPatientIdAndDoctorIdAndConsultationDateAndConsultationTypeAndRequestType(
                                     consultation.getPatientId(), consultation.getDoctorId().getUserId(),
-                                    last_consult_data.getConsultationDate(), RequestType.Cancel, ConsultationType.Free
+                                    last_consult_data.getConsultationDate().toLocalDate(), RequestType.Cancel, ConsultationType.Free
                             );
                         }
                     }

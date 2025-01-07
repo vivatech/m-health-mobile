@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Date;
 import java.time.LocalDate;
 
 @Setter
@@ -18,7 +19,7 @@ public class OrderData {
     private Integer doctor_id;
     private String photo;
     private String transaction_id;
-    private LocalDate consultation_date;
+    private Date consultation_date;
     private String report_suggested;
     private String consultation_type;
     private String rec_consultation_type;

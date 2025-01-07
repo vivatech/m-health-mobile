@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -41,7 +42,7 @@ public class Consultation {
     private String paymentMethod;
 
     @Column(name = "consultation_date", nullable = false)
-    private LocalDate consultationDate;
+    private Date consultationDate;
 
     @Column(name = "consult_type")
     private String consultType;

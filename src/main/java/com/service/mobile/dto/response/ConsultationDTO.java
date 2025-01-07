@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Date;
 import java.time.LocalDate;
 
 @Getter
@@ -16,7 +17,7 @@ public class ConsultationDTO {
     private String name;
     private String consult_type;
     private String consultation_type;
-    private LocalDate date;
+    private Date date;
     private String time;
     private String charges;
     private String cancel_reason;

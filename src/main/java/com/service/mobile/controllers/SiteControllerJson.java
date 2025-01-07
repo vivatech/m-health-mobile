@@ -1,5 +1,6 @@
 package com.service.mobile.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.LogoutRequest;
 import com.service.mobile.dto.request.*;
@@ -131,7 +132,7 @@ public class SiteControllerJson {
 
     @PostMapping(path = "/search-consultations", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> searchConsultations(@RequestHeader(name = "X-localization", required = false,defaultValue = "so") Locale locale,
-                                           @RequestBody ConsultationsRequest request) {
+                                           @RequestBody ConsultationsRequest request) throws JsonProcessingException {
         return consultationService.searchConsultations(request, locale);
     }
 

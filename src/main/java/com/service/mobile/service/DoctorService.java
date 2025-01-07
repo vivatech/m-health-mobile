@@ -371,12 +371,12 @@ public class DoctorService {
                 GlobalConfiguration free_cnt = globalConfigurationRepository.findByKey("NO_OF_FREE_BOOKING");
                 GlobalConfiguration free_days = globalConfigurationRepository.findByKey("DAYS_FOR_FREE_BOOKING");
 
-                LocalDate last_free_date = last_consult_data.getConsultationDate().plusDays(Integer.parseInt(free_cnt.getValue()));
+                LocalDate last_free_date = last_consult_data.getConsultationDate().toLocalDate().plusDays(Integer.parseInt(free_cnt.getValue()));
                 SlotMaster timeslot = last_consult_data.getSlotId();
 
                 Long free_consult_cnt = consultationRepository.countByPatientIdAndDoctorIdCreatedAtAndConstaitionTypeConsultTypeAndConstationDate(
                         Integer.parseInt(request.getUser_id()), Integer.parseInt(request.getDoctor_id()), newOrderDate,
-                        ConsultationType.Free, last_consult_data.getConsultType(), last_consult_data.getConsultationDate()
+                        ConsultationType.Free, last_consult_data.getConsultType(), last_consult_data.getConsultationDate().toLocalDate()
                 );
                 long rem_cnt = Long.parseLong(free_cnt.getValue()) - free_consult_cnt;
                 if (rem_cnt > 0) {

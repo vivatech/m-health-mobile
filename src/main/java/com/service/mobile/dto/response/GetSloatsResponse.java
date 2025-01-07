@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Date;
 import java.time.LocalDate;
 
 @Setter
@@ -19,7 +20,7 @@ public class GetSloatsResponse {
     private String slot_day;
     private String slot_time;
     private Integer slot_type;
-    private LocalDate consultation_date;
+    private Date consultation_date;
     private Integer to;
     private String name;
     private RequestType status;

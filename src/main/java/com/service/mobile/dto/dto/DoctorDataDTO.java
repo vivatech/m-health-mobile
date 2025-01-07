@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 @Setter
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class DoctorDataDTO {
     private String first_name;
-    private LocalDate consultation_date;
+    private Date consultation_date;
     private String transaction_id;
     private String slot_time;
     private String amount;

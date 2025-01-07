@@ -1,5 +1,7 @@
 package com.service.mobile.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.service.mobile.config.Constants;
 import com.service.mobile.dto.dto.CheckOnGoingConsultationDto;
 import com.service.mobile.dto.dto.ClinicInformation;
@@ -197,11 +199,14 @@ public class ConsultationService {
         }
     }
 
-    public ResponseEntity<?> searchConsultations(ConsultationsRequest request, Locale locale) {
-        log.info("Entering into search consultation api : {}", request);
+    public ResponseEntity<?> searchConsultations(ConsultationsRequest request, Locale locale) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        log.info("Entering into search consultation api : {}", mapper.writeValueAsString(request));
         Map<String, Object> res = new HashMap<>();
         try {
-            List<Consultation> consultations = consultationRepository.findByPatientIdAndDateOrderByCaseId(Integer.parseInt(request.getUser_id()), LocalDate.parse(request.getDate()));
+            LocalDate date = LocalDate.parse(request.getDate());
+            System.out.println("LocalDate : "+date);
+            List<Consultation> consultations = consultationRepository.findByPatientIdAndDateOrderByCaseId(Integer.parseInt(request.getUser_id()), date);
             if (!consultations.isEmpty()) {
                 List<ConsultationResponse> list = new ArrayList<>();
                 for (Consultation consultation : consultations) {

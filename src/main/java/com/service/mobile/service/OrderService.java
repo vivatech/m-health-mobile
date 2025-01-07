@@ -68,7 +68,6 @@ public class OrderService {
 
     public ResponseEntity<?> recentOrders(Locale locale, String userId) {
         log.info("Entering into recent order api : {}", userId);
-        System.out.println("Application default time zone set to: " + TimeZone.getDefault().getID());
         if (StringUtils.isEmpty(userId)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     Constants.NO_CONTENT_FOUNT_CODE,
@@ -79,7 +78,9 @@ public class OrderService {
         Users userInfo = usersRepository.findById(Integer.parseInt(userId)).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.USER_NOT_FOUND, null, locale)));
         String photoPath = userInfo.getProfilePicture() != null ? baseUrl + "uploaded_file/UserProfile/" + userInfo.getUserId() + "/" + userInfo.getProfilePicture() : "";
 
-        List<Consultation> consultations = consultationRepository.findUpcomingConsultationsForPatient(Integer.parseInt(userId), LocalDate.now());
+        LocalDate localDate = LocalDate.now(ZoneId.of(zoneId));
+        System.out.println("Local Date : "+ localDate);
+        List<Consultation> consultations = consultationRepository.findUpcomingConsultationsForPatient(Integer.parseInt(userId), localDate);
         List<ConsultationDTO> consultationDTOList = new ArrayList<>();
 
         if(!consultations.isEmpty()){

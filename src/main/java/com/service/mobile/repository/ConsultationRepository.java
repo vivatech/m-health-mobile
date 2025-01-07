@@ -17,7 +17,7 @@ import java.util.Optional;
 
 public interface ConsultationRepository extends JpaRepository<Consultation, Integer> {
     //TODO fix this query (this is based on date we need time)
-    @Query("SELECT c FROM Consultation c WHERE c.patientId.userId = ?1 AND c.requestType IN ('Book', 'Cancel', 'Pending', 'Failed') AND c.consultationDate >= ?2 ORDER BY c.caseId DESC LIMIT 5")
+    @Query("SELECT c FROM Consultation c WHERE c.patientId.userId = ?1 AND Date(c.consultationDate) >= ?2 AND c.requestType IN ('Book', 'Cancel', 'Pending', 'Failed') ORDER BY c.caseId DESC LIMIT 5")
     List<Consultation> findUpcomingConsultationsForPatient(Integer userId, LocalDate date);
 
     @Query("SELECT c FROM Consultation c WHERE c.doctorId.userId = ?1 AND c.requestType IN ('Book', 'Cancel') AND TO_TIMESTAMP(CONCAT(c.consultationDate, ' ', c.slotId.slotTime)) > CURRENT_TIMESTAMP ORDER BY c.caseId DESC")
@@ -52,7 +52,7 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Inte
     @Query("Select u from Consultation u where u.patientId.userId = ?1 order by u.caseId DESC")
     Page<Consultation> findByPatientIdOrderByCaseId(Integer userId,Pageable pageable);
 
-    @Query("Select u from Consultation u where u.patientId.userId = ?1 and u.consultationDate = ?2 order by u.caseId DESC")
+    @Query("Select u from Consultation u where u.patientId.userId = ?1 and Date(u.consultationDate) = ?2 order by u.caseId DESC")
     List<Consultation> findByPatientIdAndDateOrderByCaseId(Integer userId, LocalDate date);
 
     @Query("Select u from Consultation u where u.doctorId.userId = ?1 and u.consultationDate = ?2 order by u.caseId DESC")

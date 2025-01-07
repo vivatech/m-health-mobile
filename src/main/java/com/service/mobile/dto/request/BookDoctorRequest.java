@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Date;
 import java.time.LocalDate;
 
 @Setter
@@ -17,7 +18,7 @@ public class BookDoctorRequest {
     private Integer slot_id;
 
     private String message;
-    private LocalDate date;
+    private String date;
 
     private Integer doctor_id;
     private String time_slot;
