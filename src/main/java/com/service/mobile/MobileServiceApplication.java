@@ -1,7 +1,9 @@
 package com.service.mobile;
 
+import com.service.mobile.config.ServerProperties;
 import com.service.mobile.storage.StorageProperties;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,14 +15,23 @@ import org.springframework.web.client.RestTemplate;
 import java.util.TimeZone;
 
 @SpringBootApplication
-@EnableConfigurationProperties(StorageProperties.class)
+@EnableConfigurationProperties({StorageProperties.class, ServerProperties.class})
 public class MobileServiceApplication {
-	@Value("${Server.time.zone}")
-	private String serverTimeZone;
+	@Autowired
+	private ServerProperties serverProperties;
+
+	@Value("${server.time.zone}")
+	private String serverTime;
+
 	@PostConstruct
 	public void init() {
-		// Set default timezone to Somalia
-		TimeZone.setDefault(TimeZone.getTimeZone(serverTimeZone));
+		String serverTimeZone = serverProperties.getTimeZone() == null ? serverTime : serverProperties.getTimeZone();
+		if (serverTimeZone != null) {
+			TimeZone.setDefault(TimeZone.getTimeZone(serverTimeZone));
+			System.out.println("Application default time zone set to: " + TimeZone.getDefault().getID());
+		} else {
+			System.out.println("Time zone property not set.");
+		}
 	}
 
 	public static void main(String[] args) {

@@ -68,6 +68,7 @@ public class OrderService {
 
     public ResponseEntity<?> recentOrders(Locale locale, String userId) {
         log.info("Entering into recent order api : {}", userId);
+        System.out.println("Application default time zone set to: " + TimeZone.getDefault().getID());
         if (StringUtils.isEmpty(userId)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response(
                     Constants.NO_CONTENT_FOUNT_CODE,

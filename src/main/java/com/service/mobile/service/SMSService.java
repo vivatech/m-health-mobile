@@ -1,6 +1,5 @@
 package com.service.mobile.service;
 
-import com.service.mobile.config.SmsConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -15,8 +14,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class SMSService {
 
-    @Autowired
-    SmsConfig config;
     @Value("${sms.api.url}")
     private String smsApiUrl;
 
@@ -55,9 +52,5 @@ public class SMSService {
             log.error("Failed to send SMS", e);
             throw new RuntimeException("Failed to send SMS", e);
         }
-    }
-
-    public String getValue(String key){
-        return config.getProperty(key);
     }
 }
