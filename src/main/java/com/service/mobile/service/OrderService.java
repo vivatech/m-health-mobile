@@ -28,9 +28,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -79,19 +77,17 @@ public class OrderService {
         }
         Users userInfo = usersRepository.findById(Integer.parseInt(userId)).orElseThrow(()-> new MobileServiceExceptionHandler(messageSource.getMessage(Constants.USER_NOT_FOUND, null, locale)));
         String photoPath = userInfo.getProfilePicture() != null ? baseUrl + "uploaded_file/UserProfile/" + userInfo.getUserId() + "/" + userInfo.getProfilePicture() : "";
-        LocalDate currentDate = LocalDate.now(ZoneId.of(zoneId));
-        List<Consultation> consultations = consultationRepository.findUpcomingConsultationsForPatient(Integer.parseInt(userId), currentDate);
+
+        List<Consultation> consultations = consultationRepository.findUpcomingConsultationsForPatient(Integer.parseInt(userId), LocalDate.now());
         List<ConsultationDTO> consultationDTOList = new ArrayList<>();
 
         if(!consultations.isEmpty()){
             for (Consultation consultation : consultations) {
-                int slotTypeId = consultation.getDoctorId().getSlotTypeId() != null
-                        ? consultation.getDoctorId().getSlotTypeId() : slotType;
-                String minutes = slotTypeRepository.findMinutesBySlotType(slotTypeId);
-                if (consultation.getConsultationDate().isEqual(LocalDate.now(ZoneId.of(zoneId)))
-                            && consultation.getSlotId().getSlotStartTime()
-                        .plusMinutes(Integer.parseInt(minutes == null ? slotMinutes : minutes))
-                            .isBefore(LocalTime.now(ZoneId.of(zoneId)))) {
+
+                String[] timeArray = consultation.getSlotId().getSlotTime().split(":");
+                LocalTime time = LocalTime.parse(timeArray[2] + ":" + timeArray[3]);
+                if (consultation.getConsultationDate().equals(LocalDate.now(ZoneId.of(zoneId)))
+                        && time.isBefore(LocalTime.now(ZoneId.of(zoneId)))) {
 
                 } else {
                     HomeConsultationInformation nurse = null;
